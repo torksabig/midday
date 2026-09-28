@@ -3394,6 +3394,71 @@ export async function fetchReplacementSimilarTransactions(
   return mapReplacementToSimilarTransactions(payload);
 }
 
+export type ReplacementSearchTransactionMatchQuery = {
+  query?: string;
+  inboxId?: string;
+  maxResults?: number;
+  minConfidenceScore?: number;
+  includeAlreadyMatched?: boolean;
+};
+
+export async function fetchReplacementSearchTransactionMatch(
+  baseUrl: string,
+  token: string,
+  query: ReplacementSearchTransactionMatchQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const params = new URLSearchParams();
+  if (query.query) params.set("query", query.query);
+  if (query.inboxId) params.set("inboxId", query.inboxId);
+  if (query.maxResults != null) params.set("maxResults", String(query.maxResults));
+  if (query.minConfidenceScore != null) {
+    params.set("minConfidenceScore", String(query.minConfidenceScore));
+  }
+  if (query.includeAlreadyMatched != null) {
+    params.set("includeAlreadyMatched", String(query.includeAlreadyMatched));
+  }
+  const qs = params.toString();
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/transactions/search-match${qs ? `?${qs}` : ""}`,
+    token,
+  );
+  return deepCamelCaseKeys(
+    Array.isArray(payload) ? payload : [],
+  ) as unknown[];
+}
+
+export type ReplacementCreateTransactionInput = {
+  name: string;
+  amount: number;
+  currency: string;
+  date: string;
+  bankAccountId: string;
+  assignedId?: string;
+  categorySlug?: string;
+  note?: string;
+  attachments?: {
+    type: string;
+    name: string;
+    size: number;
+    path: string[];
+  }[];
+};
+
+export async function fetchReplacementCreateTransaction(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCreateTransactionInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transactions/create`,
+    token,
+    input,
+  );
+  return mapReplacementToTransactionById(payload);
+}
+
 export async function fetchReplacementTogglePortal(
   baseUrl: string,
   token: string,

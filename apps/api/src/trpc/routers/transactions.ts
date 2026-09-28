@@ -24,6 +24,8 @@ import {
   tryDelegateTransactionsDeleteMany,
   tryDelegateMoveToReview,
   tryDelegateSimilarTransactions,
+  tryDelegateSearchTransactionMatch,
+  tryDelegateCreateTransaction,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -230,7 +232,24 @@ export const transactionsRouter = createTRPCRouter({
 
   searchTransactionMatch: protectedProcedure
     .input(searchTransactionMatchSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateSearchTransactionMatch(
+          {
+            query: input.query,
+            inboxId: input.inboxId,
+            maxResults: input.maxResults,
+            minConfidenceScore: input.minConfidenceScore,
+            includeAlreadyMatched: input.includeAlreadyMatched,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.rows;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return searchTransactionMatch(db, {
         query: input.query,
         teamId: teamId!,
@@ -243,11 +262,38 @@ export const transactionsRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createTransactionSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
-      const transaction = await createTransaction(db, {
-        ...input,
-        teamId: teamId!,
-      });
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      let transaction: Awaited<ReturnType<typeof createTransaction>> | null =
+        null;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCreateTransaction(
+          {
+            name: input.name,
+            amount: input.amount,
+            currency: input.currency,
+            date: input.date,
+            bankAccountId: input.bankAccountId,
+            assignedId: input.assignedId,
+            categorySlug: input.categorySlug,
+            note: input.note,
+            attachments: input.attachments,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          transaction = delegated.transaction as typeof transaction;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!transaction) {
+        transaction = await createTransaction(db, {
+          ...input,
+          teamId: teamId!,
+        });
+      }
 
       if (transaction?.id) {
         await triggerJob(
