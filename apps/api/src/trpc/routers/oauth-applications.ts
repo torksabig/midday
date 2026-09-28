@@ -21,6 +21,7 @@ import {
   tryDelegateOAuthAuthorized,
   tryDelegateOAuthRevokeAccess,
   tryDelegateApplicationInfo,
+  tryDelegateOAuthApprovalStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -448,7 +449,54 @@ export const oauthApplicationsRouter = createTRPCRouter({
   updateApprovalStatus: protectedProcedure
     .input(updateApprovalStatusSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, teamId, session } = ctx;
+      const { db, teamId, session, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApprovalStatus(
+          input.id,
+          input.status,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const application = delegated.result.application as {
+            name?: string;
+            developerName?: string | null;
+          };
+          const result = delegated.result.result;
+
+          if (input.status === "pending") {
+            try {
+              const userTeams = await getTeamsByUserId(db, session.user.id);
+              const currentTeam = userTeams?.find((team) => team.id === teamId);
+
+              if (currentTeam && session.user.email) {
+                const html = await render(
+                  AppReviewRequestEmail({
+                    applicationName: application.name ?? result.name,
+                    developerName: application.developerName || undefined,
+                    teamName: currentTeam.name!,
+                    userEmail: session.user.email,
+                  }),
+                );
+
+                await resend.emails.send({
+                  from: "Midday <middaybot@midday.ai>",
+                  to: "pontus@midday.ai",
+                  subject: `Application Review Request - ${application.name ?? result.name}`,
+                  html,
+                });
+              }
+            } catch (error) {
+              logger.error("Failed to send application review request", {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+
+          return result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       // Get full application details before updating
       const application = await getOAuthApplicationById(db, input.id, teamId!);

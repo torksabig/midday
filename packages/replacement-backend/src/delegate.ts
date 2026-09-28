@@ -4391,6 +4391,101 @@ export async function fetchReplacementInboxAccountById(
   }
 }
 
+
+/** Midday `team.delete` prep — membership + team + bank connections for cleanup job. */
+export async function fetchReplacementTeamDeletePrep(
+  baseUrl: string,
+  token: string,
+  teamId: string,
+): Promise<{
+  team: unknown;
+  connections: Array<{
+    referenceId: string | null;
+    provider: string | null;
+    accessToken: string | null;
+  }>;
+}> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/delete-prep`,
+    token,
+    { teamId },
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    team?: unknown;
+    connections?: unknown;
+  };
+  if (!row.team) {
+    throw new Error("team delete-prep missing team");
+  }
+  const connections = Array.isArray(row.connections)
+    ? (row.connections as Array<{
+        referenceId?: string | null;
+        provider?: string | null;
+        accessToken?: string | null;
+      }>).map((c) => ({
+        referenceId: c.referenceId ?? null,
+        provider: c.provider ?? null,
+        accessToken: c.accessToken ?? null,
+      }))
+    : [];
+  return { team: row.team, connections };
+}
+
+export async function fetchReplacementTeamDelete(
+  baseUrl: string,
+  token: string,
+  teamId: string,
+): Promise<{ id: string; memberUserIds: string[] }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/delete`,
+    token,
+    { teamId },
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    id?: string;
+    memberUserIds?: string[];
+  };
+  if (typeof row.id !== "string") {
+    throw new Error("team delete payload missing id");
+  }
+  return {
+    id: row.id,
+    memberUserIds: Array.isArray(row.memberUserIds) ? row.memberUserIds : [],
+  };
+}
+
+/** Midday `oauthApplications.updateApprovalStatus` — status SQL; email stays Node. */
+export async function fetchReplacementOAuthApprovalStatus(
+  baseUrl: string,
+  token: string,
+  id: string,
+  status: string,
+): Promise<{ application: unknown; result: { id: string; name: string; status: string } }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/oauth-applications/${encodeURIComponent(id)}/approval-status`,
+    token,
+    { status },
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    application?: unknown;
+    result?: { id?: string; name?: string; status?: string };
+  };
+  if (!row.application || typeof row.result?.id !== "string") {
+    throw new Error("oauth approval-status payload incomplete");
+  }
+  return {
+    application: row.application,
+    result: {
+      id: row.result.id,
+      name: row.result.name ?? "",
+      status: row.result.status ?? status,
+    },
+  };
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

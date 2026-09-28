@@ -457,6 +457,7 @@ export const mocks = {
   // OAuth applications (team apps list / CRUD used by router)
   getOAuthApplicationsByTeam: mock(() => []) as MockFn,
   getOAuthApplicationById: mock(() => null) as MockFn,
+  updateOAuthApplicationstatus: mock(() => null) as MockFn,
   getOAuthApplicationByClientId: mock(() => null) as MockFn,
   createOAuthApplication: mock(() =>
     Promise.resolve({
@@ -1169,7 +1170,7 @@ const dbQueriesMock = new Proxy(
     createAuthorizationCode: createDefaultMock(),
     getOAuthApplicationByClientId: mocks.getOAuthApplicationByClientId,
     hasUserEverAuthorizedApp: createDefaultMock(),
-    updateOAuthApplicationstatus: createDefaultMock(),
+    updateOAuthApplicationstatus: mocks.updateOAuthApplicationstatus,
 
     getOverviewSummary: mocks.getOverviewSummary,
     getBillableHours: mocks.getBillableHours,

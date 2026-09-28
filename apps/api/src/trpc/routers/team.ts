@@ -28,6 +28,8 @@ import {
   tryDelegateUserInvites,
   tryDelegateAvailablePlans,
   tryDelegateTeamCreateInvites,
+  tryDelegateTeamDeletePrep,
+  tryDelegateTeamDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -233,41 +235,59 @@ export const teamRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteTeamSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
-      // Check if the user has access to the team before deleting
-      const canAccess = await hasTeamAccess(db, input.teamId, session.user.id);
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
+      type Conn = {
+        referenceId: string | null;
+        provider: string | null;
+        accessToken: string | null;
+      };
+      let bankConnections: Conn[] | undefined;
+      let usedDelegatedPrep = false;
 
-      if (!canAccess) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have access to this team",
-        });
+      if (shouldDelegateToReplacementBackend()) {
+        const prep = await tryDelegateTeamDeletePrep(input.teamId, accessToken);
+        if (prep.delegated) {
+          usedDelegatedPrep = true;
+          bankConnections = prep.result.connections;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
       }
 
-      // Fetch team data BEFORE deleting (for cleanup job)
-      const team = await getTeamById(db, input.teamId);
+      if (!usedDelegatedPrep) {
+        const canAccess = await hasTeamAccess(
+          db,
+          input.teamId,
+          session.user.id,
+        );
 
-      if (!team) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Team not found",
+        if (!canAccess) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have access to this team",
+          });
+        }
+
+        const team = await getTeamById(db, input.teamId);
+
+        if (!team) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Team not found",
+          });
+        }
+
+        bankConnections = await getBankConnections(db, {
+          teamId: input.teamId,
         });
       }
-
-      const bankConnections = await getBankConnections(db, {
-        teamId: input.teamId,
-      });
 
       // Trigger cleanup job BEFORE deleting team from database.
-      // This ensures that if job triggering fails (Redis down, queue unavailable),
-      // the team remains intact and the user can retry. The cleanup job will handle
-      // bank connection deletion. Subscription cancellation should be done manually
-      // by the user via the customer portal before deleting the team.
       await triggerJob(
         "delete-team",
         {
           teamId: input.teamId!,
-          connections: bankConnections.map((c) => ({
+          connections: (bankConnections ?? []).map((c) => ({
             referenceId: c.referenceId,
             provider: c.provider,
             accessToken: c.accessToken,
@@ -276,10 +296,28 @@ export const teamRouter = createTRPCRouter({
         "teams",
       );
 
-      const data = await deleteTeam(db, {
-        teamId: input.teamId,
-        userId: session.user.id,
-      });
+      let data: { id: string; memberUserIds: string[] } | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamDelete(
+          input.teamId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.result;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          data = await deleteTeam(db, {
+            teamId: input.teamId,
+            userId: session.user.id,
+          });
+        }
+      } else {
+        data = await deleteTeam(db, {
+          teamId: input.teamId,
+          userId: session.user.id,
+        });
+      }
 
       if (!data) {
         throw new TRPCError({
