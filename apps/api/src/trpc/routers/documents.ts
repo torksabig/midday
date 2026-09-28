@@ -12,6 +12,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateDocumentsGet,
   tryDelegateDocumentsGetById,
+  tryDelegateDocumentsGetRelated,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -83,7 +84,19 @@ export const documentsRouter = createTRPCRouter({
 
   getRelatedDocuments: protectedProcedure
     .input(getRelatedDocumentsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsGetRelated(
+          input.id,
+          input.pageSize,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getRelatedDocuments(db, {
         id: input.id,
         pageSize: input.pageSize,

@@ -13,10 +13,22 @@ import {
   getTaxSummarySchema,
 } from "@api/schemas/reports";
 import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateReportsAccountBalances,
+  tryDelegateReportsBurnRate,
+  tryDelegateReportsExpense,
+  tryDelegateReportsProfit,
+  tryDelegateReportsRevenue,
+  tryDelegateReportsRunway,
+  tryDelegateReportsSpending,
+  tryDelegateReportsTaxSummary,
+} from "@api/services/replacement-delegation";
+import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   InvalidReportTypeError,
   ReportExpiredError,
@@ -40,7 +52,23 @@ import { TRPCError } from "@trpc/server";
 export const reportsRouter = createTRPCRouter({
   revenue: protectedProcedure
     .input(getRevenueSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsRevenue(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+            revenueType: input.revenueType,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getReports(db, {
         teamId: teamId!,
         from: input.from,
@@ -53,7 +81,23 @@ export const reportsRouter = createTRPCRouter({
 
   profit: protectedProcedure
     .input(getProfitSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsProfit(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+            revenueType: input.revenueType,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getReports(db, {
         teamId: teamId!,
         from: input.from,
@@ -66,7 +110,22 @@ export const reportsRouter = createTRPCRouter({
 
   burnRate: protectedProcedure
     .input(getBurnRateSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsBurnRate(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getBurnRate(db, {
         teamId: teamId!,
         from: input.from,
@@ -77,7 +136,18 @@ export const reportsRouter = createTRPCRouter({
 
   runway: protectedProcedure
     .input(getRunwaySchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsRunway(
+          input.currency,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getRunway(db, {
         teamId: teamId!,
         currency: input.currency,
@@ -86,7 +156,22 @@ export const reportsRouter = createTRPCRouter({
 
   expense: protectedProcedure
     .input(getExpensesSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsExpense(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getExpenses(db, {
         teamId: teamId!,
         from: input.from,
@@ -97,7 +182,22 @@ export const reportsRouter = createTRPCRouter({
 
   spending: protectedProcedure
     .input(getSpendingSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsSpending(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getSpending(db, {
         teamId: teamId!,
         from: input.from,
@@ -108,7 +208,25 @@ export const reportsRouter = createTRPCRouter({
 
   taxSummary: protectedProcedure
     .input(getTaxSummarySchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsTaxSummary(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+            type: input.type,
+            categorySlug: input.categorySlug,
+            taxType: input.taxType,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTaxSummary(db, {
         teamId: teamId!,
         from: input.from,
@@ -135,7 +253,18 @@ export const reportsRouter = createTRPCRouter({
 
   getAccountBalances: protectedProcedure
     .input(getAccountBalancesSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsAccountBalances(
+          input.currency,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const accountBalances = await getCashBalance(db, {
         teamId: teamId!,
         currency: input.currency,

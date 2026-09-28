@@ -10,6 +10,15 @@ import {
   fetchReplacementInvoicePaymentStatus,
   fetchReplacementInvoiceSummary,
   fetchReplacementSearchGlobal,
+  fetchReplacementRelatedDocuments,
+  fetchReplacementReportsAccountBalances,
+  fetchReplacementReportsBurnRate,
+  fetchReplacementReportsExpense,
+  fetchReplacementReportsProfit,
+  fetchReplacementReportsRevenue,
+  fetchReplacementReportsRunway,
+  fetchReplacementReportsSpending,
+  fetchReplacementReportsTaxSummary,
   fetchReplacementInboxById,
   fetchReplacementInboxByStatus,
   fetchReplacementInboxCheckAttachments,
@@ -38,6 +47,8 @@ import {
   type ReplacementInboxByStatusQuery,
   type ReplacementInboxListQuery,
   type ReplacementInboxSearchQuery,
+  type ReplacementReportDateRangeQuery,
+  type ReplacementTaxSummaryQuery,
   type ReplacementTransactionsListQuery,
 } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
@@ -922,4 +933,122 @@ export async function tryDelegateTransactionsGetById(
     }
     return { delegated: false };
   }
+}
+
+async function tryDelegateReplacementRead<T>(
+  sessionAccessToken: string | null | undefined,
+  run: (baseUrl: string, token: string) => Promise<T>,
+): Promise<T | null> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return null;
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return null;
+  }
+
+  try {
+    return await run(getReplacementApiUrl(), token);
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return null;
+  }
+}
+
+export async function tryDelegateDocumentsGetRelated(
+  id: string,
+  pageSize: number,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementRelatedDocuments(baseUrl, token, id, pageSize),
+  );
+}
+
+export async function tryDelegateReportsRevenue(
+  input: ReplacementReportDateRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsRevenue(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsProfit(
+  input: ReplacementReportDateRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsProfit(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsBurnRate(
+  input: ReplacementReportDateRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsBurnRate(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsRunway(
+  currency: string | null | undefined,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsRunway(baseUrl, token, currency),
+  );
+}
+
+export async function tryDelegateReportsExpense(
+  input: ReplacementReportDateRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsExpense(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsSpending(
+  input: ReplacementReportDateRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsSpending(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsTaxSummary(
+  input: ReplacementTaxSummaryQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsTaxSummary(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsAccountBalances(
+  currency: string | null | undefined,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsAccountBalances(baseUrl, token, currency),
+  );
 }

@@ -12,6 +12,8 @@ import {
   mapReplacementToInvoiceSummary,
   mapReplacementToOverviewSummary,
   mapReplacementToPaymentStatus,
+  mapReplacementToRelatedDocuments,
+  mapReplacementToReportJson,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
@@ -423,6 +425,29 @@ describe("replacement mappers", () => {
       invoiceCount: 2,
       breakdown: [{ originalAmount: 50, convertedAmount: 55 }],
     });
+  });
+
+  test("mapReplacementToRelatedDocuments maps path tokens", () => {
+    const mapped = mapReplacementToRelatedDocuments([
+      {
+        id: "d2",
+        name: "a.pdf",
+        path_tokens: ["vault", "a.pdf"],
+        title: "Tax doc",
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      id: "d2",
+      pathTokens: ["vault", "a.pdf"],
+      title: "Tax doc",
+    });
+  });
+
+  test("mapReplacementToReportJson camelCases chart summary", () => {
+    const mapped = mapReplacementToReportJson({
+      summary: { current_total: 100, prev_total: 50, currency: "USD" },
+    }) as { summary: { currentTotal: number } };
+    expect(mapped.summary.currentTotal).toBe(100);
   });
 
   test("mapReplacementToGlobalSearch preserves FTS row shape", () => {

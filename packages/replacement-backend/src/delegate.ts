@@ -23,7 +23,10 @@ import {
   mapReplacementToPaymentStatus,
   mapReplacementToInvoiceSummary,
   mapReplacementToGlobalSearch,
+  mapReplacementToRelatedDocuments,
+  mapReplacementToReportJson,
   type MiddayBankAccountsGetShape,
+  type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayInvoicesGetShape,
@@ -48,6 +51,8 @@ export {
   mapReplacementToDocumentById,
   mapReplacementToDocumentsGet,
   mapReplacementToGlobalSearch,
+  mapReplacementToRelatedDocuments,
+  mapReplacementToReportJson,
   mapReplacementToInboxById,
   mapReplacementToInboxByStatus,
   mapReplacementToInboxCheckAttachments,
@@ -67,6 +72,7 @@ export {
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
+  type MiddayRelatedDocumentShape,
   type MiddayInvoiceSummaryShape,
   type MiddayInvoicesGetShape,
   type MiddayInboxByIdShape,
@@ -793,6 +799,176 @@ export async function fetchReplacementSearchGlobal(
     token,
   );
   return mapReplacementToGlobalSearch(payload);
+}
+
+export async function fetchReplacementRelatedDocuments(
+  baseUrl: string,
+  token: string,
+  id: string,
+  pageSize: number,
+): Promise<MiddayRelatedDocumentShape[]> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams({ pageSize: String(pageSize) });
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/documents/${encodeURIComponent(id)}/related?${search}`,
+    token,
+  );
+  return mapReplacementToRelatedDocuments(payload);
+}
+
+export type ReplacementReportDateRangeQuery = {
+  from: string;
+  to: string;
+  currency?: string | null;
+  revenueType?: "gross" | "net" | null;
+};
+
+function buildReportDateRangeQuery(params: ReplacementReportDateRangeQuery): string {
+  const search = new URLSearchParams({ from: params.from, to: params.to });
+  if (params.currency) search.set("currency", params.currency);
+  if (params.revenueType) search.set("revenueType", params.revenueType);
+  return `?${search.toString()}`;
+}
+
+async function fetchReplacementReportPath(
+  baseUrl: string,
+  token: string,
+  path: string,
+  query: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/reports/${path}${query}`,
+    token,
+  );
+  return mapReplacementToReportJson(payload);
+}
+
+export async function fetchReplacementReportsRevenue(
+  baseUrl: string,
+  token: string,
+  params: ReplacementReportDateRangeQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "revenue",
+    buildReportDateRangeQuery(params),
+  );
+}
+
+export async function fetchReplacementReportsProfit(
+  baseUrl: string,
+  token: string,
+  params: ReplacementReportDateRangeQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "profit",
+    buildReportDateRangeQuery(params),
+  );
+}
+
+export async function fetchReplacementReportsBurnRate(
+  baseUrl: string,
+  token: string,
+  params: ReplacementReportDateRangeQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "burn-rate",
+    buildReportDateRangeQuery(params),
+  );
+}
+
+export async function fetchReplacementReportsRunway(
+  baseUrl: string,
+  token: string,
+  currency?: string | null,
+): Promise<unknown> {
+  const search = new URLSearchParams();
+  if (currency) search.set("currency", currency);
+  const qs = search.toString();
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "runway",
+    qs ? `?${qs}` : "",
+  );
+}
+
+export async function fetchReplacementReportsExpense(
+  baseUrl: string,
+  token: string,
+  params: ReplacementReportDateRangeQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "expense",
+    buildReportDateRangeQuery(params),
+  );
+}
+
+export async function fetchReplacementReportsSpending(
+  baseUrl: string,
+  token: string,
+  params: ReplacementReportDateRangeQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "spending",
+    buildReportDateRangeQuery(params),
+  );
+}
+
+export type ReplacementTaxSummaryQuery = {
+  from: string;
+  to: string;
+  currency?: string | null;
+  type: string;
+  categorySlug?: string | null;
+  taxType?: string | null;
+};
+
+export async function fetchReplacementReportsTaxSummary(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTaxSummaryQuery,
+): Promise<unknown> {
+  const search = new URLSearchParams({
+    from: params.from,
+    to: params.to,
+    type: params.type,
+  });
+  if (params.currency) search.set("currency", params.currency);
+  if (params.categorySlug) search.set("categorySlug", params.categorySlug);
+  if (params.taxType) search.set("taxType", params.taxType);
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "tax-summary",
+    `?${search.toString()}`,
+  );
+}
+
+export async function fetchReplacementReportsAccountBalances(
+  baseUrl: string,
+  token: string,
+  currency?: string | null,
+): Promise<unknown> {
+  const search = new URLSearchParams();
+  if (currency) search.set("currency", currency);
+  const qs = search.toString();
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "account-balances",
+    qs ? `?${qs}` : "",
+  );
 }
 
 export { shouldDelegateToReplacementBackend };

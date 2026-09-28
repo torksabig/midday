@@ -1363,3 +1363,42 @@ export function mapReplacementToGlobalSearch(
 ): MiddayGlobalSearchRowShape[] {
   return z.array(replacementGlobalSearchRowSchema).parse(payload);
 }
+
+const replacementRelatedDocumentSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable().optional(),
+  metadata: z.unknown().optional(),
+  path_tokens: z.array(z.string()).nullable().optional(),
+  tag: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  summary: z.string().nullable().optional(),
+});
+
+export type MiddayRelatedDocumentShape = {
+  id: string;
+  name?: string | null;
+  metadata?: unknown;
+  pathTokens?: string[] | null;
+  tag?: string | null;
+  title?: string | null;
+  summary?: string | null;
+};
+
+export function mapReplacementToRelatedDocuments(
+  payload: unknown,
+): MiddayRelatedDocumentShape[] {
+  return z.array(replacementRelatedDocumentSchema).parse(payload).map((row) => ({
+    id: row.id,
+    name: row.name,
+    metadata: row.metadata,
+    pathTokens: row.path_tokens ?? undefined,
+    tag: row.tag,
+    title: row.title,
+    summary: row.summary,
+  }));
+}
+
+/** Chart, expense, tax, runway, and account-balance report payloads. */
+export function mapReplacementToReportJson(payload: unknown): unknown {
+  return deepCamelCaseKeys(payload);
+}
