@@ -158,7 +158,7 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Backend mode** | `MIDDAY_BACKEND_MODE` = `legacy` \| `dual` \| `replacement` on `apps/api` | Env removed; no permanent dual |
 | **Delegation package** | `@midday/replacement-backend` REST client + Zod mappers | Temporary; delete with `apps/api` |
 | **Identity cutover** | **Done (replacement mode):** `user.me` / `team.current` use Rust only (throw on failure; no Drizzle). **Dual:** delegate first, Drizzle fallback. Demo bearer still available for smoke when no session. | Delete Drizzle identity paths entirely when `apps/api` goes away |
-| **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` delegates to `GET /api/v1/transactions` when dual/replacement; Postgres via `MIDDAY_DATABASE_URL`. **Phase 2c–2d:** Rust list supports `sort`, `statuses`, `start`/`end`, `categories`, `accounts`, `tags`, `exported`, `fulfilled` (+ `q`, cursor, `pageSize`). Dual fallback still Drizzle for assignees, attachments filter, recurring, amount/type/manual. Attachments/tags JSON on list rows still empty on Rust path. | Remaining list filters + delete Drizzle list |
+| **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` → `GET /api/v1/transactions`; **Phase 2e:** remaining dashboard filters on Postgres + attachments/tags JSON on list/detail rows; **`transactions.getReviewCount`** → `GET /api/v1/transactions/review-count`. See filter matrix below. | Delete Drizzle list + review count when stable |
 | **Categories / bank accounts (read)** | **Done:** `transactionCategories.get` → `GET /api/v1/categories`; `bankAccounts.get` → `GET /api/v1/bank-accounts` with delegation | Mutations still Drizzle-only |
 | **Auth on Rust** | **Done:** Supabase HS256 + JWKS path; session bearer from tRPC `accessToken` | Same |
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
@@ -185,8 +185,26 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 ## Immediate next engineering step (Phase 2 → 3)
 
 1. **Phase 2 list read** — landed: clone paginated `GET /api/v1/transactions`, tRPC `transactions.get` delegation, mapper tests.
-2. **Done (read path):** `transactions.getById` delegates to `GET /api/v1/transactions/{id}`. **Phase 2d done:** categories/accounts/tags/exported/fulfilled list filters + category/bank-account read lists. Next: assignees/recurring/amount/manual filters, attachments/tags JSON on Rust list rows.
+2. **Done (read path):** `transactions.getById` → `GET /api/v1/transactions/{id}`. **Phase 2d:** categories/accounts/tags/exported/fulfilled. **Phase 2e:** assignees, attachments filter, recurring, type/manual, amount/amountRange, row attachments/tags JSON, `getReviewCount` delegation.
 3. Contract tests + smoke; delete Drizzle for transactions when stable.
+
+### Transactions list filter matrix (`transactions.get` → Rust)
+
+| Filter | Rust Postgres | Notes |
+|--------|---------------|--------|
+| `q`, cursor, `pageSize`, `sort` | Yes | Phase 2b |
+| `statuses`, `start`, `end` | Yes | Phase 2c |
+| `categories`, `accounts`, `tags` | Yes | Phase 2d; category parent→child expansion |
+| `exported`, `fulfilled` | Yes | Phase 2d; review tab uses both |
+| `assignees` | Yes | Phase 2e |
+| `attachments` (include/exclude) | Yes | Phase 2e; same semantics as fulfilled presence |
+| `recurring` | Yes | Phase 2e; `all` → `recurring = true`, else frequency IN |
+| `type` (income/expense) | Yes | Phase 2e; income uses revenue slug set |
+| `manual` (include/exclude) | Yes | Phase 2e |
+| `amountRange`, `amount` | Yes | Phase 2e; range respects `type`; amount supports gte/lte pair or exact IN |
+| Row `attachments` / `tags` JSON | Yes | Phase 2e; `json_agg` subqueries |
+| Full-text `q` (tsvector) | No | Rust uses ILIKE + exact amount; Drizzle fallback in dual only |
+| `transactions.getReviewCount` | Yes | Phase 2e; mirrors `getTransactionsReadyForExportCount` |
 
 Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` + `packages/ui` only, per [UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md).
 
