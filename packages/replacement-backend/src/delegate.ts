@@ -4175,6 +4175,84 @@ export async function fetchReplacementAppsCreatePlatformLinkToken(
   return mapReplacementToAppMutation(payload);
 }
 
+export type ReplacementInvoiceDefaultSettingsData = {
+  nextInvoiceNumber: string;
+  template: unknown | null;
+  team: { id?: string; baseCurrency?: string | null } | null;
+  user: {
+    id?: string;
+    locale?: string | null;
+    timezone?: string | null;
+    dateFormat?: string | null;
+  } | null;
+};
+
+export async function fetchReplacementInvoiceDefaultSettingsData(
+  baseUrl: string,
+  token: string,
+): Promise<ReplacementInvoiceDefaultSettingsData> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/default-settings-data`,
+    token,
+  );
+  const row = deepCamelCaseKeys(payload) as Record<string, unknown>;
+  return {
+    nextInvoiceNumber: String(row.nextInvoiceNumber ?? "INV-0001"),
+    template: row.template ?? null,
+    team: (row.team as ReplacementInvoiceDefaultSettingsData["team"]) ?? null,
+    user: (row.user as ReplacementInvoiceDefaultSettingsData["user"]) ?? null,
+  };
+}
+
+export async function fetchReplacementBankAccountGetById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementFetch<unknown>(
+      `${root}/api/v1/bank-accounts/${encodeURIComponent(id)}`,
+      token,
+    );
+    return mapReplacementToBankAccountMutation(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function fetchReplacementInboxAccountDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string; scheduleId: string | null } | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementDelete<unknown>(
+      `${root}/api/v1/inbox-accounts/${encodeURIComponent(id)}`,
+      token,
+    );
+    if (payload == null) return null;
+    const row = deepCamelCaseKeys(payload) as {
+      id?: string;
+      scheduleId?: string | null;
+    };
+    if (typeof row.id !== "string") {
+      throw new Error("inbox account delete payload missing id");
+    }
+    return { id: row.id, scheduleId: row.scheduleId ?? null };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

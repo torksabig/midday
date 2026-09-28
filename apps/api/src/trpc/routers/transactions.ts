@@ -26,6 +26,8 @@ import {
   tryDelegateSimilarTransactions,
   tryDelegateSearchTransactionMatch,
   tryDelegateCreateTransaction,
+  tryDelegateBankAccountGetById,
+  tryDelegateBankAccountUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -342,16 +344,34 @@ export const transactionsRouter = createTRPCRouter({
 
   import: protectedProcedure
     .input(importTransactionsSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new Error("Team not found");
       }
 
       // Only update balance/currency for manual accounts (backfill into connected accounts keeps bank-synced balance)
-      const account = await getBankAccountById(db, {
-        id: input.bankAccountId,
-        teamId,
-      });
+      let account: { manual?: boolean | null } | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountGetById(
+          input.bankAccountId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          account = delegated.account as typeof account;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          account = await getBankAccountById(db, {
+            id: input.bankAccountId,
+            teamId,
+          });
+        }
+      } else {
+        account = await getBankAccountById(db, {
+          id: input.bankAccountId,
+          teamId,
+        });
+      }
 
       if (!account) {
         throw new TRPCError({
@@ -370,12 +390,32 @@ export const transactionsRouter = createTRPCRouter({
             ? parsedBalance
             : null;
 
-        await updateBankAccount(db, {
-          id: input.bankAccountId,
-          teamId,
-          currency: input.currency,
-          balance: balance ?? undefined,
-        });
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateBankAccountUpdate(
+            input.bankAccountId,
+            {
+              currency: input.currency,
+              balance: balance ?? undefined,
+            },
+            accessToken,
+          );
+          if (!delegated.delegated) {
+            assertLegacyIdentityFallbackAllowed();
+            await updateBankAccount(db, {
+              id: input.bankAccountId,
+              teamId,
+              currency: input.currency,
+              balance: balance ?? undefined,
+            });
+          }
+        } else {
+          await updateBankAccount(db, {
+            id: input.bankAccountId,
+            teamId,
+            currency: input.currency,
+            balance: balance ?? undefined,
+          });
+        }
       }
 
       return triggerJob(

@@ -36,6 +36,7 @@ import {
   tryDelegateInvoiceDraft,
   tryDelegateInvoiceDelete,
   tryDelegateInvoiceDuplicate,
+  tryDelegateInvoiceDefaultSettingsData,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -386,14 +387,47 @@ export const invoiceRouter = createTRPCRouter({
     }),
 
   defaultSettings: protectedProcedure.query(
-    async ({ ctx: { db, teamId, session, geo } }) => {
-      // Fetch invoice number, template, and team details concurrently
-      const [nextInvoiceNumber, template, team, user] = await Promise.all([
-        getNextInvoiceNumber(db, teamId!),
-        getInvoiceTemplate(db, teamId!),
-        getTeamById(db, teamId!),
-        getUserById(db, session.user.id),
-      ]);
+    async ({ ctx: { db, teamId, session, geo, accessToken } }) => {
+      type TemplateRow = Awaited<ReturnType<typeof getInvoiceTemplate>>;
+      type TeamRow = Awaited<ReturnType<typeof getTeamById>>;
+      type UserRow = Awaited<ReturnType<typeof getUserById>>;
+
+      let nextInvoiceNumber: string;
+      let template: TemplateRow | null | undefined;
+      let team: Pick<NonNullable<TeamRow>, "baseCurrency"> | null | undefined;
+      let user:
+        | Pick<
+            NonNullable<UserRow>,
+            "locale" | "timezone" | "dateFormat"
+          >
+        | null
+        | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated =
+          await tryDelegateInvoiceDefaultSettingsData(accessToken);
+        if (delegated.delegated) {
+          nextInvoiceNumber = delegated.data.nextInvoiceNumber;
+          template = delegated.data.template as TemplateRow;
+          team = delegated.data.team as typeof team;
+          user = delegated.data.user as typeof user;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          [nextInvoiceNumber, template, team, user] = await Promise.all([
+            getNextInvoiceNumber(db, teamId!),
+            getInvoiceTemplate(db, teamId!),
+            getTeamById(db, teamId!),
+            getUserById(db, session.user.id),
+          ]);
+        }
+      } else {
+        [nextInvoiceNumber, template, team, user] = await Promise.all([
+          getNextInvoiceNumber(db, teamId!),
+          getInvoiceTemplate(db, teamId!),
+          getTeamById(db, teamId!),
+          getUserById(db, session.user.id),
+        ]);
+      }
 
       const locale = user?.locale ?? geo?.locale ?? "en";
       const timezone = user?.timezone ?? geo?.timezone ?? "America/New_York";

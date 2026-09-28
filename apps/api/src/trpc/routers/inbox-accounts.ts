@@ -8,6 +8,7 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateInboxAccountsGet,
+  tryDelegateInboxAccountDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -94,11 +95,29 @@ export const inboxAccountsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteInboxAccountSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
-      const data = await deleteInboxAccount(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      let data: { id: string; scheduleId: string | null } | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxAccountDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.result;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          data = await deleteInboxAccount(db, {
+            id: input.id,
+            teamId: teamId!,
+          });
+        }
+      } else {
+        data = await deleteInboxAccount(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
 
       if (data?.scheduleId) {
         await schedules.del(data.scheduleId);

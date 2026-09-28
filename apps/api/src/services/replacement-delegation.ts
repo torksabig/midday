@@ -108,11 +108,15 @@ import {
   fetchReplacementAppsRemoveWhatsApp,
   fetchReplacementAppsCreatePlatformLinkToken,
   fetchReplacementInboxCreate,
+  fetchReplacementInvoiceDefaultSettingsData,
+  fetchReplacementBankAccountGetById,
+  fetchReplacementInboxAccountDelete,
   type ReplacementAppsUpdateInput,
   type ReplacementAppsUpdateSettingsInput,
   type ReplacementRemoveWhatsAppInput,
   type ReplacementPlatformLinkTokenInput,
   type ReplacementInboxCreateInput,
+  type ReplacementInvoiceDefaultSettingsData,
   fetchReplacementInboxBlocklist,
   fetchReplacementInboxBlocklistCreate,
   fetchReplacementInboxBlocklistDelete,
@@ -6303,6 +6307,139 @@ export async function tryDelegateAppsCreatePlatformLinkToken(
       input,
     );
     return { delegated: true, token: result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceDefaultSettingsResult =
+  | { delegated: false }
+  | { delegated: true; data: ReplacementInvoiceDefaultSettingsData };
+
+export async function tryDelegateInvoiceDefaultSettingsData(
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceDefaultSettingsResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const data = await fetchReplacementInvoiceDefaultSettingsData(
+      getReplacementApiUrl(),
+      token,
+    );
+    return { delegated: true, data };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateBankAccountGetByIdResult =
+  | { delegated: false }
+  | { delegated: true; account: unknown | null };
+
+export async function tryDelegateBankAccountGetById(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateBankAccountGetByIdResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const account = await fetchReplacementBankAccountGetById(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, account };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInboxAccountDeleteResult =
+  | { delegated: false }
+  | { delegated: true; result: { id: string; scheduleId: string | null } | null };
+
+export async function tryDelegateInboxAccountDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInboxAccountDeleteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInboxAccountDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, result };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({
