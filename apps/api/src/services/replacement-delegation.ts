@@ -80,6 +80,13 @@ import {
   fetchReplacementInvoiceProductById,
   fetchReplacementInvoiceProductDelete,
   fetchReplacementInvoiceProductIncrementUsage,
+  fetchReplacementInvoiceTemplates,
+  fetchReplacementInvoiceTemplateById,
+  fetchReplacementInvoiceTemplateCount,
+  fetchReplacementInvoiceTemplateCreate,
+  fetchReplacementInvoiceTemplateUpsert,
+  fetchReplacementInvoiceTemplateSetDefault,
+  fetchReplacementInvoiceTemplateDelete,
   type ReplacementInvoiceProductsQuery,
   fetchReplacementCategoryCreate,
   fetchReplacementCategoryUpdate,
@@ -3045,6 +3052,247 @@ export async function tryDelegateInvoiceProductIncrementUsage(
 
   try {
     const result = await fetchReplacementInvoiceProductIncrementUsage(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceTemplatesList(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInvoiceTemplates(baseUrl, token),
+  );
+}
+
+export type DelegateInvoiceTemplateGetResult =
+  | { delegated: false }
+  | { delegated: true; template: unknown | null };
+
+export async function tryDelegateInvoiceTemplateGet(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceTemplateGetResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const template = await fetchReplacementInvoiceTemplateById(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, template };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceTemplateCount(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInvoiceTemplateCount(baseUrl, token),
+  );
+}
+
+export type DelegateInvoiceTemplateCreateResult =
+  | { delegated: false }
+  | { delegated: true; template: unknown };
+
+export async function tryDelegateInvoiceTemplateCreate(
+  input: Record<string, unknown>,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceTemplateCreateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const template = await fetchReplacementInvoiceTemplateCreate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, template };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceTemplateUpsertResult =
+  | { delegated: false }
+  | { delegated: true; template: unknown | null };
+
+export async function tryDelegateInvoiceTemplateUpsert(
+  input: Record<string, unknown>,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceTemplateUpsertResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const template = await fetchReplacementInvoiceTemplateUpsert(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, template };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceTemplateSetDefaultResult =
+  | { delegated: false }
+  | { delegated: true; template: unknown | null };
+
+export async function tryDelegateInvoiceTemplateSetDefault(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceTemplateSetDefaultResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const template = await fetchReplacementInvoiceTemplateSetDefault(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, template };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceTemplateDeleteResult =
+  | { delegated: false }
+  | { delegated: true; result: unknown };
+
+export async function tryDelegateInvoiceTemplateDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceTemplateDeleteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInvoiceTemplateDelete(
       getReplacementApiUrl(),
       token,
       id,

@@ -1324,6 +1324,22 @@ export function mapReplacementToInvoiceProduct(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToInvoiceTemplates(
+  payload: unknown,
+): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
+export function mapReplacementToInvoiceTemplate(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToInvoiceTemplateDelete(
+  payload: unknown,
+): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToTrackerTimerStatus(payload: unknown): unknown {
   return deepCamelCaseKeys(payload);
 }

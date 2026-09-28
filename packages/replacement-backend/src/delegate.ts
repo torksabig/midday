@@ -31,6 +31,9 @@ import {
   mapReplacementToIdOnly,
   mapReplacementToInvoiceProducts,
   mapReplacementToInvoiceProduct,
+  mapReplacementToInvoiceTemplates,
+  mapReplacementToInvoiceTemplate,
+  mapReplacementToInvoiceTemplateDelete,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -128,6 +131,9 @@ export {
   mapReplacementToIdOnly,
   mapReplacementToInvoiceProducts,
   mapReplacementToInvoiceProduct,
+  mapReplacementToInvoiceTemplates,
+  mapReplacementToInvoiceTemplate,
+  mapReplacementToInvoiceTemplateDelete,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -2094,6 +2100,113 @@ export async function fetchReplacementInvoiceProductIncrementUsage(
     {},
   );
   return { success: true };
+}
+
+export async function fetchReplacementInvoiceTemplates(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-templates`,
+    token,
+  );
+  return mapReplacementToInvoiceTemplates(payload);
+}
+
+export async function fetchReplacementInvoiceTemplateById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/invoice-templates/${encodeURIComponent(id)}`;
+  try {
+    const payload = await replacementFetch<unknown>(url, token);
+    return mapReplacementToInvoiceTemplate(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function fetchReplacementInvoiceTemplateCount(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-templates/count`,
+    token,
+  );
+  if (typeof payload === "number") return payload;
+  if (typeof payload === "string") return Number(payload);
+  throw new Error("replacement invoice-templates/count: expected number");
+}
+
+export async function fetchReplacementInvoiceTemplateCreate(
+  baseUrl: string,
+  token: string,
+  input: Record<string, unknown>,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-templates`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceTemplate(payload);
+}
+
+export async function fetchReplacementInvoiceTemplateUpsert(
+  baseUrl: string,
+  token: string,
+  input: Record<string, unknown>,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-templates/upsert`,
+    token,
+    input,
+  );
+  if (payload == null) return null;
+  return mapReplacementToInvoiceTemplate(payload);
+}
+
+export async function fetchReplacementInvoiceTemplateSetDefault(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementPost<unknown>(
+      `${root}/api/v1/invoice-templates/${encodeURIComponent(id)}/set-default`,
+      token,
+      {},
+    );
+    return mapReplacementToInvoiceTemplate(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function fetchReplacementInvoiceTemplateDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/invoice-templates/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToInvoiceTemplateDelete(payload);
 }
 
 export type ReplacementCategoryCreateInput = {
