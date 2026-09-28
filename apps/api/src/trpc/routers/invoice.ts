@@ -34,6 +34,7 @@ import {
   tryDelegateNewCustomersCount,
   tryDelegateSearchInvoiceNumber,
   tryDelegateInvoiceDraft,
+  tryDelegateInvoiceDelete,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -522,7 +523,18 @@ export const invoiceRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteInvoice(db, {
         id: input.id,
         teamId: teamId!,

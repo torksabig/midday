@@ -1302,6 +1302,20 @@ export function mapReplacementToTrackerCurrentTimer(payload: unknown): unknown |
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToTrackerEntriesUpsert(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
+export function mapReplacementToIdOnly(
+  payload: unknown,
+): { id: string } | null {
+  if (payload == null) return null;
+  const row = z
+    .object({ id: z.union([z.string(), z.number()]) })
+    .parse(payload);
+  return { id: String(row.id) };
+}
+
 export function mapReplacementToTrackerTimerStatus(payload: unknown): unknown {
   return deepCamelCaseKeys(payload);
 }

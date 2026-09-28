@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **73 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~28.5%). **35** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `invoice.draft`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **73 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~28.5%). **38** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `invoice.draft`, `invoice.delete`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -103,7 +103,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.newCustomersCount` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.update` | yes | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); no activity feed for paid/canceled |
 | `invoice.draft` | yes | **write** · upsert draft row (AP-29); `getNextInvoiceNumber` stays in Node |
-| `invoice.*` (other) | no | delete, schedule, create/send, etc. |
+| `invoice.delete` | yes | **write** · draft/canceled only (AP-32) |
+| `invoice.*` (other) | no | schedule (Trigger), create/send, duplicate, etc. |
 | `trackerProjects.get` | yes | read · list (Phase 6 slice 1) |
 | `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
 | `trackerProjects.*` (other) | no | CRUD |
@@ -114,7 +115,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `trackerEntries.getTimerStatus` | yes | read · elapsed + summary (Phase 9) |
 | `trackerEntries.startTimer` | yes | **write** · start running entry (AP-27); stops prior running timer |
 | `trackerEntries.stopTimer` | yes | **write** · stop / discard <60s (AP-27) |
-| `trackerEntries.*` (other) | no | upsert, delete |
+| `trackerEntries.upsert` | yes | **write** · multi-date upsert + activity on create (AP-32) |
+| `trackerEntries.delete` | yes | **write** · team-scoped delete (AP-32) |
+| `trackerEntries.*` (other) | no | bulkCreate |
 | `accounting.getSyncStatus` | yes | read · `accounting_sync_records` (Phase 9) |
 | `accounting.getConnections` | yes | read · connected apps (Phase 9) |
 | `accounting.getAccounts` | no | external provider API |
@@ -139,7 +142,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.delete` | yes | **write** · delete tag (AP-22) |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team` (**PUT**), `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/notifications/:id/status` (**PUT**), `/notifications/status` (**PUT** bulk), `/user` (**PUT**), `/user/invites`, `/workers/noop` (**POST** Stage-3 sketch), `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications` (GET + **POST**), `/oauth-applications/:id` (GET + **PUT** + **DELETE**), `/inbox-accounts`, `/document-tags` (GET + **POST**), `/document-tags/:id` (**DELETE**), `/document-tag-assignments` (**POST** + **DELETE**), `/tags` (GET + **POST**), `/tags/:id` (**PUT** + **DELETE**), `/categories` (GET + **POST**), `/categories/:id` (GET + **PUT** + **DELETE**), `/transaction-tags` (**POST** + **DELETE**), `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers` (GET + **POST** upsert), `/customers/:id` (GET + **DELETE**), `/invoices`, `/invoices/draft` (**POST**), `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/timer/start` (**POST**), `/tracker/timer/stop` (**POST**), `/tracker/billable-hours`, `/notification-settings` (GET + **PUT**), `/notification-settings/bulk` (**PUT**), `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team` (**PUT**), `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/notifications/:id/status` (**PUT**), `/notifications/status` (**PUT** bulk), `/user` (**PUT**), `/user/invites`, `/workers/noop` (**POST** Stage-3 sketch), `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications` (GET + **POST**), `/oauth-applications/:id` (GET + **PUT** + **DELETE**), `/inbox-accounts`, `/document-tags` (GET + **POST**), `/document-tags/:id` (**DELETE**), `/document-tag-assignments` (**POST** + **DELETE**), `/tags` (GET + **POST**), `/tags/:id` (**PUT** + **DELETE**), `/categories` (GET + **POST**), `/categories/:id` (GET + **PUT** + **DELETE**), `/transaction-tags` (**POST** + **DELETE**), `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers` (GET + **POST** upsert), `/customers/:id` (GET + **DELETE**), `/invoices`, `/invoices/draft` (**POST**), `/invoices/:id` (GET + **PUT** + **DELETE**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/entries/upsert` (**POST**), `/tracker/entries/:id` (**DELETE**), `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/timer/start` (**POST**), `/tracker/timer/stop` (**POST**), `/tracker/billable-hours`, `/notification-settings` (GET + **PUT**), `/notification-settings/bulk` (**PUT**), `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -345,10 +348,11 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-29 | DONE | `invoice.draft` (number gen stays Node) | write |
 | AP-30 | DONE | `transactionCategories.create`/`update`/`delete` | write |
 | AP-31 | DONE | `oauthApplications.get`/`create`/`update`/`delete` (SHA-256 secret hash) | write+read |
+| AP-32 | DONE | `trackerEntries.upsert`/`delete` + `invoice.delete` | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** trackerEntries.upsert/delete, invoice delete/schedule (Trigger stays Node), then invoiceTemplate / invoiceProducts Postgres CRUD. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** invoice updateSchedule/cancelSchedule (Trigger stays Node; DB to Rust), invoice.duplicate, invoiceTemplate / invoiceProducts Postgres CRUD. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
 **Blocked:** AP-15 `bankAccounts.getDetails` (decrypt); `user.delete` (Supabase admin + Resend); `apiKeys.upsert` email side-effect; live bank OAuth token exchange; accounting.getAccounts / external provider APIs; email/Resend sends; oauth authorize / updateApprovalStatus (Resend).
 
-**Autopilot AP-12–31 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Autopilot AP-12–32 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.

@@ -14,6 +14,8 @@ import {
   tryDelegateTrackerCurrentTimer,
   tryDelegateTrackerEntriesByDate,
   tryDelegateTrackerEntriesByRange,
+  tryDelegateTrackerEntriesUpsert,
+  tryDelegateTrackerEntryDelete,
   tryDelegateTrackerStartTimer,
   tryDelegateTrackerStopTimer,
   tryDelegateTrackerTimerStatus,
@@ -106,7 +108,18 @@ export const trackerEntriesRouter = createTRPCRouter({
 
   upsert: protectedProcedure
     .input(upsertTrackerEntriesSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerEntriesUpsert(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.entries;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return upsertTrackerEntries(db, {
         ...input,
         teamId: teamId!,
@@ -115,7 +128,18 @@ export const trackerEntriesRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteTrackerEntrySchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerEntryDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteTrackerEntry(db, {
         teamId: teamId!,
         id: input.id,

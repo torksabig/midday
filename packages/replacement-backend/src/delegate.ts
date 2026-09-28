@@ -27,6 +27,8 @@ import {
   mapReplacementToTrackerProjectById,
   mapReplacementToTrackerCurrentTimer,
   mapReplacementToTrackerTimerStatus,
+  mapReplacementToTrackerEntriesUpsert,
+  mapReplacementToIdOnly,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -120,6 +122,8 @@ export {
   mapReplacementToTrackerProjectById,
   mapReplacementToTrackerCurrentTimer,
   mapReplacementToTrackerTimerStatus,
+  mapReplacementToTrackerEntriesUpsert,
+  mapReplacementToIdOnly,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -1519,6 +1523,66 @@ export async function fetchReplacementTrackerStopTimer(
     },
   );
   return mapReplacementToTrackerCurrentTimer(payload ?? {});
+}
+
+export type ReplacementTrackerUpsertInput = {
+  id?: string;
+  start: string;
+  stop: string;
+  dates: string[];
+  assignedId?: string | null;
+  projectId: string;
+  description?: string | null;
+  duration: number;
+};
+
+export async function fetchReplacementTrackerEntriesUpsert(
+  baseUrl: string,
+  token: string,
+  input: ReplacementTrackerUpsertInput,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tracker/entries/upsert`,
+    token,
+    {
+      id: input.id,
+      start: input.start,
+      stop: input.stop,
+      dates: input.dates,
+      assignedId: input.assignedId ?? undefined,
+      projectId: input.projectId,
+      description: input.description ?? undefined,
+      duration: input.duration,
+    },
+  );
+  return mapReplacementToTrackerEntriesUpsert(payload);
+}
+
+export async function fetchReplacementTrackerEntryDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/tracker/entries/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToIdOnly(payload);
+}
+
+export async function fetchReplacementInvoiceDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/invoices/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToIdOnly(payload);
 }
 
 export type ReplacementAccountingSyncStatusQuery = {

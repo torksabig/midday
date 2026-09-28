@@ -32,6 +32,9 @@ import {
   fetchReplacementTrackerTimerStatus,
   fetchReplacementTrackerStartTimer,
   fetchReplacementTrackerStopTimer,
+  fetchReplacementTrackerEntriesUpsert,
+  fetchReplacementTrackerEntryDelete,
+  fetchReplacementInvoiceDelete,
   fetchReplacementAccountingSyncStatus,
   fetchReplacementAccountingConnections,
   fetchReplacementBankConnections,
@@ -144,6 +147,7 @@ import {
   type ReplacementTrackerTimerQuery,
   type ReplacementStartTimerInput,
   type ReplacementStopTimerInput,
+  type ReplacementTrackerUpsertInput,
   type ReplacementAccountingSyncStatusQuery,
   type ReplacementBankConnectionsListQuery,
 } from "@midday/replacement-backend";
@@ -1434,6 +1438,137 @@ export async function tryDelegateTrackerStopTimer(
       input,
     );
     return { delegated: true, entry };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateTrackerUpsertResult =
+  | { delegated: false }
+  | { delegated: true; entries: unknown[] };
+
+export async function tryDelegateTrackerEntriesUpsert(
+  input: ReplacementTrackerUpsertInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTrackerUpsertResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const entries = await fetchReplacementTrackerEntriesUpsert(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, entries };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateIdOnlyResult =
+  | { delegated: false }
+  | { delegated: true; result: { id: string } | null };
+
+export async function tryDelegateTrackerEntryDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateIdOnlyResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementTrackerEntryDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateIdOnlyResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInvoiceDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, result };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({
