@@ -4253,6 +4253,45 @@ export async function fetchReplacementInboxAccountDelete(
   }
 }
 
+export async function fetchReplacementCustomerStartEnrichment(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ queued: true }> {
+  const root = trimBase(baseUrl);
+  await replacementPost<unknown>(
+    `${root}/api/v1/customers/${encodeURIComponent(id)}/start-enrichment`,
+    token,
+    {},
+  );
+  return { queued: true };
+}
+
+export async function fetchReplacementDocumentProcessingStatus(
+  baseUrl: string,
+  token: string,
+  id: string,
+  processingStatus: string,
+): Promise<{ id: string; processingStatus: string }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/documents/${encodeURIComponent(id)}/processing-status`,
+    token,
+    { processingStatus },
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    id?: string;
+    processingStatus?: string;
+  };
+  if (typeof row.id !== "string") {
+    throw new Error("document processing-status payload missing id");
+  }
+  return {
+    id: row.id,
+    processingStatus: row.processingStatus ?? processingStatus,
+  };
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

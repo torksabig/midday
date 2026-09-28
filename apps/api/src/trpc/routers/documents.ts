@@ -15,6 +15,7 @@ import {
   tryDelegateDocumentsGetRelated,
   tryDelegateDocumentsCheckAttachments,
   tryDelegateDocumentsDelete,
+  tryDelegateDocumentProcessingStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -217,12 +218,31 @@ export const documentsRouter = createTRPCRouter({
 
   reprocessDocument: protectedProcedure
     .input(reprocessDocumentSchema)
-    .mutation(async ({ ctx: { teamId, db }, input }) => {
-      // Get the document to reprocess
-      const document = await getDocumentById(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ ctx: { teamId, db, accessToken }, input }) => {
+      type DocRow = Awaited<ReturnType<typeof getDocumentById>>;
+      let document: DocRow | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsGetById(
+          input.id,
+          undefined,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          document = delegated.document as DocRow;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          document = await getDocumentById(db, {
+            id: input.id,
+            teamId: teamId!,
+          });
+        }
+      } else {
+        document = await getDocumentById(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
 
       if (!document) {
         throw new TRPCError({
@@ -231,12 +251,10 @@ export const documentsRouter = createTRPCRouter({
         });
       }
 
-      // Get mimetype from metadata
       const mimetype =
         (document.metadata as { mimetype?: string })?.mimetype ??
         "application/octet-stream";
 
-      // Validate pathTokens exists - required for job processing
       if (!document.pathTokens || document.pathTokens.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -244,13 +262,26 @@ export const documentsRouter = createTRPCRouter({
         });
       }
 
-      // Check if it's a supported file type
-      if (!isMimeTypeSupportedForProcessing(mimetype)) {
-        // Mark unsupported files as completed
+      const setStatus = async (processingStatus: "completed" | "pending") => {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateDocumentProcessingStatus(
+            input.id,
+            processingStatus,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
         await updateDocumentProcessingStatus(db, {
           id: input.id,
-          processingStatus: "completed",
+          processingStatus,
         });
+      };
+
+      if (!isMimeTypeSupportedForProcessing(mimetype)) {
+        await setStatus("completed");
         return {
           success: true,
           skipped: true,
@@ -258,17 +289,8 @@ export const documentsRouter = createTRPCRouter({
         };
       }
 
-      // Reset status to pending
-      await updateDocumentProcessingStatus(db, {
-        id: input.id,
-        processingStatus: "pending",
-      });
+      await setStatus("pending");
 
-      // Trigger reprocessing with unique jobId (includes timestamp)
-      // Unlike initial processing which uses deterministic IDs to prevent duplicate uploads,
-      // reprocessing MUST use unique IDs because BullMQ won't create a new job if an ID exists.
-      // Completed jobs are retained for 24h and failed for 7 days, so deterministic IDs
-      // would cause retries within these windows to silently fail (returns existing job).
       const jobResult = await triggerJob(
         "process-document",
         {

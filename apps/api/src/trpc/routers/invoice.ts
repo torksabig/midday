@@ -828,7 +828,7 @@ export const invoiceRouter = createTRPCRouter({
 
   remind: protectedProcedure
     .input(remindInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       await triggerJob(
         "send-invoice-reminder",
         {
@@ -836,6 +836,20 @@ export const invoiceRouter = createTRPCRouter({
         },
         "invoices",
       );
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceUpdate(
+          {
+            id: input.id,
+            reminderSentAt: input.date,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return updateInvoice(db, {
         id: input.id,

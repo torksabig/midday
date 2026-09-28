@@ -117,6 +117,8 @@ export {
   type ReplacementInvoiceDefaultSettingsData,
   fetchReplacementBankAccountGetById,
   fetchReplacementInboxAccountDelete,
+  fetchReplacementCustomerStartEnrichment,
+  fetchReplacementDocumentProcessingStatus,
   fetchReplacementInboxBlocklist,
   fetchReplacementInboxBlocklistCreate,
   fetchReplacementInboxBlocklistDelete,

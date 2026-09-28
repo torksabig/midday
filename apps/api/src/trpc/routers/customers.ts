@@ -18,6 +18,7 @@ import {
   tryDelegateCustomerInvoiceSummary,
   tryDelegateCustomerCancelEnrichment,
   tryDelegateCustomerClearEnrichment,
+  tryDelegateCustomerStartEnrichment,
   tryDelegateTogglePortal,
   tryDelegatePortalCustomer,
   tryDelegatePortalInvoices,
@@ -226,37 +227,55 @@ export const customersRouter = createTRPCRouter({
 
   enrich: protectedProcedure
     .input(enrichCustomerSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
-      const customer = await getCustomerById(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      let customerId = input.id;
+      let delegatedSql = false;
 
-      if (!customer) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerStartEnrichment(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          delegatedSql = true;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
       }
 
-      if (!customer.website && !customer.email) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Customer has no website or email - enrichment requires at least one",
+      if (!delegatedSql) {
+        const customer = await getCustomerById(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+
+        if (!customer) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Customer not found",
+          });
+        }
+
+        if (!customer.website && !customer.email) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Customer has no website or email - enrichment requires at least one",
+          });
+        }
+
+        customerId = customer.id;
+
+        await updateCustomerEnrichmentStatus(db, {
+          customerId: customer.id,
+          status: "pending",
         });
       }
-
-      // Set status to pending first, then trigger job
-      await updateCustomerEnrichmentStatus(db, {
-        customerId: customer.id,
-        status: "pending",
-      });
 
       await triggerJob(
         "enrich-customer",
         {
-          customerId: customer.id,
+          customerId,
           teamId: teamId!,
         },
         "customers",
