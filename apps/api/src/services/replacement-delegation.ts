@@ -42,6 +42,7 @@ import {
   fetchReplacementTransactionUpdate,
   fetchReplacementTransactionsUpdateMany,
   fetchReplacementNotificationsList,
+  fetchReplacementNotificationUpdateStatus,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -117,6 +118,17 @@ export function assertLegacyIdentityFallbackAllowed(): void {
         "Replacement backend delegation failed (legacy fallback disabled in replacement mode)",
     });
   }
+}
+
+/**
+ * AP-20: procedure/router is 100% on Rust — dual may not fall back to Drizzle.
+ * Legacy mode still uses Drizzle (callers only invoke this after shouldDelegate).
+ */
+export function assertNoLegacyFallback(procedurePath: string): never {
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: `Replacement backend delegation failed (legacy fallback removed for ${procedurePath})`,
+  });
 }
 
 export async function tryDelegateUserMe(
@@ -1528,6 +1540,53 @@ export async function tryDelegateNotificationsList(
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementNotificationsList(baseUrl, token, input),
   );
+}
+
+export type DelegateNotificationUpdateStatusResult =
+  | { delegated: false }
+  | { delegated: true; notification: unknown | null };
+
+export async function tryDelegateNotificationUpdateStatus(
+  activityId: string,
+  status: "unread" | "read" | "archived",
+  sessionAccessToken?: string | null,
+): Promise<DelegateNotificationUpdateStatusResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const notification = await fetchReplacementNotificationUpdateStatus(
+      getReplacementApiUrl(),
+      token,
+      activityId,
+      status,
+    );
+    return { delegated: true, notification };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
 }
 
 export async function tryDelegateTransactionsUpdateMany(

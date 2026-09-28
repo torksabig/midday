@@ -31,6 +31,7 @@ import {
   mapReplacementToBankAccountTransactionCount,
   buildReplacementTransactionUpdateBody,
   mapReplacementToNotificationsList,
+  mapReplacementToNotification,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -700,6 +701,28 @@ describe("replacement mappers", () => {
     });
     expect(mapped.data[0]?.createdAt).toBe("2024-01-01T00:00:00.000Z");
     expect(mapped.meta.hasPreviousPage).toBe(true);
+  });
+
+  test("mapReplacementToNotification maps a single activity row", () => {
+    const mapped = mapReplacementToNotification({
+      id: "a1",
+      created_at: "2024-01-01T00:00:00.000Z",
+      team_id: "team-1",
+      user_id: "user-1",
+      type: "transactions_created",
+      priority: 3,
+      group_id: null,
+      source: "system",
+      metadata: { count: 2 },
+      status: "read",
+      last_used_at: null,
+    });
+    expect(mapped).toMatchObject({
+      id: "a1",
+      status: "read",
+      teamId: "team-1",
+      createdAt: "2024-01-01T00:00:00.000Z",
+    });
   });
 
   test("buildReplacementTransactionUpdateBody omits id and undefined fields", () => {

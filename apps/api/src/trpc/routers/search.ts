@@ -3,7 +3,7 @@ import {
   searchAttachmentsSchema,
 } from "@api/schemas/search";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateSearchGlobal,
   tryDelegateSearchAttachments,
 } from "@api/services/replacement-delegation";
@@ -32,7 +32,7 @@ export const searchRouter = createTRPCRouter({
         ? 0.01
         : input.relevanceThreshold;
 
-      let results: Awaited<ReturnType<typeof globalSearchQuery>> | null = null;
+      let results: Awaited<ReturnType<typeof globalSearchQuery>>;
 
       if (shouldDelegateToReplacementBackend()) {
         const delegated = await tryDelegateSearchGlobal(
@@ -45,14 +45,12 @@ export const searchRouter = createTRPCRouter({
           },
           accessToken,
         );
-        if (delegated !== null) {
-          results = delegated;
-        } else {
-          assertLegacyIdentityFallbackAllowed();
+        if (delegated === null) {
+          // AP-20: search is 100% delegated — no dual FTS Drizzle fallback
+          assertNoLegacyFallback("search.global");
         }
-      }
-
-      if (results === null) {
+        results = delegated;
+      } else {
         results = await globalSearchQuery(db, {
           teamId: teamId!,
           ...input,
@@ -61,6 +59,7 @@ export const searchRouter = createTRPCRouter({
         });
       }
 
+      // LLM semantic enhancement stays in apps/api (not a Rust FTS substitute)
       if (shouldUseLLMFilters && !results.length) {
         const filters = await generateLLMFilters(searchTerm);
 
@@ -93,7 +92,8 @@ export const searchRouter = createTRPCRouter({
         if (delegated) {
           return delegated;
         }
-        assertLegacyIdentityFallbackAllowed();
+        // AP-20: search is 100% delegated — no dual Drizzle fallback
+        assertNoLegacyFallback("search.attachments");
       }
 
       const [inboxResults, invoiceResults] = await Promise.all([

@@ -1,4 +1,7 @@
-import { assertLegacyIdentityFallbackAllowed, tryDelegateOverviewSummary } from "@api/services/replacement-delegation";
+import {
+  assertNoLegacyFallback,
+  tryDelegateOverviewSummary,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { getOverviewSummary } from "@midday/db/queries";
@@ -10,7 +13,8 @@ export const overviewRouter = createTRPCRouter({
       if (delegated) {
         return delegated;
       }
-      assertLegacyIdentityFallbackAllowed();
+      // AP-20: overview is 100% delegated — no dual Drizzle fallback
+      assertNoLegacyFallback("overview.summary");
     }
 
     return getOverviewSummary(db, { teamId: teamId! });

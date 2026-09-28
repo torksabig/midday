@@ -1627,20 +1627,35 @@ export function mapReplacementToNotificationsList(
       hasPreviousPage: parsed.meta.has_previous_page,
       hasNextPage: parsed.meta.has_next_page,
     },
-    data: parsed.data.map((row) => ({
-      id: row.id,
-      createdAt: row.created_at,
-      teamId: row.team_id,
-      userId: row.user_id ?? null,
-      type: row.type,
-      priority: row.priority,
-      groupId: row.group_id ?? null,
-      source: row.source,
-      metadata: row.metadata,
-      status: row.status,
-      lastUsedAt: row.last_used_at ?? null,
-    })),
+    data: parsed.data.map((row) => mapNotificationRow(row)),
   };
+}
+
+export type MiddayNotificationShape =
+  MiddayNotificationsListShape["data"][number];
+
+function mapNotificationRow(
+  row: z.infer<typeof replacementNotificationRowSchema>,
+): MiddayNotificationShape {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    teamId: row.team_id,
+    userId: row.user_id ?? null,
+    type: row.type,
+    priority: row.priority,
+    groupId: row.group_id ?? null,
+    source: row.source,
+    metadata: row.metadata,
+    status: row.status,
+    lastUsedAt: row.last_used_at ?? null,
+  };
+}
+
+export function mapReplacementToNotification(
+  payload: unknown,
+): MiddayNotificationShape {
+  return mapNotificationRow(replacementNotificationRowSchema.parse(payload));
 }
 
 export function mapReplacementToTransactionsUpdateMany(

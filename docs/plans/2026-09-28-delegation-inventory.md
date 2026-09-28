@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **8** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **9** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `notifications.updateStatus`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -19,7 +19,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `team.teamInvites` | yes | read · AP-13 |
 | `team.*` (other) | no | writes / admin reads |
 | `notifications.list` | yes | read · activities feed (AP-12) |
-| `notifications.*` (other) | no | updateStatus, updateAllStatus writes |
+| `notifications.updateStatus` | yes | **write** · single activity status (AP-20 follow-on) |
+| `notifications.*` (other) | no | updateAllStatus write |
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
@@ -106,7 +107,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.*` (other) | no | CRUD |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/notifications/:id/status` (**PUT**), `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -225,6 +226,20 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `trackerProjects.get` `q` | FTS `to_tsquery` on `tp.fts` (was ILIKE-only) |
 | `transactions.update` activity feed | Inserts `transactions_categorized` / `transactions_assigned` into `activities` |
 
+### AP-20 — delete Drizzle fallback (100% delegated routers)
+
+| Router | Change |
+| --- | --- |
+| `overview` (`summary` only) | Dual no longer falls back to `getOverviewSummary`; legacy mode still uses Drizzle |
+| `search` (`global` + `attachments`) | Dual no longer falls back to FTS/attachments Drizzle; LLM semantic post-pass on `search.global` kept in `apps/api` |
+
+### `notifications.updateStatus` write parity (AP-20 follow-on)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| Single activity status update | Yes · `PUT /notifications/:id/status` | Same |
+| `updateAllStatus` bulk | **No** | Yes |
+
 ## Autopilot queue
 
 Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
@@ -241,10 +256,10 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-17 | DONE | `transactions.deleteMany` (manual only) | write |
 | AP-18 | DONE | Inbox match + delete(+many); ignore→done (Rust) | write |
 | AP-19 | DONE | FTS `q` (tx + tracker) + tx update activity feed | parity |
-| AP-20 | PENDING | Delete Drizzle for routers at 100% delegation | delete |
+| AP-20 | DONE | Delete Drizzle fallback for `overview` + `search` (100% delegated); + `notifications.updateStatus` write | delete + write |
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** AP-20 (delete Drizzle for 100% delegated routers) — **skip per autopilot scope**; pause after AP-19.
+**Next slice:** AP-STAGE3 (Rust workers) — only with explicit go-ahead; or continue inventory gaps (`notifications.updateAllStatus`, `user.update` / team writes). Prefer more write gaps before Stage 3/4.
 
-**Autopilot AP-12–19 complete.** Skip AP-20 / AP-STAGE4 until explicit decommission.
+**Autopilot AP-12–20 complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.

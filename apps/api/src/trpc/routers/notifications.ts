@@ -6,6 +6,7 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateNotificationsList,
+  tryDelegateNotificationUpdateStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -46,7 +47,19 @@ export const notificationsRouter = createTRPCRouter({
 
   updateStatus: protectedProcedure
     .input(updateNotificationStatusSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNotificationUpdateStatus(
+          input.activityId,
+          input.status,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.notification;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateActivityStatus(db, input.activityId, input.status, teamId!);
     }),
 

@@ -47,12 +47,14 @@ import {
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
   mapReplacementToNotificationsList,
+  mapReplacementToNotification,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
   mapReplacementToInboxAccountsGet,
   type MiddayAccountingConnectionShape,
   type MiddayNotificationsListShape,
+  type MiddayNotificationShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -125,6 +127,7 @@ export {
   mapReplacementToInboxAccountsGet,
   type MiddayBankAccountsGetShape,
   type MiddayNotificationsListShape,
+  type MiddayNotificationShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
@@ -1675,6 +1678,24 @@ export async function fetchReplacementNotificationsList(
     token,
   );
   return mapReplacementToNotificationsList(payload);
+}
+
+export async function fetchReplacementNotificationUpdateStatus(
+  baseUrl: string,
+  token: string,
+  activityId: string,
+  status: "unread" | "read" | "archived",
+): Promise<MiddayNotificationShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/notifications/${encodeURIComponent(activityId)}/status`,
+    token,
+    { status },
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToNotification(payload);
 }
 
 export async function fetchReplacementTransactionsUpdateMany(

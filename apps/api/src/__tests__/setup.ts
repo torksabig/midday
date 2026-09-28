@@ -665,6 +665,23 @@ export const mocks = {
   ) as MockFn,
   polarSubscriptionsUpdate: mock(() => Promise.resolve({})) as MockFn,
 
+  // Overview
+  getOverviewSummary: mock(() =>
+    Promise.resolve({
+      openInvoices: { count: 0, totalAmount: 0, currency: "USD" },
+      unbilledTime: {
+        totalDuration: 0,
+        totalAmount: 0,
+        projectCount: 0,
+        currency: "USD",
+      },
+      inboxPending: { count: 0 },
+      transactionsToReview: { count: 0 },
+      cashBalance: { totalBalance: 0, currency: "USD", accountCount: 0 },
+      runway: 0,
+    }),
+  ) as MockFn,
+
   // Notifications (activities)
   getActivities: mock(() =>
     Promise.resolve({
@@ -1118,6 +1135,7 @@ const dbQueriesMock = new Proxy(
     hasUserEverAuthorizedApp: createDefaultMock(),
     updateOAuthApplicationstatus: createDefaultMock(),
 
+    getOverviewSummary: mocks.getOverviewSummary,
     getBillableHours: mocks.getBillableHours,
     getCashBalance: mocks.getCashBalance,
     getCashFlow: mocks.getCashFlow,

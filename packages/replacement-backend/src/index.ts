@@ -74,6 +74,7 @@ export {
   fetchReplacementTransactionUpdate,
   fetchReplacementTransactionsUpdateMany,
   fetchReplacementNotificationsList,
+  fetchReplacementNotificationUpdateStatus,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -202,7 +203,9 @@ export {
 } from "./delegate";
 export {
   type MiddayNotificationsListShape,
+  type MiddayNotificationShape,
   mapReplacementToNotificationsList,
+  mapReplacementToNotification,
   mapReplacementToTransactionsUpdateMany,
 } from "./mappers";
 export {
