@@ -2262,6 +2262,82 @@ export async function fetchReplacementCustomerDelete(
   return mapReplacementToCustomerById(payload);
 }
 
+export type ReplacementCustomerUpsertInput = {
+  id?: string;
+  name: string;
+  email: string;
+  billingEmail?: string | null;
+  country?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  note?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  contact?: string | null;
+  vatNumber?: string | null;
+  countryCode?: string | null;
+  tags?: { id: string; name?: string }[] | null;
+};
+
+export async function fetchReplacementCustomerUpsert(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCustomerUpsertInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/customers`,
+    token,
+    input,
+  );
+  return mapReplacementToCustomerById(payload);
+}
+
+export async function fetchReplacementNotificationSettingUpsert(
+  baseUrl: string,
+  token: string,
+  input: {
+    notificationType: string;
+    channel: string;
+    enabled: boolean;
+  },
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/notification-settings`,
+    token,
+    input,
+  );
+  if (payload == null) {
+    throw new Error("notification-settings upsert returned empty");
+  }
+  return payload;
+}
+
+export async function fetchReplacementNotificationSettingsBulkUpdate(
+  baseUrl: string,
+  token: string,
+  updates: {
+    notificationType: string;
+    channel: string;
+    enabled: boolean;
+  }[],
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/notification-settings/bulk`,
+    token,
+    { updates },
+  );
+  if (!Array.isArray(payload)) {
+    throw new Error("notification-settings bulk payload must be an array");
+  }
+  return payload;
+}
+
 export async function fetchReplacementCategoryById(
   baseUrl: string,
   token: string,

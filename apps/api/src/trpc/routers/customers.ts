@@ -14,6 +14,7 @@ import {
   tryDelegateCustomersGet,
   tryDelegateCustomersGetById,
   tryDelegateCustomerDelete,
+  tryDelegateCustomerUpsert,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -113,23 +114,62 @@ export const customersRouter = createTRPCRouter({
 
   upsert: protectedProcedure
     .input(upsertCustomerSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
       const isNewCustomer = !input.id;
 
-      const customer = await upsertCustomer(db, {
-        ...input,
-        teamId: teamId!,
-        userId: session.user.id,
-      });
+      let customer: Awaited<ReturnType<typeof upsertCustomer>>;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerUpsert(
+          {
+            id: input.id,
+            name: input.name,
+            email: input.email,
+            billingEmail: input.billingEmail,
+            country: input.country,
+            addressLine1: input.addressLine1,
+            addressLine2: input.addressLine2,
+            city: input.city,
+            state: input.state,
+            zip: input.zip,
+            note: input.note,
+            website: input.website,
+            phone: input.phone,
+            contact: input.contact,
+            vatNumber: input.vatNumber,
+            countryCode: input.countryCode,
+            tags: input.tags,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          customer = delegated.customer as Awaited<
+            ReturnType<typeof upsertCustomer>
+          >;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          customer = await upsertCustomer(db, {
+            ...input,
+            teamId: teamId!,
+            userId: session.user.id,
+          });
+        }
+      } else {
+        customer = await upsertCustomer(db, {
+          ...input,
+          teamId: teamId!,
+          userId: session.user.id,
+        });
+      }
 
       // Auto-trigger enrichment for new customers with a website or email
+      // (job queue stays in Node — Rust path is DB-only)
       if (
         isNewCustomer &&
         (customer?.website || customer?.email) &&
         customer?.id
       ) {
         try {
-          // Set status to pending first, then trigger job
           await updateCustomerEnrichmentStatus(db, {
             customerId: customer.id,
             status: "pending",
@@ -145,15 +185,13 @@ export const customersRouter = createTRPCRouter({
             { attempts: 1 },
           );
         } catch (error) {
-          // Log but don't fail the customer creation
           logger.error("Failed to trigger customer enrichment", {
             error: error instanceof Error ? error.message : String(error),
           });
-          // Reset status since job wasn't queued
           await updateCustomerEnrichmentStatus(db, {
             customerId: customer.id,
             status: null,
-          }).catch(() => {}); // Ignore errors on cleanup
+          }).catch(() => {});
         }
       }
 

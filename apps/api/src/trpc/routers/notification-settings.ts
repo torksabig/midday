@@ -6,6 +6,8 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateNotificationSettingsGet,
+  tryDelegateNotificationSettingsUpdate,
+  tryDelegateNotificationSettingsBulkUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -49,7 +51,18 @@ export const notificationSettingsRouter = createTRPCRouter({
   // Update a single notification setting
   update: protectedProcedure
     .input(updateNotificationSettingSchema)
-    .mutation(async ({ ctx: { db, session, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNotificationSettingsUpdate(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.setting;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return upsertNotificationSetting(db, {
         userId: session.user.id,
         teamId: teamId!,
@@ -60,7 +73,18 @@ export const notificationSettingsRouter = createTRPCRouter({
   // Bulk update multiple notification settings
   bulkUpdate: protectedProcedure
     .input(bulkUpdateNotificationSettingsSchema)
-    .mutation(async ({ ctx: { db, session, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNotificationSettingsBulkUpdate(
+          input.updates,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.settings;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return bulkUpdateNotificationSettings(
         db,
         session.user.id,
