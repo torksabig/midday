@@ -3,12 +3,16 @@ import {
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayTransactionsGetShape,
 } from "./mappers";
 
 export {
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
 };
@@ -105,6 +109,43 @@ export async function fetchReplacementTeamCurrent(
     `${root}/api/v1/team/current`,
     token,
   );
+}
+
+export type ReplacementTransactionsListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  q?: string | null;
+};
+
+function buildTransactionsListQuery(
+  params: ReplacementTransactionsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) {
+    search.set("cursor", params.cursor);
+  }
+  if (params.pageSize != null) {
+    search.set("pageSize", String(params.pageSize));
+  }
+  if (params.q) {
+    search.set("q", params.q);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementTransactionsList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTransactionsListQuery,
+): Promise<MiddayTransactionsGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildTransactionsListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/transactions${query}`,
+    token,
+  );
+  return mapReplacementToTransactionsGet(payload);
 }
 
 export { shouldDelegateToReplacementBackend };

@@ -14,7 +14,12 @@ import {
   updateTransactionSchema,
   updateTransactionsSchema,
 } from "@api/schemas/transactions";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateTransactionsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   createTransaction,
   deleteTransactions,
@@ -54,7 +59,22 @@ const csvMappingInFlight = new Map<
 export const transactionsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getTransactionsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionsGet(
+          {
+            cursor: input.cursor,
+            pageSize: input.pageSize,
+            q: input.q,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTransactions(db, {
         ...input,
         exported: input.exported ?? undefined,

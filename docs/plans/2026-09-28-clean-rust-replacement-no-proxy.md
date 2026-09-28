@@ -158,6 +158,7 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Backend mode** | `MIDDAY_BACKEND_MODE` = `legacy` \| `dual` \| `replacement` on `apps/api` | Env removed; no permanent dual |
 | **Delegation package** | `@midday/replacement-backend` REST client + Zod mappers | Temporary; delete with `apps/api` |
 | **Identity cutover** | **Done (replacement mode):** `user.me` / `team.current` use Rust only (throw on failure; no Drizzle). **Dual:** delegate first, Drizzle fallback. Demo bearer still available for smoke when no session. | Delete Drizzle identity paths entirely when `apps/api` goes away |
+| **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` delegates to `GET /api/v1/transactions` when dual/replacement; Postgres via `MIDDAY_DATABASE_URL` for Supabase sessions. Filters beyond `q` / cursor / pageSize still Drizzle-only in dual fallback. | Full filter parity + delete Drizzle list |
 | **Auth on Rust** | **Done:** Supabase HS256 + JWKS path; session bearer from tRPC `accessToken` | Same |
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
 | **UI** | Frozen by policy; workspace may diverge from Downloads baseline | Same — sync UI from Downloads; no backend-driven UI redesign |
@@ -180,10 +181,10 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 
 ---
 
-## Immediate next engineering step (Phase 2)
+## Immediate next engineering step (Phase 2 → 3)
 
-1. In **`fintech/clone`**: implement **transactions list** (read path) against Midday Postgres / team scope, matching tRPC return shape.
-2. In **`apps/api`**: delegate `transactions.*` read procedures when `MIDDAY_BACKEND_MODE` is dual/replacement; no Drizzle in `replacement` mode.
+1. **Phase 2 list read** — landed: clone paginated `GET /api/v1/transactions`, tRPC `transactions.get` delegation, mapper tests.
+2. Next: `transactions.getById`, remaining list filters (status, tags, sort columns), attachments/tags JSON on Rust path.
 3. Contract tests + smoke; delete Drizzle for transactions when stable.
 
 Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` + `packages/ui` only, per [UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md).

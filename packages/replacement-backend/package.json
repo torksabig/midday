@@ -15,6 +15,9 @@
     "./delegate": "./src/delegate.ts",
     "./mappers": "./src/mappers.ts"
   },
+  "dependencies": {
+    "zod": "catalog:"
+  },
   "devDependencies": {
     "typescript": "catalog:"
   }
