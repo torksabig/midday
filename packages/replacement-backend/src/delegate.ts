@@ -34,6 +34,7 @@ import {
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
+  deepCamelCaseKeys,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -134,6 +135,7 @@ export {
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
+  deepCamelCaseKeys,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -2474,6 +2476,78 @@ export async function fetchReplacementOAuthApplicationDelete(
     return null;
   }
   return mapReplacementToOAuthApplicationDelete(payload);
+}
+
+export async function fetchReplacementOAuthApplicationRegenerateSecret(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string; clientId: string; clientSecret: string } | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementPost<unknown>(
+      `${root}/api/v1/oauth-applications/${encodeURIComponent(id)}/regenerate-secret`,
+      token,
+      {},
+    );
+    const mapped = deepCamelCaseKeys(
+      payload,
+    ) as { id?: string; clientId?: string; clientSecret?: string };
+    if (!mapped?.id || !mapped.clientId || !mapped.clientSecret) {
+      return null;
+    }
+    return {
+      id: mapped.id,
+      clientId: mapped.clientId,
+      clientSecret: mapped.clientSecret,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export type ReplacementTrackerProjectUpsertInput = {
+  id?: string;
+  name: string;
+  description?: string | null;
+  estimate?: number | null;
+  billable?: boolean | null;
+  rate?: number | null;
+  currency?: string | null;
+  customerId?: string | null;
+  tags?: { id: string; value?: string }[] | null;
+};
+
+export async function fetchReplacementTrackerProjectUpsert(
+  baseUrl: string,
+  token: string,
+  input: ReplacementTrackerProjectUpsertInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tracker/projects`,
+    token,
+    input,
+  );
+  if (payload == null) return null;
+  return mapReplacementToTrackerProjectById(payload);
+}
+
+export async function fetchReplacementTrackerProjectDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/tracker/projects/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) return null;
+  return mapReplacementToIdOnly(payload);
 }
 
 export async function fetchReplacementInboxAccountsGet(

@@ -17,6 +17,7 @@ import {
   tryDelegateOAuthApplicationCreate,
   tryDelegateOAuthApplicationUpdate,
   tryDelegateOAuthApplicationDelete,
+  tryDelegateOAuthApplicationRegenerateSecret,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -358,7 +359,21 @@ export const oauthApplicationsRouter = createTRPCRouter({
   regenerateSecret: protectedProcedure
     .input(regenerateClientSecretSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, teamId } = ctx;
+      const { db, teamId, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApplicationRegenerateSecret(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.result) {
+            throw new Error("OAuth application not found");
+          }
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const result = await regenerateClientSecret(db, input.id, teamId!);
 

@@ -8,6 +8,8 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTrackerProjectGetById,
   tryDelegateTrackerProjectsGet,
+  tryDelegateTrackerProjectUpsert,
+  tryDelegateTrackerProjectDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -51,7 +53,21 @@ export const trackerProjectsRouter = createTRPCRouter({
 
   upsert: protectedProcedure
     .input(upsertTrackerProjectSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerProjectUpsert(
+          {
+            ...input,
+            tags: input.tags ?? null,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.project;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return upsertTrackerProject(db, {
         ...input,
         teamId: teamId!,
@@ -61,7 +77,18 @@ export const trackerProjectsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteTrackerProjectSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerProjectDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteTrackerProject(db, {
         ...input,
         teamId: teamId!,
