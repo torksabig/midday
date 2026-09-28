@@ -57,6 +57,20 @@ curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
   "${BASE}/api/v1/transactions"
 echo
 
+echo "== inbox (first page) =="
+curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
+  --data-urlencode "pageSize=5" \
+  --data-urlencode "tab=all" \
+  "${BASE}/api/v1/inbox"
+echo
+
+if [[ -n "${INBOX_ITEM_ID:-}" ]]; then
+  echo "== inbox by id =="
+  curl -sf -H "Authorization: Bearer ${TOKEN}" \
+    "${BASE}/api/v1/inbox/${INBOX_ITEM_ID}"
+  echo
+fi
+
 if [[ -n "${MIDDAY_API_URL:-}" ]]; then
   MIDDAY="${MIDDAY_API_URL%/}"
   echo "== tRPC user.me (replacement mode requires apps/api env) =="

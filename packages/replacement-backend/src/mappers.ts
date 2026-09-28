@@ -662,3 +662,294 @@ export function mapReplacementToBankAccountsGet(
       : null,
   }));
 }
+
+const replacementInboxAccountSchema = z
+  .object({
+    id: z.string(),
+    email: z.string().nullable().optional(),
+    provider: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+const replacementInboxTransactionSchema = z
+  .object({
+    id: z.string(),
+    amount: z.number().nullable().optional(),
+    currency: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    date: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+const replacementInboxListItemSchema = z.object({
+  id: z.string(),
+  file_name: z.string().nullable().optional(),
+  file_path: z.array(z.string()).nullable().optional(),
+  display_name: z.string().nullable().optional(),
+  transaction_id: z.string().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  content_type: z.string().nullable().optional(),
+  date: z.string().nullable().optional(),
+  status: z.string(),
+  type: z.string().nullable().optional(),
+  created_at: z.string(),
+  website: z.string().nullable().optional(),
+  sender_email: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  inbox_account_id: z.string().nullable().optional(),
+  tax_amount: z.number().nullable().optional(),
+  tax_rate: z.number().nullable().optional(),
+  tax_type: z.string().nullable().optional(),
+  related_count: z.number(),
+  inbox_account: replacementInboxAccountSchema,
+  transaction: replacementInboxTransactionSchema,
+});
+
+export const replacementInboxListSchema = z.object({
+  meta: z.object({
+    cursor: z.string().nullable().optional(),
+    has_previous_page: z.boolean(),
+    has_next_page: z.boolean(),
+  }),
+  data: z.array(replacementInboxListItemSchema),
+});
+
+export type MiddayInboxListItemShape = {
+  id: string;
+  fileName: string | null;
+  filePath: string[] | null;
+  displayName: string | null;
+  transactionId: string | null;
+  amount: number | null;
+  currency: string | null;
+  contentType: string | null;
+  date: string | null;
+  status: string;
+  type: string | null;
+  createdAt: string;
+  website: string | null;
+  senderEmail: string | null;
+  description: string | null;
+  inboxAccountId: string | null;
+  taxAmount: number | null;
+  taxRate: number | null;
+  taxType: string | null;
+  relatedCount: number;
+  inboxAccount: {
+    id: string;
+    email: string | null;
+    provider: string | null;
+  } | null;
+  transaction: {
+    id: string;
+    amount: number | null;
+    currency: string | null;
+    name: string | null;
+    date: string | null;
+  } | null;
+};
+
+export type MiddayInboxGetShape = {
+  meta: {
+    cursor?: string;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  data: MiddayInboxListItemShape[];
+};
+
+const replacementSuggestedTransactionSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().nullable().optional(),
+    amount: z.number().nullable().optional(),
+    currency: z.string().nullable().optional(),
+    date: z.string().nullable().optional(),
+  })
+  .optional();
+
+const replacementInboxSuggestionSchema = z
+  .object({
+    id: z.string().nullable().optional(),
+    transaction_id: z.string().nullable().optional(),
+    confidence_score: z.number().nullable().optional(),
+    match_type: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    suggested_transaction: replacementSuggestedTransactionSchema,
+  })
+  .nullable()
+  .optional();
+
+const replacementInboxRelatedItemSchema = z.object({
+  id: z.string(),
+  file_name: z.string().nullable().optional(),
+  file_path: z.array(z.string()).nullable().optional(),
+  display_name: z.string().nullable().optional(),
+  transaction_id: z.string().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  content_type: z.string().nullable().optional(),
+  date: z.string().nullable().optional(),
+  status: z.string(),
+  type: z.string().nullable().optional(),
+  created_at: z.string(),
+  website: z.string().nullable().optional(),
+  sender_email: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  inbox_account_id: z.string().nullable().optional(),
+});
+
+export const replacementInboxDetailSchema = replacementInboxListItemSchema.extend({
+  grouped_inbox_id: z.string().nullable().optional(),
+  meta: z.unknown().nullable().optional(),
+  suggestion: replacementInboxSuggestionSchema,
+  related_items: z.array(replacementInboxRelatedItemSchema).optional(),
+});
+
+export type MiddayInboxByIdShape = MiddayInboxListItemShape & {
+  groupedInboxId: string | null;
+  meta: unknown;
+  suggestion: {
+    id: string | null;
+    transactionId: string | null;
+    confidenceScore: number | null;
+    matchType: string | null;
+    status: string | null;
+    suggestedTransaction?: {
+      id: string;
+      name: string | null;
+      amount: number | null;
+      currency: string | null;
+      date: string | null;
+    };
+  } | null;
+  relatedItems?: MiddayInboxListItemShape[];
+};
+
+function mapReplacementInboxAccount(
+  account: z.infer<typeof replacementInboxAccountSchema>,
+): MiddayInboxListItemShape["inboxAccount"] {
+  if (!account?.id) {
+    return null;
+  }
+  return {
+    id: account.id,
+    email: account.email ?? null,
+    provider: account.provider ?? null,
+  };
+}
+
+function mapReplacementInboxTransaction(
+  tx: z.infer<typeof replacementInboxTransactionSchema>,
+): MiddayInboxListItemShape["transaction"] {
+  if (!tx?.id) {
+    return null;
+  }
+  return {
+    id: tx.id,
+    amount: tx.amount ?? null,
+    currency: tx.currency ?? null,
+    name: tx.name ?? null,
+    date: tx.date ?? null,
+  };
+}
+
+function mapReplacementInboxListItem(
+  row: z.infer<typeof replacementInboxListItemSchema>,
+): MiddayInboxListItemShape {
+  return {
+    id: row.id,
+    fileName: row.file_name ?? null,
+    filePath: row.file_path ?? null,
+    displayName: row.display_name ?? null,
+    transactionId: row.transaction_id ?? null,
+    amount: row.amount ?? null,
+    currency: row.currency ?? null,
+    contentType: row.content_type ?? null,
+    date: row.date ?? null,
+    status: row.status,
+    type: row.type ?? null,
+    createdAt: row.created_at,
+    website: row.website ?? null,
+    senderEmail: row.sender_email ?? null,
+    description: row.description ?? null,
+    inboxAccountId: row.inbox_account_id ?? null,
+    taxAmount: row.tax_amount ?? null,
+    taxRate: row.tax_rate ?? null,
+    taxType: row.tax_type ?? null,
+    relatedCount: row.related_count,
+    inboxAccount: mapReplacementInboxAccount(row.inbox_account),
+    transaction: mapReplacementInboxTransaction(row.transaction),
+  };
+}
+
+export function mapReplacementToInboxGet(payload: unknown): MiddayInboxGetShape {
+  const parsed = replacementInboxListSchema.parse(payload);
+  return {
+    meta: {
+      cursor: parsed.meta.cursor ?? undefined,
+      hasPreviousPage: parsed.meta.has_previous_page,
+      hasNextPage: parsed.meta.has_next_page,
+    },
+    data: parsed.data.map(mapReplacementInboxListItem),
+  };
+}
+
+export function mapReplacementToInboxById(
+  payload: unknown,
+): MiddayInboxByIdShape {
+  const parsed = replacementInboxDetailSchema.parse(payload);
+  const base = mapReplacementInboxListItem(parsed);
+
+  const suggestion = parsed.suggestion?.id
+    ? {
+        id: parsed.suggestion.id ?? null,
+        transactionId: parsed.suggestion.transaction_id ?? null,
+        confidenceScore: parsed.suggestion.confidence_score ?? null,
+        matchType: parsed.suggestion.match_type ?? null,
+        status: parsed.suggestion.status ?? null,
+        ...(parsed.suggestion.suggested_transaction
+          ? {
+              suggestedTransaction: {
+                id: parsed.suggestion.suggested_transaction.id,
+                name: parsed.suggestion.suggested_transaction.name ?? null,
+                amount: parsed.suggestion.suggested_transaction.amount ?? null,
+                currency:
+                  parsed.suggestion.suggested_transaction.currency ?? null,
+                date: parsed.suggestion.suggested_transaction.date ?? null,
+              },
+            }
+          : {}),
+      }
+    : parsed.suggestion
+      ? {
+          id: parsed.suggestion.id ?? null,
+          transactionId: parsed.suggestion.transaction_id ?? null,
+          confidenceScore: parsed.suggestion.confidence_score ?? null,
+          matchType: parsed.suggestion.match_type ?? null,
+          status: parsed.suggestion.status ?? null,
+        }
+      : null;
+
+  const relatedItems = parsed.related_items?.map((item) =>
+    mapReplacementInboxListItem({
+      ...item,
+      related_count: 0,
+      inbox_account: null,
+      transaction: null,
+    }),
+  );
+
+  return {
+    ...base,
+    groupedInboxId: parsed.grouped_inbox_id ?? null,
+    meta: parsed.meta ?? null,
+    suggestion,
+    ...(relatedItems && relatedItems.length > 0
+      ? { relatedItems }
+      : {}),
+  };
+}

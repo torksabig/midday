@@ -4,11 +4,15 @@ import {
   type ReplacementTeamCurrentPayload,
   mapReplacementToTeamCurrent,
   mapReplacementToBankAccountsGet,
+  mapReplacementToInboxById,
+  mapReplacementToInboxGet,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
   type MiddayBankAccountsGetShape,
+  type MiddayInboxByIdShape,
+  type MiddayInboxGetShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -16,12 +20,16 @@ import {
 
 export {
   mapReplacementToBankAccountsGet,
+  mapReplacementToInboxById,
+  mapReplacementToInboxGet,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
   type MiddayBankAccountsGetShape,
+  type MiddayInboxByIdShape,
+  type MiddayInboxGetShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -149,6 +157,43 @@ export type ReplacementBankAccountsListQuery = {
   enabled?: boolean;
   manual?: boolean;
 };
+
+export type ReplacementInboxListQuery = {
+  cursor?: string | null;
+  order?: string | null;
+  sort?: string | null;
+  pageSize?: number;
+  q?: string | null;
+  status?: string | null;
+  tab?: string | null;
+};
+
+export function buildInboxListQuery(params: ReplacementInboxListQuery): string {
+  const search = new URLSearchParams();
+  if (params.cursor) {
+    search.set("cursor", params.cursor);
+  }
+  if (params.pageSize != null) {
+    search.set("pageSize", String(params.pageSize));
+  }
+  if (params.order) {
+    search.set("order", params.order);
+  }
+  if (params.sort) {
+    search.set("sort", params.sort);
+  }
+  if (params.q) {
+    search.set("q", params.q);
+  }
+  if (params.status) {
+    search.set("status", params.status);
+  }
+  if (params.tab) {
+    search.set("tab", params.tab);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
 
 /** Encodes list query params for GET /api/v1/transactions (exported for tests). */
 export function buildTransactionsListQuery(
@@ -298,6 +343,44 @@ export async function fetchReplacementBankAccounts(
     token,
   );
   return mapReplacementToBankAccountsGet(payload);
+}
+
+export async function fetchReplacementInboxList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInboxListQuery,
+): Promise<MiddayInboxGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildInboxListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox${query}`,
+    token,
+  );
+  return mapReplacementToInboxGet(payload);
+}
+
+export async function fetchReplacementInboxById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<MiddayInboxByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/inbox/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  const payload = (await res.json()) as unknown;
+  return mapReplacementToInboxById(payload);
 }
 
 export async function fetchReplacementTransactionById(

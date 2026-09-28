@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  buildInboxListQuery,
   buildTransactionsListQuery,
   resolveReplacementBearerToken,
 } from "./delegate";
@@ -8,6 +9,28 @@ const env = process.env;
 
 afterEach(() => {
   process.env = { ...env };
+});
+
+describe("buildInboxListQuery", () => {
+  test("encodes inbox list filters", () => {
+    const qs = buildInboxListQuery({
+      pageSize: 20,
+      cursor: "40",
+      order: "desc",
+      sort: "document_date",
+      q: "invoice",
+      status: "pending",
+      tab: "all",
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("pageSize")).toBe("20");
+    expect(params.get("cursor")).toBe("40");
+    expect(params.get("order")).toBe("desc");
+    expect(params.get("sort")).toBe("document_date");
+    expect(params.get("q")).toBe("invoice");
+    expect(params.get("status")).toBe("pending");
+    expect(params.get("tab")).toBe("all");
+  });
 });
 
 describe("buildTransactionsListQuery", () => {

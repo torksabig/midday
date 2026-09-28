@@ -159,6 +159,7 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Delegation package** | `@midday/replacement-backend` REST client + Zod mappers | Temporary; delete with `apps/api` |
 | **Identity cutover** | **Done (replacement mode):** `user.me` / `team.current` use Rust only (throw on failure; no Drizzle). **Dual:** delegate first, Drizzle fallback. Demo bearer still available for smoke when no session. | Delete Drizzle identity paths entirely when `apps/api` goes away |
 | **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` → `GET /api/v1/transactions`; **Phase 2e:** remaining dashboard filters on Postgres + attachments/tags JSON on list/detail rows; **`transactions.getReviewCount`** → `GET /api/v1/transactions/review-count`. See filter matrix below. | Delete Drizzle list + review count when stable |
+| **Inbox list/detail (Phase 3 read)** | **Done (read path):** `inbox.get` → `GET /api/v1/inbox`; `inbox.getById` → `GET /api/v1/inbox/{id}`. Blocklist, tab/status filters, offset cursor, joins (account/transaction), grouped-item detail + pending suggestion. FTS `q` uses ILIKE in Rust (dual Drizzle fallback). | Mutations/search/getByStatus still Drizzle |
 | **Categories / bank accounts (read)** | **Done:** `transactionCategories.get` → `GET /api/v1/categories`; `bankAccounts.get` → `GET /api/v1/bank-accounts` with delegation | Mutations still Drizzle-only |
 | **Auth on Rust** | **Done:** Supabase HS256 + JWKS path; session bearer from tRPC `accessToken` | Same |
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
@@ -186,7 +187,22 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 
 1. **Phase 2 list read** — landed: clone paginated `GET /api/v1/transactions`, tRPC `transactions.get` delegation, mapper tests.
 2. **Done (read path):** `transactions.getById` → `GET /api/v1/transactions/{id}`. **Phase 2d:** categories/accounts/tags/exported/fulfilled. **Phase 2e:** assignees, attachments filter, recurring, type/manual, amount/amountRange, row attachments/tags JSON, `getReviewCount` delegation.
-3. Contract tests + smoke; delete Drizzle for transactions when stable.
+3. **Phase 3 inbox read (this pass):** `inbox.get` / `inbox.getById` delegated; clone `inbox_list.rs` on Midday Postgres; smoke script adds `GET /api/v1/inbox` (+ optional `INBOX_ITEM_ID`).
+4. **Next:** `inbox.search`, `inbox.getByStatus`, `inbox.checkAttachments`, then overview metrics read; contract tests + delete Drizzle inbox reads when stable.
+
+### Inbox read matrix (`inbox.get` / `inbox.getById` → Rust)
+
+| Concern | Rust Postgres | Notes |
+|---------|---------------|--------|
+| Pagination (`cursor`, `pageSize`) | Yes | Offset cursor like transactions list |
+| `sort` / `order` | Yes | Matches Drizzle including inverted default `createdAt` when `order=desc` |
+| `status`, `tab` (`all` / `other`) | Yes | |
+| Blocklist (email/domain) | Yes | Preloaded per team |
+| `q` search | Partial | ILIKE + numeric amount; no `fts` tsquery in Rust |
+| List joins (account, transaction, `relatedCount`) | Yes | |
+| Detail grouped primary + `relatedItems` | Yes | `getById` |
+| Pending match `suggestion` + `suggestedTransaction` | Yes | `getById` |
+| `inbox.search`, `getByStatus`, mutations | No | Still Drizzle |
 
 ### Transactions list filter matrix (`transactions.get` → Rust)
 

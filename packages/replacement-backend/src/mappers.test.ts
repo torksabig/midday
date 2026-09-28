@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   mapReplacementToBankAccountsGet,
+  mapReplacementToInboxById,
+  mapReplacementToInboxGet,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
@@ -232,6 +234,79 @@ describe("replacement mappers", () => {
       id: "bc1",
       name: "Chase",
       accessToken: null,
+    });
+  });
+
+  test("mapReplacementToInboxGet maps paginated inbox list", () => {
+    const mapped = mapReplacementToInboxGet({
+      meta: {
+        cursor: "20",
+        has_previous_page: true,
+        has_next_page: false,
+      },
+      data: [
+        {
+          id: "in1",
+          file_name: "inv.pdf",
+          file_path: ["vault", "inv.pdf"],
+          display_name: "Invoice",
+          status: "pending",
+          created_at: "2026-09-01T00:00:00Z",
+          related_count: 2,
+          inbox_account: { id: "ia1", email: "in@co.com", provider: "gmail" },
+          transaction: {
+            id: "tx1",
+            amount: 10,
+            currency: "USD",
+            name: "Coffee",
+            date: "2026-08-30",
+          },
+        },
+      ],
+    });
+
+    expect(mapped.meta).toMatchObject({
+      cursor: "20",
+      hasPreviousPage: true,
+      hasNextPage: false,
+    });
+    expect(mapped.data[0]).toMatchObject({
+      id: "in1",
+      fileName: "inv.pdf",
+      relatedCount: 2,
+      inboxAccount: { id: "ia1", email: "in@co.com", provider: "gmail" },
+      transaction: { id: "tx1", name: "Coffee" },
+    });
+  });
+
+  test("mapReplacementToInboxById maps detail fields", () => {
+    const mapped = mapReplacementToInboxById({
+      id: "in1",
+      status: "suggested_match",
+      created_at: "2026-09-01T00:00:00Z",
+      related_count: 0,
+      grouped_inbox_id: null,
+      suggestion: {
+        id: "s1",
+        transaction_id: "tx9",
+        confidence_score: 0.91,
+        match_type: "amount",
+        status: "pending",
+        suggested_transaction: {
+          id: "tx9",
+          name: "Vendor",
+          amount: 50,
+          currency: "USD",
+          date: "2026-08-01",
+        },
+      },
+    });
+
+    expect(mapped.suggestion).toMatchObject({
+      id: "s1",
+      transactionId: "tx9",
+      confidenceScore: 0.91,
+      suggestedTransaction: { id: "tx9", name: "Vendor" },
     });
   });
 });

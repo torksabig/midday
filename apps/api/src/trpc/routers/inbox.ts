@@ -17,7 +17,13 @@ import {
   unmatchTransactionSchema,
   updateInboxSchema,
 } from "@api/schemas/inbox";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInboxGet,
+  tryDelegateInboxGetById,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   checkInboxAttachments,
   confirmSuggestedMatch,
@@ -43,7 +49,26 @@ import { remove } from "@midday/supabase/storage";
 export const inboxRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInboxSchema.optional())
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxGet(
+          {
+            cursor: input?.cursor,
+            order: input?.order,
+            sort: input?.sort,
+            pageSize: input?.pageSize,
+            q: input?.q,
+            status: input?.status,
+            tab: input?.tab,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInbox(db, {
         teamId: teamId!,
         ...input,
@@ -52,7 +77,15 @@ export const inboxRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getInboxByIdSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxGetById(input.id, accessToken);
+        if (delegated.delegated) {
+          return delegated.item;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInboxById(db, {
         id: input.id,
         teamId: teamId!,
