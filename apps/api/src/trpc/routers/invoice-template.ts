@@ -5,6 +5,9 @@ import {
   tryDelegateInvoiceTemplateGet,
   tryDelegateInvoiceTemplateCount,
   tryDelegateInvoiceTemplateCreate,
+  tryDelegateInvoiceTemplateUpsert,
+  tryDelegateInvoiceTemplateSetDefault,
+  tryDelegateInvoiceTemplateDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { parseInputValue } from "@api/utils/parse";
@@ -93,27 +96,67 @@ export const invoiceTemplateRouter = createTRPCRouter({
         name: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
-      return upsertInvoiceTemplate(db, {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      const payload = {
         ...input,
-        teamId: teamId!,
         fromDetails: parseInputValue(input.fromDetails),
         paymentDetails: parseInputValue(input.paymentDetails),
         noteDetails: parseInputValue(input.noteDetails),
+      };
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceTemplateUpsert(
+          payload as Record<string, unknown>,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.template;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return upsertInvoiceTemplate(db, {
+        ...payload,
+        teamId: teamId!,
       });
     }),
 
   // Set a template as the default
   setDefault: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceTemplateSetDefault(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.template) {
+            throw new Error("Template not found");
+          }
+          return delegated.template;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return setDefaultTemplate(db, { id: input.id, teamId: teamId! });
     }),
 
   // Delete a template (returns the new default to switch to)
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceTemplateDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteInvoiceTemplate(db, { id: input.id, teamId: teamId! });
     }),
 

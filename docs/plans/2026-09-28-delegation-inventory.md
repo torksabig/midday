@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **78 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~30.5%). **44** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceTemplate.create`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **78 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~30.5%). **47** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -149,7 +149,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoiceTemplate.get` | yes | read · by id (AP-35) |
 | `invoiceTemplate.count` | yes | read · team count (AP-35) |
 | `invoiceTemplate.create` | yes | **write** · insert + first/default logic (AP-35) |
-| `invoiceTemplate.*` (other) | no | upsert/setDefault/delete |
+| `invoiceTemplate.upsert` | yes | **write** · by id or default (AP-36) |
+| `invoiceTemplate.setDefault` | yes | **write** · atomic default swap (AP-36) |
+| `invoiceTemplate.delete` | yes | **write** · refuse last template (AP-36) |
 | `invoiceProducts.get` | yes | read · list filters (AP-34) |
 | `invoiceProducts.getById` | yes | read · detail (AP-34) |
 | `invoiceProducts.delete` | yes | **write** · team-scoped delete (AP-34) |
@@ -366,10 +368,11 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-33 | DONE | `invoice.duplicate` + `updateSchedule`/`cancelSchedule` (Trigger stays Node) | write |
 | AP-34 | DONE | `invoiceProducts.get`/`getById`/`delete`/`incrementUsage` | write+read |
 | AP-35 | DONE | `invoiceTemplate.list`/`get`/`count`/`create` | write+read |
+| AP-36 | DONE | `invoiceTemplate.upsert`/`setDefault`/`delete` | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** invoiceTemplate upsert/setDefault/delete, invoiceProducts create/upsert/update, trackerProjects CRUD, oauth regenerateSecret. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** invoiceProducts create/upsert/update, trackerProjects CRUD, oauth regenerateSecret. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
 **Blocked:** AP-15 `bankAccounts.getDetails` (decrypt); `user.delete` (Supabase admin + Resend); `apiKeys.upsert` email side-effect; live bank OAuth token exchange; accounting.getAccounts / external provider APIs; email/Resend sends; oauth authorize / updateApprovalStatus (Resend).
 
-**Autopilot AP-12–35 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Autopilot AP-12–36 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
