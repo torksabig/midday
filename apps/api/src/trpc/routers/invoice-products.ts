@@ -13,6 +13,9 @@ import {
   tryDelegateInvoiceProductGetById,
   tryDelegateInvoiceProductDelete,
   tryDelegateInvoiceProductIncrementUsage,
+  tryDelegateInvoiceProductCreate,
+  tryDelegateInvoiceProductUpsert,
+  tryDelegateInvoiceProductUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -77,7 +80,28 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createInvoiceProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        try {
+          const delegated = await tryDelegateInvoiceProductCreate(
+            input,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.product;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        } catch (error) {
+          if (
+            error instanceof TRPCError &&
+            error.code === "INTERNAL_SERVER_ERROR"
+          ) {
+            throw error;
+          }
+          throw new TRPCError({ code: "CONFLICT" });
+        }
+      }
+
       try {
         return await createInvoiceProduct(db, {
           ...input,
@@ -93,7 +117,18 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   upsert: protectedProcedure
     .input(upsertInvoiceProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductUpsert(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.product;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return upsertInvoiceProduct(db, {
         ...input,
         teamId: teamId!,
@@ -103,7 +138,31 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   updateProduct: protectedProcedure
     .input(updateInvoiceProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      const { id, ...updateData } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        try {
+          const delegated = await tryDelegateInvoiceProductUpdate(
+            id,
+            updateData,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.product;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        } catch (error) {
+          if (
+            error instanceof TRPCError &&
+            error.code === "INTERNAL_SERVER_ERROR"
+          ) {
+            throw error;
+          }
+          throw new TRPCError({ code: "CONFLICT" });
+        }
+      }
+
       try {
         return await updateInvoiceProduct(db, {
           ...input,

@@ -80,6 +80,12 @@ import {
   fetchReplacementInvoiceProductById,
   fetchReplacementInvoiceProductDelete,
   fetchReplacementInvoiceProductIncrementUsage,
+  fetchReplacementInvoiceProductCreate,
+  fetchReplacementInvoiceProductUpsert,
+  fetchReplacementInvoiceProductUpdate,
+  type ReplacementInvoiceProductCreateInput,
+  type ReplacementInvoiceProductUpsertInput,
+  type ReplacementInvoiceProductUpdateInput,
   fetchReplacementInvoiceTemplates,
   fetchReplacementInvoiceTemplateById,
   fetchReplacementInvoiceTemplateCount,
@@ -3057,6 +3063,135 @@ export async function tryDelegateInvoiceProductIncrementUsage(
       id,
     );
     return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceProductMutationResult =
+  | { delegated: false }
+  | { delegated: true; product: unknown | null };
+
+export async function tryDelegateInvoiceProductCreate(
+  input: ReplacementInvoiceProductCreateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceProductMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const product = await fetchReplacementInvoiceProductCreate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, product };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceProductUpsert(
+  input: ReplacementInvoiceProductUpsertInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceProductMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const product = await fetchReplacementInvoiceProductUpsert(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, product };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceProductUpdate(
+  id: string,
+  input: ReplacementInvoiceProductUpdateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceProductMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const product = await fetchReplacementInvoiceProductUpdate(
+      getReplacementApiUrl(),
+      token,
+      id,
+      input,
+    );
+    return { delegated: true, product };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

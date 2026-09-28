@@ -2102,6 +2102,79 @@ export async function fetchReplacementInvoiceProductIncrementUsage(
   return { success: true };
 }
 
+export type ReplacementInvoiceProductCreateInput = {
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  unit?: string | null;
+  taxRate?: number | null;
+  isActive?: boolean;
+};
+
+export type ReplacementInvoiceProductUpsertInput = {
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  unit?: string | null;
+  taxRate?: number | null;
+};
+
+export type ReplacementInvoiceProductUpdateInput = {
+  name?: string;
+  description?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  unit?: string | null;
+  taxRate?: number | null;
+  isActive?: boolean;
+};
+
+export async function fetchReplacementInvoiceProductCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInvoiceProductCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-products`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceProduct(payload);
+}
+
+export async function fetchReplacementInvoiceProductUpsert(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInvoiceProductUpsertInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-products/upsert`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceProduct(payload);
+}
+
+export async function fetchReplacementInvoiceProductUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  input: ReplacementInvoiceProductUpdateInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/invoice-products/${encodeURIComponent(id)}`,
+    token,
+    input,
+  );
+  if (payload == null) return null;
+  return mapReplacementToInvoiceProduct(payload);
+}
+
 export async function fetchReplacementInvoiceTemplates(
   baseUrl: string,
   token: string,
