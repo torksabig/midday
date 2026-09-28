@@ -126,6 +126,10 @@ export {
   type ReplacementShortLinkCreateInput,
   fetchReplacementInvoiceRecurringList,
   fetchReplacementInvoiceRecurringGet,
+  fetchReplacementInvoiceRecurringPause,
+  fetchReplacementInvoiceRecurringResume,
+  fetchReplacementInvoiceRecurringDelete,
+  fetchReplacementInvoiceRecurringUpcoming,
   type ReplacementInvoiceRecurringListQuery,
   fetchReplacementAccountingDisconnect,
   fetchReplacementTeamLeave,
@@ -364,6 +368,8 @@ export {
   mapReplacementToTransactionTagDelete,
   mapReplacementToCategoryById,
   mapReplacementToTransactionsUpdateMany,
+  mapReplacementToInvoiceRecurringMutation,
+  mapReplacementToInvoiceRecurringUpcoming,
 } from "./mappers";
 export {
   replacementInboxDetailSchema,

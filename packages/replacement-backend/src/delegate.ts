@@ -40,6 +40,8 @@ import {
   mapReplacementToShortLink,
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
+  mapReplacementToInvoiceRecurringMutation,
+  mapReplacementToInvoiceRecurringUpcoming,
   mapReplacementToBankAccountMutation,
   mapReplacementToInstitutions,
   mapReplacementToInstitution,
@@ -170,6 +172,8 @@ export {
   mapReplacementToShortLink,
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
+  mapReplacementToInvoiceRecurringMutation,
+  mapReplacementToInvoiceRecurringUpcoming,
   mapReplacementToBankAccountMutation,
   mapReplacementToInstitutions,
   mapReplacementToInstitution,
@@ -2548,6 +2552,64 @@ export async function fetchReplacementInvoiceRecurringGet(
     token,
   );
   return mapReplacementToInvoiceRecurring(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringPause(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ recurring: unknown; jobIds: string[] }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}/pause`,
+    token,
+    {},
+  );
+  return mapReplacementToInvoiceRecurringMutation(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringResume(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}/resume`,
+    token,
+    {},
+  );
+  return mapReplacementToInvoiceRecurring(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ recurring: unknown; jobIds: string[] }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToInvoiceRecurringMutation(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringUpcoming(
+  baseUrl: string,
+  token: string,
+  id: string,
+  limit?: number,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams();
+  if (limit != null) search.set("limit", String(limit));
+  const qs = search.toString();
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}/upcoming${qs ? `?${qs}` : ""}`,
+    token,
+  );
+  return mapReplacementToInvoiceRecurringUpcoming(payload);
 }
 
 /** accounting.disconnect reuses apps DELETE; returns `{ success: true }`. */

@@ -11,6 +11,10 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateInvoiceRecurringGet,
   tryDelegateInvoiceRecurringList,
+  tryDelegateInvoiceRecurringPause,
+  tryDelegateInvoiceRecurringResume,
+  tryDelegateInvoiceRecurringDelete,
+  tryDelegateInvoiceRecurringUpcoming,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -530,12 +534,32 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteInvoiceRecurringSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const queue = getQueue("invoices");
+          await Promise.all(
+            delegated.jobIds.map(async (scheduledJobId) => {
+              const { jobId: rawJobId } = decodeJobId(scheduledJobId);
+              const job = await queue.getJob(rawJobId);
+              if (job) await job.remove();
+            }),
+          );
+          const recurring = delegated.recurring as { id?: string } | null;
+          return { id: recurring?.id ?? input.id };
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       // Use a transaction to ensure both operations succeed or fail together
@@ -601,12 +625,31 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   pause: protectedProcedure
     .input(pauseResumeInvoiceRecurringSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringPause(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const queue = getQueue("invoices");
+          await Promise.all(
+            delegated.jobIds.map(async (scheduledJobId) => {
+              const { jobId: rawJobId } = decodeJobId(scheduledJobId);
+              const job = await queue.getJob(rawJobId);
+              if (job) await job.remove();
+            }),
+          );
+          return delegated.recurring;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       // Use a transaction to ensure both operations succeed or fail together
@@ -671,12 +714,29 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   resume: protectedProcedure
     .input(pauseResumeInvoiceRecurringSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringResume(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.recurring) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Recurring invoice series not found or not paused",
+            });
+          }
+          return delegated.recurring;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const result = await resumeInvoiceRecurring(db, {
@@ -696,12 +756,24 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   getUpcoming: protectedProcedure
     .input(getUpcomingInvoicesSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringUpcoming(
+          input.id,
+          input.limit,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const result = await getUpcomingInvoices(db, {

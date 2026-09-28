@@ -126,6 +126,10 @@ import {
   type ReplacementShortLinkCreateInput,
   fetchReplacementInvoiceRecurringList,
   fetchReplacementInvoiceRecurringGet,
+  fetchReplacementInvoiceRecurringPause,
+  fetchReplacementInvoiceRecurringResume,
+  fetchReplacementInvoiceRecurringDelete,
+  fetchReplacementInvoiceRecurringUpcoming,
   type ReplacementInvoiceRecurringListQuery,
   fetchReplacementAccountingDisconnect,
   fetchReplacementTeamLeave,
@@ -5266,6 +5270,155 @@ export async function tryDelegateInvoiceRecurringGet(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementInvoiceRecurringGet(baseUrl, token, id),
+  );
+}
+
+export type DelegateInvoiceRecurringMutationResult =
+  | { delegated: false }
+  | { delegated: true; recurring: unknown; jobIds: string[] };
+
+export async function tryDelegateInvoiceRecurringPause(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceRecurringMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInvoiceRecurringPause(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return {
+      delegated: true,
+      recurring: result.recurring,
+      jobIds: result.jobIds,
+    };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceRecurringResumeResult =
+  | { delegated: false }
+  | { delegated: true; recurring: unknown };
+
+export async function tryDelegateInvoiceRecurringResume(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceRecurringResumeResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const recurring = await fetchReplacementInvoiceRecurringResume(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, recurring };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceRecurringDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceRecurringMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInvoiceRecurringDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return {
+      delegated: true,
+      recurring: result.recurring,
+      jobIds: result.jobIds,
+    };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceRecurringUpcoming(
+  id: string,
+  limit: number | undefined,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInvoiceRecurringUpcoming(baseUrl, token, id, limit),
   );
 }
 

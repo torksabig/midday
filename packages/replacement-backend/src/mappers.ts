@@ -1383,6 +1383,28 @@ export function mapReplacementToInvoiceRecurring(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToInvoiceRecurringMutation(payload: unknown): {
+  recurring: unknown;
+  jobIds: string[];
+} {
+  const obj = deepCamelCaseKeys(
+    z.record(z.string(), z.unknown()).parse(payload),
+  ) as Record<string, unknown>;
+  const jobIds = Array.isArray(obj.jobIds)
+    ? (obj.jobIds as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+  return {
+    recurring: obj.recurring ?? null,
+    jobIds,
+  };
+}
+
+export function mapReplacementToInvoiceRecurringUpcoming(
+  payload: unknown,
+): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToBankAccountMutation(
   payload: unknown,
 ): unknown {
