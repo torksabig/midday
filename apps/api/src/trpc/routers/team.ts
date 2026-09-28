@@ -43,8 +43,8 @@ import { tasks } from "@trigger.dev/sdk";
 import { TRPCError } from "@trpc/server";
 
 export const teamRouter = createTRPCRouter({
-  current: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    const delegated = await tryDelegateTeamCurrent();
+  current: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    const delegated = await tryDelegateTeamCurrent(accessToken);
     if (delegated) {
       return delegated;
     }

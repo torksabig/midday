@@ -36,10 +36,16 @@ async function replacementFetch<T>(
   return (await res.json()) as T;
 }
 
-/** Bearer for delegation: explicit env, or demo login when enabled (Phase 2 smoke / pre–auth-bridge). */
+/** Bearer for delegation: session JWT, explicit env, or demo login when enabled. */
 export async function resolveReplacementBearerToken(
   baseUrl = getReplacementApiUrl(),
+  sessionAccessToken?: string | null,
 ): Promise<string | null> {
+  const fromSession = sessionAccessToken?.trim();
+  if (fromSession) {
+    return fromSession;
+  }
+
   const fromEnv = process.env.REPLACEMENT_DELEGATION_TOKEN?.trim();
   if (fromEnv) {
     return fromEnv;

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { userRouter } from "../../trpc/routers/user";
 import { createTestContext } from "../helpers/test-context";
-import { mocks } from "../setup";
 
 if (!process.env.FILE_KEY_SECRET) {
   process.env.FILE_KEY_SECRET = "test-file-key-secret-for-trpc-user-tests";
@@ -16,6 +16,7 @@ describe("tRPC: user.me replacement delegation", () => {
     mocks.getUserById.mockReset();
     process.env = {
       ...env,
+      SUPABASE_URL: env.SUPABASE_URL ?? "https://test.supabase.co",
       MIDDAY_BACKEND_MODE: "dual",
       REPLACEMENT_DELEGATION_USE_DEMO: "true",
       REPLACEMENT_API_URL: "http://127.0.0.1:8787",

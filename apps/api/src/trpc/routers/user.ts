@@ -17,9 +17,10 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 export const userRouter = createTRPCRouter({
-  me: protectedProcedure.query(async ({ ctx: { db, session } }) => {
-    const delegated = await tryDelegateUserMe(async (teamId) =>
-      generateFileKey(teamId),
+  me: protectedProcedure.query(async ({ ctx: { db, session, accessToken } }) => {
+    const delegated = await tryDelegateUserMe(
+      async (teamId) => generateFileKey(teamId),
+      accessToken,
     );
     if (delegated) {
       return delegated;

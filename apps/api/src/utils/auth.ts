@@ -19,9 +19,19 @@ type SupabaseJWTPayload = JWTPayload & {
 
 // Primary: verify via JWKS (asymmetric ES256/RS256). jose caches the
 // keyset in memory so only the first call hits the network.
-const JWKS = createRemoteJWKSet(
-  new URL(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
-);
+// Lazy-init so module load does not require SUPABASE_URL (e.g. CI / isolated tests).
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getJwks() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  if (!jwks) {
+    jwks = createRemoteJWKSet(
+      new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`),
+    );
+  }
+  return jwks;
+}
 
 // Fallback: HS256 shared secret for tokens issued before key rotation.
 // Remove this once the legacy JWT secret is revoked in Supabase.
@@ -45,11 +55,14 @@ export async function verifyAccessToken(
 ): Promise<Session | null> {
   if (!accessToken) return null;
 
-  try {
-    const { payload } = await jwtVerify(accessToken, JWKS);
-    return extractSession(payload);
-  } catch {
-    // JWKS verification failed -- try HS256 fallback if configured.
+  const jwksKeySet = getJwks();
+  if (jwksKeySet) {
+    try {
+      const { payload } = await jwtVerify(accessToken, jwksKeySet);
+      return extractSession(payload);
+    } catch {
+      // JWKS verification failed -- try HS256 fallback if configured.
+    }
   }
 
   if (HS256_SECRET) {

@@ -19,6 +19,7 @@ const perfLogger = createLoggerWithContext("perf:trpc");
 
 type TRPCContext = {
   session: Session | null;
+  accessToken?: string;
   supabase: SupabaseClient;
   db: Database;
   geo: ReturnType<typeof getGeoContext>;
@@ -69,6 +70,7 @@ export const createTRPCContext = async (
 
   return {
     session,
+    accessToken,
     supabase,
     db,
     geo,
@@ -136,6 +138,7 @@ export const protectedProcedure = t.procedure
       ctx: {
         teamId,
         session,
+        accessToken: opts.ctx.accessToken,
       },
     });
   });
