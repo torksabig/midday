@@ -2002,6 +2002,20 @@ export async function fetchReplacementInvoiceDraft(
   return mapReplacementToInvoiceById(payload);
 }
 
+export async function fetchReplacementInvoiceDuplicate(
+  baseUrl: string,
+  token: string,
+  input: { id: string; invoiceNumber: string },
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoices/duplicate`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceById(payload);
+}
+
 export type ReplacementCategoryCreateInput = {
   name: string;
   color?: string;

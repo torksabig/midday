@@ -88,6 +88,7 @@ export {
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementInvoiceDraft,
+  fetchReplacementInvoiceDuplicate,
   fetchReplacementCategoryCreate,
   fetchReplacementCategoryUpdate,
   fetchReplacementCategoryDelete,

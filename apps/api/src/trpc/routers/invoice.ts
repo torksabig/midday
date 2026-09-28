@@ -35,6 +35,7 @@ import {
   tryDelegateSearchInvoiceNumber,
   tryDelegateInvoiceDraft,
   tryDelegateInvoiceDelete,
+  tryDelegateInvoiceDuplicate,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -758,8 +759,22 @@ export const invoiceRouter = createTRPCRouter({
 
   duplicate: protectedProcedure
     .input(duplicateInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, session, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, session, teamId, accessToken } }) => {
       const nextInvoiceNumber = await getNextInvoiceNumber(db, teamId!);
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceDuplicate(
+          {
+            id: input.id,
+            invoiceNumber: nextInvoiceNumber!,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return duplicateInvoice(db, {
         id: input.id,
@@ -771,7 +786,7 @@ export const invoiceRouter = createTRPCRouter({
 
   updateSchedule: protectedProcedure
     .input(updateScheduledInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       // Get the current invoice to find the old scheduled job ID
       const invoice = await getInvoiceById(db, {
         id: input.id,
@@ -819,12 +834,33 @@ export const invoiceRouter = createTRPCRouter({
       }
 
       // Update the scheduled date and job ID in the database
-      const updatedInvoice = await updateInvoice(db, {
-        id: input.id,
-        scheduledAt: input.scheduledAt,
-        scheduledJobId: scheduledRun.id,
-        teamId: teamId!,
-      });
+      let updatedInvoice: Awaited<ReturnType<typeof updateInvoice>> | null =
+        null;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceUpdate(
+          {
+            id: input.id,
+            scheduledAt: input.scheduledAt,
+            scheduledJobId: scheduledRun.id,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          updatedInvoice = delegated.invoice as typeof updatedInvoice;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!updatedInvoice) {
+        updatedInvoice = await updateInvoice(db, {
+          id: input.id,
+          scheduledAt: input.scheduledAt,
+          scheduledJobId: scheduledRun.id,
+          teamId: teamId!,
+        });
+      }
 
       if (!updatedInvoice) {
         // Database update failed - clean up the newly created job to avoid orphans
@@ -866,7 +902,7 @@ export const invoiceRouter = createTRPCRouter({
 
   cancelSchedule: protectedProcedure
     .input(cancelScheduledInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       // Get the current invoice to find the scheduled job ID
       const invoice = await getInvoiceById(db, {
         id: input.id,
@@ -892,6 +928,22 @@ export const invoiceRouter = createTRPCRouter({
       }
 
       // Update the invoice status back to draft and clear scheduling fields
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceUpdate(
+          {
+            id: input.id,
+            status: "draft",
+            scheduledAt: null,
+            scheduledJobId: null,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const updatedInvoice = await updateInvoice(db, {
         id: input.id,
         status: "draft",
