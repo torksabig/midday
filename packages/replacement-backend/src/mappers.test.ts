@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
   mapReplacementToBankAccountsGet,
   mapReplacementToInboxById,
+  mapReplacementToInboxByStatus,
+  mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
+  mapReplacementToInboxSearch,
+  mapReplacementToOverviewSummary,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
@@ -307,6 +311,76 @@ describe("replacement mappers", () => {
       transactionId: "tx9",
       confidenceScore: 0.91,
       suggestedTransaction: { id: "tx9", name: "Vendor" },
+    });
+  });
+
+  test("mapReplacementToInboxSearch maps search rows", () => {
+    const mapped = mapReplacementToInboxSearch([
+      {
+        id: "in1",
+        created_at: "2026-09-01T00:00:00Z",
+        display_name: "Receipt",
+        status: "pending",
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      id: "in1",
+      displayName: "Receipt",
+      createdAt: "2026-09-01T00:00:00Z",
+    });
+  });
+
+  test("mapReplacementToInboxByStatus maps status list", () => {
+    const mapped = mapReplacementToInboxByStatus([
+      {
+        id: "in1",
+        display_name: "Doc",
+        status: "pending",
+        created_at: "2026-09-01T00:00:00Z",
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      displayName: "Doc",
+      transactionId: null,
+    });
+  });
+
+  test("mapReplacementToInboxCheckAttachments maps attachment probe", () => {
+    const mapped = mapReplacementToInboxCheckAttachments({
+      has_attachments: true,
+      attachments: [{ id: "a1", transaction_id: "tx1", name: "file.pdf" }],
+      file_name: "file.pdf",
+    });
+    expect(mapped).toMatchObject({
+      hasAttachments: true,
+      fileName: "file.pdf",
+      attachments: [{ id: "a1", transactionId: "tx1", name: "file.pdf" }],
+    });
+  });
+
+  test("mapReplacementToOverviewSummary maps dashboard home payload", () => {
+    const mapped = mapReplacementToOverviewSummary({
+      open_invoices: { count: 2, total_amount: 100, currency: "USD" },
+      unbilled_time: {
+        total_duration: 3600,
+        total_amount: 50,
+        project_count: 1,
+        currency: "USD",
+      },
+      inbox_pending: { count: 3 },
+      transactions_to_review: { count: 4 },
+      cash_balance: {
+        total_balance: 5000,
+        currency: "USD",
+        account_count: 2,
+      },
+      runway: 12,
+    });
+    expect(mapped).toMatchObject({
+      openInvoices: { count: 2, totalAmount: 100 },
+      inboxPending: { count: 3 },
+      cashBalance: { totalBalance: 5000, accountCount: 2 },
+      runway: 12,
     });
   });
 });

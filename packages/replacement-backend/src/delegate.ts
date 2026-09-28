@@ -5,14 +5,22 @@ import {
   mapReplacementToTeamCurrent,
   mapReplacementToBankAccountsGet,
   mapReplacementToInboxById,
+  mapReplacementToInboxByStatus,
+  mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
+  mapReplacementToInboxSearch,
+  mapReplacementToOverviewSummary,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
   type MiddayBankAccountsGetShape,
   type MiddayInboxByIdShape,
+  type MiddayInboxByStatusItemShape,
+  type MiddayInboxCheckAttachmentsShape,
   type MiddayInboxGetShape,
+  type MiddayInboxSearchItemShape,
+  type MiddayOverviewSummaryShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -29,7 +37,11 @@ export {
   mapReplacementToUserMe,
   type MiddayBankAccountsGetShape,
   type MiddayInboxByIdShape,
+  type MiddayInboxByStatusItemShape,
+  type MiddayInboxCheckAttachmentsShape,
   type MiddayInboxGetShape,
+  type MiddayInboxSearchItemShape,
+  type MiddayOverviewSummaryShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -166,6 +178,16 @@ export type ReplacementInboxListQuery = {
   q?: string | null;
   status?: string | null;
   tab?: string | null;
+};
+
+export type ReplacementInboxSearchQuery = {
+  q?: string | null;
+  transactionId?: string | null;
+  limit?: number;
+};
+
+export type ReplacementInboxByStatusQuery = {
+  status?: string | null;
 };
 
 export function buildInboxListQuery(params: ReplacementInboxListQuery): string {
@@ -357,6 +379,87 @@ export async function fetchReplacementInboxList(
     token,
   );
   return mapReplacementToInboxGet(payload);
+}
+
+export function buildInboxSearchQuery(
+  params: ReplacementInboxSearchQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.q) {
+    search.set("q", params.q);
+  }
+  if (params.transactionId) {
+    search.set("transactionId", params.transactionId);
+  }
+  if (params.limit != null) {
+    search.set("limit", String(params.limit));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function buildInboxByStatusQuery(
+  params: ReplacementInboxByStatusQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.status) {
+    search.set("status", params.status);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementInboxSearch(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInboxSearchQuery,
+): Promise<MiddayInboxSearchItemShape[]> {
+  const root = trimBase(baseUrl);
+  const query = buildInboxSearchQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox/search${query}`,
+    token,
+  );
+  return mapReplacementToInboxSearch(payload);
+}
+
+export async function fetchReplacementInboxByStatus(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInboxByStatusQuery,
+): Promise<MiddayInboxByStatusItemShape[]> {
+  const root = trimBase(baseUrl);
+  const query = buildInboxByStatusQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox/by-status${query}`,
+    token,
+  );
+  return mapReplacementToInboxByStatus(payload);
+}
+
+export async function fetchReplacementInboxCheckAttachments(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<MiddayInboxCheckAttachmentsShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox/${encodeURIComponent(id)}/check-attachments`,
+    token,
+  );
+  return mapReplacementToInboxCheckAttachments(payload);
+}
+
+export async function fetchReplacementOverviewSummary(
+  baseUrl: string,
+  token: string,
+): Promise<MiddayOverviewSummaryShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/overview/summary`,
+    token,
+  );
+  return mapReplacementToOverviewSummary(payload);
 }
 
 export async function fetchReplacementInboxById(

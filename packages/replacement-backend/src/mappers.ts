@@ -953,3 +953,239 @@ export function mapReplacementToInboxById(
       : {}),
   };
 }
+
+const replacementInboxSearchItemSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  file_name: z.string().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  file_path: z.array(z.string()).nullable().optional(),
+  content_type: z.string().nullable().optional(),
+  date: z.string().nullable().optional(),
+  display_name: z.string().nullable().optional(),
+  size: z.number().nullable().optional(),
+  description: z.string().nullable().optional(),
+  status: z.string(),
+  website: z.string().nullable().optional(),
+  base_amount: z.number().nullable().optional(),
+  base_currency: z.string().nullable().optional(),
+  tax_amount: z.number().nullable().optional(),
+  tax_rate: z.number().nullable().optional(),
+  tax_type: z.string().nullable().optional(),
+  type: z.string().nullable().optional(),
+});
+
+export type MiddayInboxSearchItemShape = {
+  id: string;
+  createdAt: string;
+  fileName: string | null;
+  amount: number | null;
+  currency: string | null;
+  filePath: string[] | null;
+  contentType: string | null;
+  date: string | null;
+  displayName: string | null;
+  size: number | null;
+  description: string | null;
+  status: string;
+  website: string | null;
+  baseAmount: number | null;
+  baseCurrency: string | null;
+  taxAmount: number | null;
+  taxRate: number | null;
+  taxType: string | null;
+  type: string | null;
+};
+
+export function mapReplacementInboxSearchItem(
+  row: z.infer<typeof replacementInboxSearchItemSchema>,
+): MiddayInboxSearchItemShape {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    fileName: row.file_name ?? null,
+    amount: row.amount ?? null,
+    currency: row.currency ?? null,
+    filePath: row.file_path ?? null,
+    contentType: row.content_type ?? null,
+    date: row.date ?? null,
+    displayName: row.display_name ?? null,
+    size: row.size ?? null,
+    description: row.description ?? null,
+    status: row.status,
+    website: row.website ?? null,
+    baseAmount: row.base_amount ?? null,
+    baseCurrency: row.base_currency ?? null,
+    taxAmount: row.tax_amount ?? null,
+    taxRate: row.tax_rate ?? null,
+    taxType: row.tax_type ?? null,
+    type: row.type ?? null,
+  };
+}
+
+export function mapReplacementToInboxSearch(
+  payload: unknown,
+): MiddayInboxSearchItemShape[] {
+  return z.array(replacementInboxSearchItemSchema).parse(payload).map(mapReplacementInboxSearchItem);
+}
+
+const replacementInboxByStatusItemSchema = z.object({
+  id: z.string(),
+  display_name: z.string().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  date: z.string().nullable().optional(),
+  status: z.string(),
+  created_at: z.string(),
+  transaction_id: z.string().nullable().optional(),
+});
+
+export type MiddayInboxByStatusItemShape = {
+  id: string;
+  displayName: string | null;
+  amount: number | null;
+  currency: string | null;
+  date: string | null;
+  status: string;
+  createdAt: string;
+  transactionId: string | null;
+};
+
+export function mapReplacementToInboxByStatus(
+  payload: unknown,
+): MiddayInboxByStatusItemShape[] {
+  return z
+    .array(replacementInboxByStatusItemSchema)
+    .parse(payload)
+    .map((row) => ({
+      id: row.id,
+      displayName: row.display_name ?? null,
+      amount: row.amount ?? null,
+      currency: row.currency ?? null,
+      date: row.date ?? null,
+      status: row.status,
+      createdAt: row.created_at,
+      transactionId: row.transaction_id ?? null,
+    }));
+}
+
+const replacementInboxCheckAttachmentsSchema = z.object({
+  has_attachments: z.boolean(),
+  attachments: z.array(
+    z.object({
+      id: z.string(),
+      transaction_id: z.string().nullable().optional(),
+      name: z.string().nullable().optional(),
+    }),
+  ),
+  file_name: z.string().nullable().optional(),
+});
+
+export type MiddayInboxCheckAttachmentsShape = {
+  hasAttachments: boolean;
+  attachments: Array<{
+    id: string;
+    transactionId: string | null;
+    name: string | null;
+  }>;
+  fileName?: string | null;
+};
+
+export function mapReplacementToInboxCheckAttachments(
+  payload: unknown,
+): MiddayInboxCheckAttachmentsShape {
+  const parsed = replacementInboxCheckAttachmentsSchema.parse(payload);
+  return {
+    hasAttachments: parsed.has_attachments,
+    attachments: parsed.attachments.map((a) => ({
+      id: a.id,
+      transactionId: a.transaction_id ?? null,
+      name: a.name ?? null,
+    })),
+    ...(parsed.file_name != null ? { fileName: parsed.file_name } : {}),
+  };
+}
+
+const replacementOverviewSummarySchema = z.object({
+  open_invoices: z.object({
+    count: z.number(),
+    total_amount: z.number(),
+    currency: z.string(),
+  }),
+  unbilled_time: z.object({
+    total_duration: z.number(),
+    total_amount: z.number(),
+    project_count: z.number(),
+    currency: z.string(),
+  }),
+  inbox_pending: z.object({
+    count: z.number(),
+  }),
+  transactions_to_review: z.object({
+    count: z.number(),
+  }),
+  cash_balance: z.object({
+    total_balance: z.number(),
+    currency: z.string(),
+    account_count: z.number(),
+  }),
+  runway: z.number(),
+});
+
+export type MiddayOverviewSummaryShape = {
+  openInvoices: {
+    count: number;
+    totalAmount: number;
+    currency: string;
+  };
+  unbilledTime: {
+    totalDuration: number;
+    totalAmount: number;
+    projectCount: number;
+    currency: string;
+  };
+  inboxPending: {
+    count: number;
+  };
+  transactionsToReview: {
+    count: number;
+  };
+  cashBalance: {
+    totalBalance: number;
+    currency: string;
+    accountCount: number;
+  };
+  runway: number;
+};
+
+export function mapReplacementToOverviewSummary(
+  payload: unknown,
+): MiddayOverviewSummaryShape {
+  const parsed = replacementOverviewSummarySchema.parse(payload);
+  return {
+    openInvoices: {
+      count: parsed.open_invoices.count,
+      totalAmount: parsed.open_invoices.total_amount,
+      currency: parsed.open_invoices.currency,
+    },
+    unbilledTime: {
+      totalDuration: parsed.unbilled_time.total_duration,
+      totalAmount: parsed.unbilled_time.total_amount,
+      projectCount: parsed.unbilled_time.project_count,
+      currency: parsed.unbilled_time.currency,
+    },
+    inboxPending: {
+      count: parsed.inbox_pending.count,
+    },
+    transactionsToReview: {
+      count: parsed.transactions_to_review.count,
+    },
+    cashBalance: {
+      totalBalance: parsed.cash_balance.total_balance,
+      currency: parsed.cash_balance.currency,
+      accountCount: parsed.cash_balance.account_count,
+    },
+    runway: parsed.runway,
+  };
+}

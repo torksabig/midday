@@ -64,10 +64,32 @@ curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
   "${BASE}/api/v1/inbox"
 echo
 
+echo "== inbox search =="
+curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
+  --data-urlencode "limit=5" \
+  "${BASE}/api/v1/inbox/search"
+echo
+
+echo "== inbox by status (pending) =="
+curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
+  --data-urlencode "status=pending" \
+  "${BASE}/api/v1/inbox/by-status"
+echo
+
+echo "== overview summary =="
+curl -sf -H "Authorization: Bearer ${TOKEN}" \
+  "${BASE}/api/v1/overview/summary"
+echo
+
 if [[ -n "${INBOX_ITEM_ID:-}" ]]; then
   echo "== inbox by id =="
   curl -sf -H "Authorization: Bearer ${TOKEN}" \
     "${BASE}/api/v1/inbox/${INBOX_ITEM_ID}"
+  echo
+
+  echo "== inbox check attachments =="
+  curl -sf -H "Authorization: Bearer ${TOKEN}" \
+    "${BASE}/api/v1/inbox/${INBOX_ITEM_ID}/check-attachments"
   echo
 fi
 

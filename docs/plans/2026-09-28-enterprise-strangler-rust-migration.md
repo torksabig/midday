@@ -283,7 +283,7 @@ Status reflects **`fintech/midday`** workspace on branch `cursor/backend-replace
 | **JWKS middleware verification** | `fintech/clone` | ⬜ Planned — no Supabase JWKS validator in clone yet |
 | **`user.me` & `team.current` delegation** | Auth / Core | 🟡 Partial — Hono + mappers + tests + smoke; **demo/replacement JWT only**, not session passthrough |
 | **`transactions` router cutover** | Finance core | 🟡 Partial — list/getById/reviewCount + categories/bankAccounts reads delegated |
-| **`inbox` & `documents` router cutover** | Documents | 🟡 Partial — `inbox.get` + `inbox.getById` read delegation; mutations/search still Drizzle |
+| **`inbox` & `documents` router cutover** | Documents | 🟡 Partial — inbox reads delegated (`get`, `getById`, `search`, `getByStatus`, `checkAttachments`); `overview.summary` delegated; mutations + documents still Drizzle |
 | **`packages/jobs` Rust consumer pipeline** | Async queue | ⬜ Planned |
 | **Shadow read verification pipeline** | Infra | ⬜ Planned |
 | **Drizzle / legacy Postgres decommission** | Infra | ⬜ Planned |

@@ -19,8 +19,11 @@ import {
 } from "@api/schemas/inbox";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateInboxCheckAttachments,
   tryDelegateInboxGet,
   tryDelegateInboxGetById,
+  tryDelegateInboxGetByStatus,
+  tryDelegateInboxSearch,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -94,7 +97,18 @@ export const inboxRouter = createTRPCRouter({
 
   checkAttachments: protectedProcedure
     .input(deleteInboxSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxCheckAttachments(
+          input.id,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return checkInboxAttachments(db, {
         id: input.id,
         teamId: teamId!,
@@ -223,8 +237,19 @@ export const inboxRouter = createTRPCRouter({
 
   search: protectedProcedure
     .input(searchInboxSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
       const { q, transactionId, limit = 10 } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxSearch(
+          { q, transactionId, limit },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return getInboxSearch(db, {
         teamId: teamId!,
@@ -259,7 +284,18 @@ export const inboxRouter = createTRPCRouter({
   // Get inbox items by status
   getByStatus: protectedProcedure
     .input(getInboxByStatusSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxGetByStatus(
+          { status: input.status },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInboxByStatus(db, {
         teamId: teamId!,
         status: input.status,
