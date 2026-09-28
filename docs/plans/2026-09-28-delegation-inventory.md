@@ -143,7 +143,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Concern | Rust | Legacy Drizzle |
 | --- | --- | --- |
-| Project list pagination / filters | Yes · core filters + sort columns | Full FTS `q` via `to_tsquery` |
+| Project list pagination / filters | Yes · core filters + FTS `q` via `to_tsquery` (AP-19) | Full FTS `q` via `to_tsquery` |
 | Assigned users on projects | Yes · distinct entry assignees / `get_assigned_users_for_project()` on getById | Same |
 | `byRange` grouped by date | Yes | Same shape |
 | `getBillableHours` week/month window | Yes · UTC date math | `@date-fns` week start |
@@ -174,7 +174,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Partial field update | Yes · JSON keys only | Same spread into `update()` |
 | Tax clear on `categorySlug` | Yes | Same |
 | Un-export sync record delete | Yes · when `status` present and ≠ `exported` | Same |
-| Activity feed (`transactions_categorized` / `_assigned`) | **No** | Yes · `createActivity` |
+| Activity feed (`transactions_categorized` / `_assigned`) | Yes · AP-19 inserts activities on category/assignee change | Yes · `createActivity` |
 | Return shape | Yes · full tx + suggestion via GET SQL | `getTransactionById` |
 
 ### `transactions.updateMany` write parity (AP-12b)
@@ -217,6 +217,14 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Storage vault file remove | API façade after delegate | Same |
 | `ignore` (`POST /inbox/:id/ignore`) | Yes · sets `done` + clears suggestions | No tRPC; SQLite stub had `ignored` |
 
+### Parity hardening (AP-19)
+
+| Concern | Hardened |
+| --- | --- |
+| `transactions.get` `q` | FTS `to_tsquery` on `fts_vector` **plus** name/description ILIKE (and numeric amount), matching Drizzle |
+| `trackerProjects.get` `q` | FTS `to_tsquery` on `tp.fts` (was ILIKE-only) |
+| `transactions.update` activity feed | Inserts `transactions_categorized` / `transactions_assigned` into `activities` |
+
 ## Autopilot queue
 
 Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
@@ -232,11 +240,11 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-16 | DONE | `apps.get`, `oauthApplications.list`, `inboxAccounts.get` | read |
 | AP-17 | DONE | `transactions.deleteMany` (manual only) | write |
 | AP-18 | DONE | Inbox match + delete(+many); ignore→done (Rust) | write |
-| AP-19 | PENDING | Parity: FTS `q`, tx update activity feed | parity |
+| AP-19 | DONE | FTS `q` (tx + tracker) + tx update activity feed | parity |
 | AP-20 | PENDING | Delete Drizzle for routers at 100% delegation | delete |
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** AP-19 (parity: FTS `q` and/or tx update activity feed).
+**Next slice:** AP-20 (delete Drizzle for 100% delegated routers) — **skip per autopilot scope**; pause after AP-19.
 
-**Autopilot AP-12–18:** through inbox match/delete batch.
+**Autopilot AP-12–19 complete.** Skip AP-20 / AP-STAGE4 until explicit decommission.
