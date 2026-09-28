@@ -9,6 +9,9 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTransactionCategoriesGet,
   tryDelegateTransactionCategoriesGetById,
+  tryDelegateTransactionCategoryCreate,
+  tryDelegateTransactionCategoryUpdate,
+  tryDelegateTransactionCategoryDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -64,7 +67,18 @@ export const transactionCategoriesRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionCategoryCreate(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.category;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return createTransactionCategory(db, {
         teamId: teamId!,
         userId: session.user.id,
@@ -74,7 +88,23 @@ export const transactionCategoriesRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const { id, ...rest } = input;
+        const delegated = await tryDelegateTransactionCategoryUpdate(
+          id,
+          {
+            ...rest,
+            clearParent: rest.parentId === null,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.category;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateTransactionCategory(db, {
         ...input,
         teamId: teamId!,
@@ -83,7 +113,18 @@ export const transactionCategoriesRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionCategoryDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.category;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteTransactionCategory(db, {
         id: input.id,
         teamId: teamId!,
