@@ -2291,6 +2291,47 @@ export async function fetchReplacementDocumentCheckAttachments(
   );
 }
 
+
+export async function fetchReplacementDocumentDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string; pathTokens: string[] | null } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/documents/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  const row = payload as { id?: string; pathTokens?: string[] | null };
+  if (typeof row.id !== "string") {
+    throw new Error("document delete payload missing id");
+  }
+  return { id: row.id, pathTokens: row.pathTokens ?? null };
+}
+
+export async function fetchReplacementApiKeys(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(`${root}/api/v1/api-keys`, token);
+  if (!Array.isArray(payload)) {
+    throw new Error("api-keys payload must be an array");
+  }
+  return payload;
+}
+
+export async function fetchReplacementTeamConnectionStatus(
+  baseUrl: string,
+  token: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  return replacementFetch<unknown>(`${root}/api/v1/team/connection-status`, token);
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

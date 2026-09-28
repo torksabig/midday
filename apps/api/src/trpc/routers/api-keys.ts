@@ -1,5 +1,9 @@
 import { deleteApiKeySchema, upsertApiKeySchema } from "@api/schemas/api-keys";
 import { resend } from "@api/services/resend";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateApiKeysGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { apiKeyCache } from "@midday/cache/api-key-cache";
 import {
@@ -9,9 +13,18 @@ import {
 } from "@midday/db/queries";
 import { ApiKeyCreatedEmail } from "@midday/email/emails/api-key-created";
 import { logger } from "@midday/logger";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 
 export const apiKeysRouter = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  get: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateApiKeysGet(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getApiKeysByTeam(db, teamId!);
   }),
 
@@ -60,16 +73,15 @@ export const apiKeysRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(deleteApiKeySchema)
     .mutation(async ({ ctx: { db, teamId }, input }) => {
-      const keyHash = await deleteApiKey(db, {
+      const data = await deleteApiKey(db, {
+        id: input.id,
         teamId: teamId!,
-        ...input,
       });
 
-      // Invalidate cache if key was deleted
-      if (keyHash) {
-        await apiKeyCache.delete(keyHash);
+      if (data?.keyHash) {
+        await apiKeyCache.delete(data.keyHash);
       }
 
-      return keyHash;
+      return data;
     }),
 });

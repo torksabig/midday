@@ -18,6 +18,7 @@ import {
   tryDelegateTeamList,
   tryDelegateTeamMembers,
   tryDelegateTeamUpdate,
+  tryDelegateTeamConnectionStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -472,9 +473,31 @@ export const teamRouter = createTRPCRouter({
    * Returns raw connection data - presentation logic handled by client.
    */
   connectionStatus: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         return { bankConnections: [], inboxAccounts: [] };
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamConnectionStatus(accessToken);
+        if (delegated) {
+          return delegated as {
+            bankConnections: Array<{
+              id: string;
+              name: string;
+              status: string | null;
+              expiresAt: string | null;
+              logoUrl: string | null;
+            }>;
+            inboxAccounts: Array<{
+              id: string;
+              email: string;
+              status: string;
+              provider: string;
+            }>;
+          };
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       // Fetch bank connections and inbox accounts in parallel

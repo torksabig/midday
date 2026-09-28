@@ -14,6 +14,7 @@ import {
   tryDelegateDocumentsGetById,
   tryDelegateDocumentsGetRelated,
   tryDelegateDocumentsCheckAttachments,
+  tryDelegateDocumentsDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -127,11 +128,27 @@ export const documentsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteDocumentSchema)
-    .mutation(async ({ input, ctx: { db, supabase, teamId } }) => {
-      const document = await deleteDocument(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ input, ctx: { db, supabase, teamId, accessToken } }) => {
+      let document: { id: string; pathTokens: string[] | null } | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          document = delegated.document;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (document === undefined) {
+        document = await deleteDocument(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
 
       if (!document?.pathTokens) {
         throw new TRPCError({

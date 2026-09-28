@@ -60,6 +60,9 @@ import {
   fetchReplacementSearchInvoiceNumber,
   fetchReplacementNotificationSettings,
   fetchReplacementDocumentCheckAttachments,
+  fetchReplacementDocumentDelete,
+  fetchReplacementApiKeys,
+  fetchReplacementTeamConnectionStatus,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -2270,6 +2273,67 @@ export async function tryDelegateDocumentsCheckAttachments(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementDocumentCheckAttachments(baseUrl, token, id),
+  );
+}
+
+export type DelegateDocumentDeleteResult =
+  | { delegated: false }
+  | { delegated: true; document: { id: string; pathTokens: string[] | null } | null };
+
+export async function tryDelegateDocumentsDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateDocumentDeleteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const document = await fetchReplacementDocumentDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, document };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateApiKeysGet(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementApiKeys(baseUrl, token),
+  );
+}
+
+export async function tryDelegateTeamConnectionStatus(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTeamConnectionStatus(baseUrl, token),
   );
 }
 
