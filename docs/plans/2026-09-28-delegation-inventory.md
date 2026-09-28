@@ -2,7 +2,7 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Counts:** **57 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~22.3%). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **59 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~23.0%). **1** write procedure delegates (`transactions.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -16,7 +16,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
-| `bankAccounts.*` (other) | no | details, payment info, writes |
+| `bankAccounts.getTransactionCount` | yes | read · tx count for delete dialog (Phase 11) |
+| `bankAccounts.*` (other) | no | getDetails (decrypt), payment info, writes |
 | `bankConnections.get` | yes | read · list + nested accounts (Phase 6 slice 1) |
 | `bankConnections.*` (other) | no | create, delete, reconnect |
 | `transactionCategories.get` | yes | read · full tree |
@@ -24,7 +25,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.get` | yes | read · list filters (Phase 2e matrix) |
 | `transactions.getById` | yes | read |
 | `transactions.getReviewCount` | yes | read |
-| `transactions.*` (other) | no | mutations, export, import, AI CSV |
+| `transactions.update` | yes | **write** · partial PATCH-style PUT on Midday Postgres; clears tax on category change; drops `accounting_sync_records` when un-exporting (Phase 11 **first write**) |
+| `transactions.*` (other) | no | updateMany, export, import, AI CSV |
 | `inbox.get` | yes | read · list |
 | `inbox.getById` | yes | read |
 | `inbox.checkAttachments` | yes | read |
@@ -80,9 +82,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
 | `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | no | write |
-| All other routers | no | notifications, oauth, transaction tags, banking adapters, etc. |
+| `tags.get` | yes | read · transaction tag list (Phase 11) |
+| `tags.*` (other) | no | CRUD |
+| All other routers | no | notifications, oauth, banking adapters, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-connections`, `/document-tags`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -139,4 +143,16 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Phase 10:** `user.invites`, `bankAccounts.balances`/`currencies`, `documentTags.get`, invoice dashboard metric reads (`mostActiveClient`, `inactiveClientsCount`, `averageDaysToPayment`, `averageInvoiceSize`, `topRevenueClient`, `newCustomersCount`).
 
-**Next slice (Phase 11 reads):** `bankAccounts.getTransactionCount`, `tags.get` (transaction tags), `notifications.*` list reads — then first write family (`transactions.update` or `inbox` match/ignore).
+**Phase 11:** `tags.get`, `bankAccounts.getTransactionCount`; **first write** `transactions.update` (Rust partial UPDATE + tRPC delegation with dual Drizzle fallback).
+
+### `transactions.update` write parity (Phase 11 — first delegated mutation)
+
+| Concern | Rust / delegated path | Legacy Drizzle path |
+| --- | --- | --- |
+| Partial field update | Yes · JSON keys only | Same spread into `update()` |
+| Tax clear on `categorySlug` | Yes | Same |
+| Un-export sync record delete | Yes · when `status` present and ≠ `exported` | Same |
+| Activity feed (`transactions_categorized` / `_assigned`) | **No** | Yes · `createActivity` |
+| Return shape | Yes · full tx + suggestion via GET SQL | `getTransactionById` |
+
+**Next slice (Phase 12):** `notifications.*` list reads; `transactions.updateMany` or `inbox` match/ignore writes; `bankAccounts.getDetails` only if decrypt path is scoped safely.

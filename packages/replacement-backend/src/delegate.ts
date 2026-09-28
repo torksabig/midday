@@ -39,6 +39,9 @@ import {
   mapReplacementToBankAccountsBalances,
   mapReplacementToBankAccountsCurrencies,
   mapReplacementToDocumentTagsGet,
+  mapReplacementToTagsGet,
+  mapReplacementToBankAccountTransactionCount,
+  buildReplacementTransactionUpdateBody,
   mapReplacementToMostActiveClient,
   mapReplacementToCountMetric,
   mapReplacementToAverageInvoiceSize,
@@ -102,6 +105,9 @@ export {
   mapReplacementToBankAccountsBalances,
   mapReplacementToBankAccountsCurrencies,
   mapReplacementToDocumentTagsGet,
+  mapReplacementToTagsGet,
+  mapReplacementToBankAccountTransactionCount,
+  buildReplacementTransactionUpdateBody,
   mapReplacementToMostActiveClient,
   mapReplacementToCountMetric,
   mapReplacementToAverageInvoiceSize,
@@ -147,6 +153,33 @@ async function replacementFetch<T>(
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(timeoutMs),
   });
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function replacementPut<T>(
+  url: string,
+  token: string,
+  body: unknown,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T | null> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
 
   if (!res.ok) {
     throw new Error(`replacement API ${url} HTTP ${res.status}`);
@@ -1424,6 +1457,54 @@ export async function fetchReplacementDocumentTags(
     token,
   );
   return mapReplacementToDocumentTagsGet(payload);
+}
+
+export async function fetchReplacementTags(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tags`,
+    token,
+  );
+  return mapReplacementToTagsGet(payload);
+}
+
+export async function fetchReplacementBankAccountTransactionCount(
+  baseUrl: string,
+  token: string,
+  bankAccountId: string,
+): Promise<{ count: number }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/bank-accounts/${encodeURIComponent(bankAccountId)}/transaction-count`,
+    token,
+  );
+  return mapReplacementToBankAccountTransactionCount(payload);
+}
+
+export type ReplacementTransactionUpdateInput = Record<string, unknown> & {
+  id: string;
+};
+
+export async function fetchReplacementTransactionUpdate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementTransactionUpdateInput,
+): Promise<MiddayTransactionByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const { id } = input;
+  const body = buildReplacementTransactionUpdateBody(input);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/transactions/${encodeURIComponent(id)}`,
+    token,
+    body,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToTransactionById(payload);
 }
 
 export async function fetchReplacementMostActiveClient(

@@ -68,6 +68,9 @@ export {
   fetchReplacementBankAccountsBalances,
   fetchReplacementBankAccountsCurrencies,
   fetchReplacementDocumentTags,
+  fetchReplacementTags,
+  fetchReplacementBankAccountTransactionCount,
+  fetchReplacementTransactionUpdate,
   fetchReplacementMostActiveClient,
   fetchReplacementInactiveClientsCount,
   fetchReplacementAverageDaysToPayment,
@@ -125,6 +128,9 @@ export {
   mapReplacementToBankAccountsBalances,
   mapReplacementToBankAccountsCurrencies,
   mapReplacementToDocumentTagsGet,
+  mapReplacementToTagsGet,
+  mapReplacementToBankAccountTransactionCount,
+  buildReplacementTransactionUpdateBody,
   mapReplacementToMostActiveClient,
   mapReplacementToCountMetric,
   mapReplacementToAverageInvoiceSize,
@@ -172,6 +178,7 @@ export {
   type ReplacementInboxSearchQuery,
   type ReplacementTeamCurrentPayload,
   type ReplacementTransactionsListQuery,
+  type ReplacementTransactionUpdateInput,
 } from "./delegate";
 export {
   replacementInboxDetailSchema,

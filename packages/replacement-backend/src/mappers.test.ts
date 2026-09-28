@@ -27,6 +27,9 @@ import {
   mapReplacementToUserInvites,
   mapReplacementToBankAccountsBalances,
   mapReplacementToDocumentTagsGet,
+  mapReplacementToTagsGet,
+  mapReplacementToBankAccountTransactionCount,
+  buildReplacementTransactionUpdateBody,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -648,5 +651,34 @@ describe("replacement mappers", () => {
   test("mapReplacementToDocumentTagsGet maps vault tag list", () => {
     const mapped = mapReplacementToDocumentTagsGet([{ id: "t1", name: "Tax" }]);
     expect(mapped[0]).toEqual({ id: "t1", name: "Tax" });
+  });
+
+  test("mapReplacementToTagsGet maps transaction tag list", () => {
+    const mapped = mapReplacementToTagsGet([
+      {
+        id: "t1",
+        name: "Travel",
+        teamId: "team-1",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({ name: "Travel", teamId: "team-1" });
+  });
+
+  test("mapReplacementToBankAccountTransactionCount maps count wrapper", () => {
+    expect(mapReplacementToBankAccountTransactionCount({ count: 12 })).toEqual({
+      count: 12,
+    });
+  });
+
+  test("buildReplacementTransactionUpdateBody omits id and undefined fields", () => {
+    expect(
+      buildReplacementTransactionUpdateBody({
+        id: "tx-1",
+        name: "Updated",
+        status: undefined,
+        categorySlug: null,
+      }),
+    ).toEqual({ name: "Updated", categorySlug: null });
   });
 });

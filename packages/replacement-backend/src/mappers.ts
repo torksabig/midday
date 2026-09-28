@@ -1562,6 +1562,41 @@ export function mapReplacementToDocumentTagsGet(payload: unknown): unknown[] {
   return z.array(replacementDocumentTagSchema).parse(payload);
 }
 
+const replacementTransactionTagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  teamId: z.string(),
+  createdAt: z.string(),
+});
+
+export function mapReplacementToTagsGet(payload: unknown): unknown[] {
+  return z.array(replacementTransactionTagSchema).parse(payload);
+}
+
+const replacementBankAccountTransactionCountSchema = z.object({
+  count: z.number(),
+});
+
+export function mapReplacementToBankAccountTransactionCount(
+  payload: unknown,
+): { count: number } {
+  return replacementBankAccountTransactionCountSchema.parse(payload);
+}
+
+/** Partial tRPC update payload → Rust PUT body (camelCase, omit undefined). */
+export function buildReplacementTransactionUpdateBody(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (key === "id" || value === undefined) {
+      continue;
+    }
+    body[key] = value;
+  }
+  return body;
+}
+
 const replacementMostActiveClientSchema = z.object({
   customer_id: z.string(),
   customer_name: z.string(),

@@ -11,6 +11,7 @@ import {
   tryDelegateBankAccountsBalances,
   tryDelegateBankAccountsCurrencies,
   tryDelegateBankAccountsGet,
+  tryDelegateBankAccountsGetTransactionCount,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -54,7 +55,18 @@ export const bankAccountsRouter = createTRPCRouter({
 
   getTransactionCount: protectedProcedure
     .input(getTransactionCountSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountsGetTransactionCount(
+          input.id,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const count = await getTransactionCountByBankAccountId(db, {
         bankAccountId: input.id,
         teamId: teamId!,

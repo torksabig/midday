@@ -37,6 +37,9 @@ import {
   fetchReplacementBankAccountsBalances,
   fetchReplacementBankAccountsCurrencies,
   fetchReplacementDocumentTags,
+  fetchReplacementTags,
+  fetchReplacementBankAccountTransactionCount,
+  fetchReplacementTransactionUpdate,
   fetchReplacementMostActiveClient,
   fetchReplacementInactiveClientsCount,
   fetchReplacementAverageDaysToPayment,
@@ -78,6 +81,7 @@ import {
   type ReplacementSearchAttachmentsQuery,
   type ReplacementTaxSummaryQuery,
   type ReplacementTransactionsListQuery,
+  type ReplacementTransactionUpdateInput,
   type ReplacementTrackerProjectsListQuery,
   type ReplacementTrackerEntriesByRangeQuery,
   type ReplacementTrackerBillableHoursQuery,
@@ -1350,6 +1354,66 @@ export async function tryDelegateDocumentTagsGet(
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementDocumentTags(baseUrl, token),
   );
+}
+
+export async function tryDelegateTagsGet(sessionAccessToken?: string | null) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTags(baseUrl, token),
+  );
+}
+
+export async function tryDelegateBankAccountsGetTransactionCount(
+  bankAccountId: string,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementBankAccountTransactionCount(baseUrl, token, bankAccountId),
+  );
+}
+
+export type DelegateTransactionUpdateResult =
+  | { delegated: false }
+  | { delegated: true; transaction: MiddayTransactionByIdShape | null };
+
+export async function tryDelegateTransactionUpdate(
+  input: ReplacementTransactionUpdateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTransactionUpdateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const transaction = await fetchReplacementTransactionUpdate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, transaction };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
 }
 
 export type DelegateNullableReadResult<T> =
