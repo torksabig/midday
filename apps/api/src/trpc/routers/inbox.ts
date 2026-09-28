@@ -26,6 +26,9 @@ import {
   tryDelegateInboxSearch,
   tryDelegateInboxUpdate,
   tryDelegateInboxMatch,
+  tryDelegateInboxConfirmMatch,
+  tryDelegateInboxDeclineMatch,
+  tryDelegateInboxUnmatch,
   tryDelegateInboxDelete,
   tryDelegateInboxDeleteMany,
   tryDelegateInboxBlocklistGet,
@@ -326,7 +329,15 @@ export const inboxRouter = createTRPCRouter({
 
   unmatchTransaction: protectedProcedure
     .input(unmatchTransactionSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxUnmatch(input.id, accessToken);
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return unmatchTransaction(db, {
         id: input.id,
         teamId: teamId!,
@@ -358,7 +369,22 @@ export const inboxRouter = createTRPCRouter({
   // Confirm a match suggestion
   confirmMatch: protectedProcedure
     .input(confirmMatchSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxConfirmMatch(
+          {
+            suggestionId: input.suggestionId,
+            inboxId: input.inboxId,
+            transactionId: input.transactionId,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.item;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return confirmSuggestedMatch(db, {
         teamId: teamId!,
         suggestionId: input.suggestionId,
@@ -371,7 +397,21 @@ export const inboxRouter = createTRPCRouter({
   // Decline a match suggestion
   declineMatch: protectedProcedure
     .input(declineMatchSchema)
-    .mutation(async ({ ctx: { db, session, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxDeclineMatch(
+          {
+            suggestionId: input.suggestionId,
+            inboxId: input.inboxId,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return declineSuggestedMatch(db, {
         suggestionId: input.suggestionId,
         inboxId: input.inboxId,

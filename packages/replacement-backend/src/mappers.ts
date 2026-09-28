@@ -1422,6 +1422,29 @@ export function mapReplacementToBankConnectionReconnect(
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToInboxConfirmMatch(
+  payload: unknown,
+): MiddayInboxByIdShape {
+  return mapReplacementToInboxById(payload);
+}
+
+export function mapReplacementToInboxDeclineMatch(payload: unknown): {
+  ok: true;
+} {
+  z.record(z.string(), z.unknown()).parse(payload);
+  return { ok: true };
+}
+
+export function mapReplacementToInboxUnmatch(
+  payload: unknown,
+): unknown[] | null {
+  if (payload == null) return null;
+  if (Array.isArray(payload)) {
+    return deepCamelCaseKeys(payload) as unknown[];
+  }
+  return [deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload))];
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

@@ -280,6 +280,10 @@ export const mocks = {
     }),
   ) as MockFn,
   getInboxByStatus: mock(() => []) as MockFn,
+  matchTransaction: mock(() => ({})) as MockFn,
+  unmatchTransaction: mock(() => ({})) as MockFn,
+  confirmSuggestedMatch: mock(() => ({})) as MockFn,
+  declineSuggestedMatch: mock(() => ({})) as MockFn,
 
   // API Keys
   getApiKeyByToken: mock(() => null) as MockFn,
@@ -968,10 +972,10 @@ const dbQueriesMock = new Proxy(
     createInboxBlocklist: mocks.createInboxBlocklist,
     deleteInboxBlocklist: mocks.deleteInboxBlocklist,
     checkInboxAttachments: mock(() => []),
-    matchTransaction: mock(() => ({})),
-    unmatchTransaction: mock(() => ({})),
-    confirmSuggestedMatch: mock(() => ({})),
-    declineSuggestedMatch: mock(() => ({})),
+    matchTransaction: mocks.matchTransaction,
+    unmatchTransaction: mocks.unmatchTransaction,
+    confirmSuggestedMatch: mocks.confirmSuggestedMatch,
+    declineSuggestedMatch: mocks.declineSuggestedMatch,
 
     // API Keys
     getApiKeyByToken: mocks.getApiKeyByToken,

@@ -48,6 +48,9 @@ import {
   mapReplacementToAttachments,
   mapReplacementToAttachment,
   mapReplacementToBankConnectionReconnect,
+  mapReplacementToInboxConfirmMatch,
+  mapReplacementToInboxDeclineMatch,
+  mapReplacementToInboxUnmatch,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -166,6 +169,9 @@ export {
   mapReplacementToAttachments,
   mapReplacementToAttachment,
   mapReplacementToBankConnectionReconnect,
+  mapReplacementToInboxConfirmMatch,
+  mapReplacementToInboxDeclineMatch,
+  mapReplacementToInboxUnmatch,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -3184,6 +3190,53 @@ export async function fetchReplacementInboxMatch(
   );
   if (payload == null) return null;
   return mapReplacementToInboxById(payload);
+}
+
+export async function fetchReplacementInboxConfirmMatch(
+  baseUrl: string,
+  token: string,
+  input: {
+    suggestionId: string;
+    inboxId: string;
+    transactionId: string;
+  },
+): Promise<MiddayInboxByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/confirm-match`,
+    token,
+    input,
+  );
+  if (payload == null) return null;
+  return mapReplacementToInboxConfirmMatch(payload);
+}
+
+export async function fetchReplacementInboxDeclineMatch(
+  baseUrl: string,
+  token: string,
+  input: { suggestionId: string; inboxId: string },
+): Promise<{ ok: true }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/decline-match`,
+    token,
+    input,
+  );
+  return mapReplacementToInboxDeclineMatch(payload ?? { ok: true });
+}
+
+export async function fetchReplacementInboxUnmatch(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown[] | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/${encodeURIComponent(id)}/unmatch`,
+    token,
+    {},
+  );
+  return mapReplacementToInboxUnmatch(payload);
 }
 
 export async function fetchReplacementInboxDelete(
