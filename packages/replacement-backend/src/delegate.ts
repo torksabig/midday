@@ -48,6 +48,9 @@ import {
   mapReplacementToTopRevenueClient,
   mapReplacementToNotificationsList,
   mapReplacementToNotification,
+  mapReplacementToNotificationsUpdateAll,
+  mapReplacementToUserUpdate,
+  buildReplacementUserUpdateBody,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -55,6 +58,7 @@ import {
   type MiddayAccountingConnectionShape,
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
+  type MiddayUserUpdateShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -121,6 +125,10 @@ export {
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
   mapReplacementToNotificationsList,
+  mapReplacementToNotification,
+  mapReplacementToNotificationsUpdateAll,
+  mapReplacementToUserUpdate,
+  buildReplacementUserUpdateBody,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -128,6 +136,7 @@ export {
   type MiddayBankAccountsGetShape,
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
+  type MiddayUserUpdateShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
@@ -1696,6 +1705,37 @@ export async function fetchReplacementNotificationUpdateStatus(
     return null;
   }
   return mapReplacementToNotification(payload);
+}
+
+export async function fetchReplacementNotificationsUpdateAll(
+  baseUrl: string,
+  token: string,
+  status: "unread" | "read" | "archived",
+): Promise<MiddayNotificationShape[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/notifications/status`,
+    token,
+    { status },
+  );
+  return mapReplacementToNotificationsUpdateAll(payload ?? []);
+}
+
+export async function fetchReplacementUserUpdate(
+  baseUrl: string,
+  token: string,
+  input: Record<string, unknown>,
+): Promise<MiddayUserUpdateShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/user`,
+    token,
+    buildReplacementUserUpdateBody(input),
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToUserUpdate(payload);
 }
 
 export async function fetchReplacementTransactionsUpdateMany(

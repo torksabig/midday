@@ -1658,6 +1658,75 @@ export function mapReplacementToNotification(
   return mapNotificationRow(replacementNotificationRowSchema.parse(payload));
 }
 
+export function mapReplacementToNotificationsUpdateAll(
+  payload: unknown,
+): MiddayNotificationShape[] {
+  return z
+    .array(replacementNotificationRowSchema)
+    .parse(payload)
+    .map((row) => mapNotificationRow(row));
+}
+
+const replacementUserUpdateSchema = z.object({
+  id: z.string(),
+  full_name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
+  locale: z.string().nullable().optional(),
+  time_format: z.number().nullable().optional(),
+  date_format: z.string().nullable().optional(),
+  week_starts_on_monday: z.boolean().nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  timezone_auto_sync: z.boolean().nullable().optional(),
+  team_id: z.string().nullable().optional(),
+});
+
+export type MiddayUserUpdateShape = {
+  id: string;
+  fullName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  locale: string | null;
+  timeFormat: number | null;
+  dateFormat: string | null;
+  weekStartsOnMonday: boolean | null;
+  timezone: string | null;
+  timezoneAutoSync: boolean | null;
+  teamId: string | null;
+};
+
+export function mapReplacementToUserUpdate(
+  payload: unknown,
+): MiddayUserUpdateShape {
+  const row = replacementUserUpdateSchema.parse(payload);
+  return {
+    id: row.id,
+    fullName: row.full_name ?? null,
+    email: row.email ?? null,
+    avatarUrl: row.avatar_url ?? null,
+    locale: row.locale ?? null,
+    timeFormat: row.time_format ?? null,
+    dateFormat: row.date_format ?? null,
+    weekStartsOnMonday: row.week_starts_on_monday ?? null,
+    timezone: row.timezone ?? null,
+    timezoneAutoSync: row.timezone_auto_sync ?? null,
+    teamId: row.team_id ?? null,
+  };
+}
+
+export function buildReplacementUserUpdateBody(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) {
+      continue;
+    }
+    body[key] = value;
+  }
+  return body;
+}
+
 export function mapReplacementToTransactionsUpdateMany(
   payload: unknown,
 ): MiddayTransactionByIdShape[] {

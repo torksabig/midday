@@ -32,6 +32,9 @@ import {
   buildReplacementTransactionUpdateBody,
   mapReplacementToNotificationsList,
   mapReplacementToNotification,
+  mapReplacementToNotificationsUpdateAll,
+  mapReplacementToUserUpdate,
+  buildReplacementUserUpdateBody,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -723,6 +726,66 @@ describe("replacement mappers", () => {
       teamId: "team-1",
       createdAt: "2024-01-01T00:00:00.000Z",
     });
+  });
+
+  test("mapReplacementToNotificationsUpdateAll maps activity array", () => {
+    const mapped = mapReplacementToNotificationsUpdateAll([
+      {
+        id: "a1",
+        created_at: "2024-01-01T00:00:00.000Z",
+        team_id: "team-1",
+        user_id: "user-1",
+        type: "transactions_created",
+        priority: 3,
+        group_id: null,
+        source: "system",
+        metadata: {},
+        status: "read",
+        last_used_at: null,
+      },
+    ]);
+    expect(mapped).toHaveLength(1);
+    expect(mapped[0]?.status).toBe("read");
+  });
+
+  test("mapReplacementToUserUpdate camelCases preference fields", () => {
+    expect(
+      mapReplacementToUserUpdate({
+        id: "u1",
+        full_name: "Jane Doe",
+        email: "jane@example.com",
+        avatar_url: null,
+        locale: "en-US",
+        time_format: 24,
+        date_format: "yyyy-MM-dd",
+        week_starts_on_monday: true,
+        timezone: "UTC",
+        timezone_auto_sync: false,
+        team_id: "t1",
+      }),
+    ).toEqual({
+      id: "u1",
+      fullName: "Jane Doe",
+      email: "jane@example.com",
+      avatarUrl: null,
+      locale: "en-US",
+      timeFormat: 24,
+      dateFormat: "yyyy-MM-dd",
+      weekStartsOnMonday: true,
+      timezone: "UTC",
+      timezoneAutoSync: false,
+      teamId: "t1",
+    });
+  });
+
+  test("buildReplacementUserUpdateBody omits undefined fields", () => {
+    expect(
+      buildReplacementUserUpdateBody({
+        fullName: "Ada",
+        timezone: undefined,
+        locale: null,
+      }),
+    ).toEqual({ fullName: "Ada", locale: null });
   });
 
   test("buildReplacementTransactionUpdateBody omits id and undefined fields", () => {

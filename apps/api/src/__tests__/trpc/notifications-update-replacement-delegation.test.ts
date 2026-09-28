@@ -40,24 +40,36 @@ describe("tRPC: notifications.updateStatus replacement delegation", () => {
     });
     expect(mocks.updateActivityStatus).not.toHaveBeenCalled();
   });
+});
 
-  test("dual mode falls back to Drizzle when replacement API is down", async () => {
+describe("tRPC: notifications.updateAllStatus replacement delegation", () => {
+  beforeEach(() => {
+    mocks.updateAllActivitiesStatus.mockReset();
+    process.env = {
+      ...env,
+      SUPABASE_URL: env.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "dual",
+      REPLACEMENT_DELEGATION_USE_DEMO: "true",
+      REPLACEMENT_API_URL: "http://127.0.0.1:8787",
+    };
+  });
+
+  afterEach(() => {
+    process.env = { ...env };
+  });
+
+  test("replacement mode throws without calling Drizzle when API is down", async () => {
+    process.env.MIDDAY_BACKEND_MODE = "replacement";
     delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
     process.env.REPLACEMENT_API_URL = "http://127.0.0.1:1";
-    mocks.updateActivityStatus.mockResolvedValue({
-      id: ACTIVITY_ID,
-      status: "read",
-    });
 
     const caller = createCaller(
       createTestContext({ accessToken: "fake-session-jwt" }),
     );
-    const result = await caller.updateStatus({
-      activityId: ACTIVITY_ID,
-      status: "read",
-    });
 
-    expect(result).toMatchObject({ id: ACTIVITY_ID, status: "read" });
-    expect(mocks.updateActivityStatus).toHaveBeenCalled();
+    await expect(caller.updateAllStatus({ status: "read" })).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    expect(mocks.updateAllActivitiesStatus).not.toHaveBeenCalled();
   });
 });

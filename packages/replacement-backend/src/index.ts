@@ -75,6 +75,8 @@ export {
   fetchReplacementTransactionsUpdateMany,
   fetchReplacementNotificationsList,
   fetchReplacementNotificationUpdateStatus,
+  fetchReplacementNotificationsUpdateAll,
+  fetchReplacementUserUpdate,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -204,8 +206,12 @@ export {
 export {
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
+  type MiddayUserUpdateShape,
   mapReplacementToNotificationsList,
   mapReplacementToNotification,
+  mapReplacementToNotificationsUpdateAll,
+  mapReplacementToUserUpdate,
+  buildReplacementUserUpdateBody,
   mapReplacementToTransactionsUpdateMany,
 } from "./mappers";
 export {

@@ -3,6 +3,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateUserInvites,
   tryDelegateUserMe,
+  tryDelegateUserUpdate,
 } from "@api/services/replacement-delegation";
 import { resend } from "@api/services/resend";
 import { createAdminClient } from "@api/services/supabase";
@@ -56,7 +57,15 @@ export const userRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateUserSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateUserUpdate(input, accessToken);
+        if (delegated.delegated) {
+          return delegated.user;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateUser(db, {
         id: session.user.id,
         ...input,
