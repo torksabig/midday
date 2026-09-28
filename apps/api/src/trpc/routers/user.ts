@@ -1,5 +1,8 @@
 import { updateUserSchema } from "@api/schemas/users";
-import { tryDelegateUserMe } from "@api/services/replacement-delegation";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateUserMe,
+} from "@api/services/replacement-delegation";
 import { resend } from "@api/services/resend";
 import { createAdminClient } from "@api/services/supabase";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -12,34 +15,42 @@ import {
   switchUserTeam,
   updateUser,
 } from "@midday/db/queries";
+import type { Session } from "@api/utils/auth";
+import type { Database } from "@midday/db/client";
 import { generateFileKey } from "@midday/encryption";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+async function loadUserMeFromLegacy(db: Database, session: Session) {
+  const result = await withRetryOnPrimary(db, async (dbInstance) =>
+    getUserById(dbInstance, session.user.id),
+  );
+
+  if (!result) {
+    return undefined;
+  }
+
+  return {
+    ...result,
+    fileKey: result.teamId ? await generateFileKey(result.teamId) : null,
+  };
+}
+
 export const userRouter = createTRPCRouter({
   me: protectedProcedure.query(async ({ ctx: { db, session, accessToken } }) => {
-    const delegated = await tryDelegateUserMe(
-      async (teamId) => generateFileKey(teamId),
-      accessToken,
-    );
-    if (delegated) {
-      return delegated;
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateUserMe(
+        async (teamId) => generateFileKey(teamId),
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
     }
 
-    // Cookie-based approach handles replication lag for new users via x-force-primary header
-    // Retry logic still handles connection errors/timeouts
-    const result = await withRetryOnPrimary(db, async (dbInstance) =>
-      getUserById(dbInstance, session.user.id),
-    );
-
-    if (!result) {
-      return undefined;
-    }
-
-    return {
-      ...result,
-      fileKey: result.teamId ? await generateFileKey(result.teamId) : null,
-    };
+    return loadUserMeFromLegacy(db, session);
   }),
 
   update: protectedProcedure

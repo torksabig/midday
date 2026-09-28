@@ -10,6 +10,17 @@ import {
 } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
 
+/** Dual mode only: replacement failed but legacy Drizzle is still allowed. */
+export function assertLegacyIdentityFallbackAllowed(): void {
+  if (replacementDelegationRequiresSuccess()) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message:
+        "Replacement backend delegation failed (legacy fallback disabled in replacement mode)",
+    });
+  }
+}
+
 export async function tryDelegateUserMe(
   generateFileKey: (teamId: string) => Promise<string | null>,
   sessionAccessToken?: string | null,

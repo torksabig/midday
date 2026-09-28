@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Smoke: replacement API health + demo delegation payloads (no Midday DB).
+# For Supabase session JWT + Midday Postgres, use scripts/smoke-phase1-session.sh.
 set -euo pipefail
 
 BASE="${REPLACEMENT_API_URL:-http://127.0.0.1:8787}"

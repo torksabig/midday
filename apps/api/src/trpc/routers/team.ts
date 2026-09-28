@@ -11,8 +11,12 @@ import {
   updateTeamByIdSchema,
   updateTeamMemberSchema,
 } from "@api/schemas/team";
-import { tryDelegateTeamCurrent } from "@api/services/replacement-delegation";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateTeamCurrent,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import type { InviteTeamMembersPayload } from "@jobs/schema";
 
 import { teamCache } from "@midday/cache/team-cache";
@@ -44,9 +48,12 @@ import { TRPCError } from "@trpc/server";
 
 export const teamRouter = createTRPCRouter({
   current: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
-    const delegated = await tryDelegateTeamCurrent(accessToken);
-    if (delegated) {
-      return delegated;
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateTeamCurrent(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
     }
 
     if (!teamId) {

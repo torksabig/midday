@@ -46,4 +46,38 @@ describe("tRPC: user.me replacement delegation", () => {
     });
     expect(mocks.getUserById).not.toHaveBeenCalled();
   });
+
+  test("replacement mode throws without calling Drizzle when API is down", async () => {
+    process.env.MIDDAY_BACKEND_MODE = "replacement";
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+    process.env.REPLACEMENT_API_URL = "http://127.0.0.1:1";
+
+    const caller = createCaller(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+
+    await expect(caller.me()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    expect(mocks.getUserById).not.toHaveBeenCalled();
+  });
+
+  test("dual mode falls back to Drizzle when replacement API is down", async () => {
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+    process.env.REPLACEMENT_API_URL = "http://127.0.0.1:1";
+
+    mocks.getUserById.mockResolvedValue({
+      id: "test-user-id",
+      email: "legacy@example.com",
+      teamId: "test-team-id",
+    });
+
+    const caller = createCaller(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.me();
+
+    expect(result).toMatchObject({ email: "legacy@example.com" });
+    expect(mocks.getUserById).toHaveBeenCalled();
+  });
 });

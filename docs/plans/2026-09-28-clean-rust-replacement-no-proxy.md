@@ -157,19 +157,19 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 |-------|---------------------------|--------|
 | **Backend mode** | `MIDDAY_BACKEND_MODE` = `legacy` \| `dual` \| `replacement` on `apps/api` | Env removed; no permanent dual |
 | **Delegation package** | `@midday/replacement-backend` REST client + Zod mappers | Temporary; delete with `apps/api` |
-| **Identity cutover** | `user.me` / `team.current` delegate when dual/replacement; **demo** bearer (`REPLACEMENT_DELEGATION_USE_DEMO`) not session JWT | Rust JWKS + session bearer passthrough; then delete Drizzle for user/team |
-| **Auth on Rust** | Clone uses demo/local JWT | Supabase JWKS validation |
+| **Identity cutover** | **Done (replacement mode):** `user.me` / `team.current` use Rust only (throw on failure; no Drizzle). **Dual:** delegate first, Drizzle fallback. Demo bearer still available for smoke when no session. | Delete Drizzle identity paths entirely when `apps/api` goes away |
+| **Auth on Rust** | **Done:** Supabase HS256 + JWKS path; session bearer from tRPC `accessToken` | Same |
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
 | **UI** | Frozen by policy; workspace may diverge from Downloads baseline | Same — sync UI from Downloads; no backend-driven UI redesign |
 | **Path A (Vite clone UI)** | Documented as deferred in `path-a-decision.md` | Still deferred — clone is **API/backend**, not product shell |
 
-Existing smoke assets (`scripts/smoke-replacement-delegation.sh`, `GET /api/replacement/status`) remain useful until Stage 4; then remove with `replacement-backend`.
+Existing smoke assets (`scripts/smoke-replacement-delegation.sh`, `scripts/smoke-phase1-session.sh`, `GET /api/replacement/status`) remain useful until Stage 4; then remove with `replacement-backend`.
 
 ---
 
 ## Recommended domain order
 
-1. **User / team / settings** (already partially wired — finish JWKS + delete legacy)
+1. **User / team / settings** — identity routing done in replacement mode; settings reads next
 2. **Transactions + categories**
 3. **Inbox + documents**
 4. **Invoices + customers**
@@ -180,11 +180,11 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 
 ---
 
-## Immediate next engineering step (Phase 1)
+## Immediate next engineering step (Phase 2)
 
-1. In **`fintech/clone`**: implement Supabase JWKS middleware + `GET /api/v1/auth/me` (and team context) accepting real session JWTs.
-2. In **`apps/api`**: pass through Supabase access token from tRPC context to Rust (replace demo delegation for `user.me` / `team.current`).
-3. **Delete loop:** remove Drizzle implementations for `user.me` and `team.current` once contract tests pass—no legacy fallback in `replacement` mode.
+1. In **`fintech/clone`**: implement **transactions list** (read path) against Midday Postgres / team scope, matching tRPC return shape.
+2. In **`apps/api`**: delegate `transactions.*` read procedures when `MIDDAY_BACKEND_MODE` is dual/replacement; no Drizzle in `replacement` mode.
+3. Contract tests + smoke; delete Drizzle for transactions when stable.
 
 Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` + `packages/ui` only, per [UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md).
 

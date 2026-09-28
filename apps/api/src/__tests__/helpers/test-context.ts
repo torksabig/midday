@@ -7,13 +7,18 @@ import { mockDb } from "../setup";
 export interface TestContextOptions {
   teamId?: string;
   userId?: string;
+  accessToken?: string;
 }
 
 // Note: This is intentionally using `any` to match the tRPC context type
 // which expects specific Supabase/Drizzle types that we mock in tests
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createTestContext(options: TestContextOptions = {}): any {
-  const { teamId = "test-team-id", userId = "test-user-id" } = options;
+  const {
+    teamId = "test-team-id",
+    userId = "test-user-id",
+    accessToken,
+  } = options;
 
   return {
     session: {
@@ -32,6 +37,7 @@ export function createTestContext(options: TestContextOptions = {}): any {
       ip: "127.0.0.1",
     },
     teamId,
+    accessToken,
     forcePrimary: false,
   };
 }
