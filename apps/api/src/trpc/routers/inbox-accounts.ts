@@ -9,6 +9,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateInboxAccountsGet,
   tryDelegateInboxAccountDelete,
+  tryDelegateInboxAccountById,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -128,12 +129,31 @@ export const inboxAccountsRouter = createTRPCRouter({
 
   sync: protectedProcedure
     .input(syncInboxAccountSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       // Verify the inbox account belongs to the caller's team
-      const account = await getInboxAccountById(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+      type AccountRow = Awaited<ReturnType<typeof getInboxAccountById>>;
+      let account: AccountRow | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxAccountById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          account = delegated.account as AccountRow;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          account = await getInboxAccountById(db, {
+            id: input.id,
+            teamId: teamId!,
+          });
+        }
+      } else {
+        account = await getInboxAccountById(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
 
       if (!account) {
         throw new TRPCError({

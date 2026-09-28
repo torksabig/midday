@@ -9,6 +9,7 @@ import {
   tryDelegateAccountingConnections,
   tryDelegateAccountingSyncStatus,
   tryDelegateAccountingDisconnect,
+  tryDelegateAppByAppId,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -33,7 +34,7 @@ export const accountingRouter = createTRPCRouter({
    */
   export: protectedProcedure
     .input(exportToAccountingSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
       const { transactionIds, providerId } = input;
 
       if (!teamId) {
@@ -44,7 +45,20 @@ export const accountingRouter = createTRPCRouter({
       }
 
       // Verify provider is connected
-      const app = await getAppByAppId(db, { appId: providerId, teamId });
+      type AppRow = Awaited<ReturnType<typeof getAppByAppId>>;
+      let app: AppRow | null | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppByAppId(providerId, accessToken);
+        if (delegated.delegated) {
+          app = delegated.app as AppRow;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          app = await getAppByAppId(db, { appId: providerId, teamId });
+        }
+      } else {
+        app = await getAppByAppId(db, { appId: providerId, teamId });
+      }
 
       if (!app?.config) {
         throw new TRPCError({

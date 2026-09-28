@@ -4292,6 +4292,105 @@ export async function fetchReplacementDocumentProcessingStatus(
   };
 }
 
+/** Midday `documents.processDocument` — bulk status by document name. */
+export async function fetchReplacementDocumentsProcessingStatus(
+  baseUrl: string,
+  token: string,
+  ids: string[],
+  processingStatus: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/documents/processing-status`,
+    token,
+    { ids, processingStatus },
+  );
+  if (!Array.isArray(payload)) {
+    throw new Error("documents processing-status expected array");
+  }
+  return payload.map((row) => deepCamelCaseKeys(row));
+}
+
+/** Midday `getAppByAppId` — used by accounting.export before jobs. */
+export async function fetchReplacementAppByAppId(
+  baseUrl: string,
+  token: string,
+  appId: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementFetch<unknown>(
+      `${root}/api/v1/apps/${encodeURIComponent(appId)}`,
+      token,
+    );
+    return deepCamelCaseKeys(payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/\bHTTP 404\b/.test(message)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export type ReplacementCreateTeamInvitesInput = {
+  invites: Array<{ email: string; role: "owner" | "member" }>;
+};
+
+export type ReplacementCreateTeamInvitesResult = {
+  results: Array<{
+    email: string | null;
+    code?: string | null;
+    role?: string | null;
+    team?: { id: string; name: string | null } | null;
+  }>;
+  skippedInvites: Array<{
+    email: string;
+    reason: "already_member" | "already_invited" | "duplicate";
+  }>;
+};
+
+/** Midday `team.invite` SQL — email Trigger stays in Node. */
+export async function fetchReplacementTeamCreateInvites(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCreateTeamInvitesInput,
+): Promise<ReplacementCreateTeamInvitesResult> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/invites`,
+    token,
+    input,
+  );
+  const row = deepCamelCaseKeys(payload) as ReplacementCreateTeamInvitesResult;
+  return {
+    results: Array.isArray(row.results) ? row.results : [],
+    skippedInvites: Array.isArray(row.skippedInvites) ? row.skippedInvites : [],
+  };
+}
+
+/** Midday `inboxAccounts.sync` — row read before Trigger. */
+export async function fetchReplacementInboxAccountById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementFetch<unknown>(
+      `${root}/api/v1/inbox-accounts/${encodeURIComponent(id)}`,
+      token,
+    );
+    return deepCamelCaseKeys(payload);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/\bHTTP 404\b/.test(message)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

@@ -27,6 +27,7 @@ import {
   tryDelegateTeamLeave,
   tryDelegateUserInvites,
   tryDelegateAvailablePlans,
+  tryDelegateTeamCreateInvites,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -446,7 +447,7 @@ export const teamRouter = createTRPCRouter({
 
   invite: protectedProcedure
     .input(inviteTeamMembersSchema)
-    .mutation(async ({ ctx: { db, session, teamId, geo }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, geo, accessToken }, input }) => {
       const invitedByEmail = session.user.email;
       if (!invitedByEmail) {
         throw new TRPCError({
@@ -457,13 +458,38 @@ export const teamRouter = createTRPCRouter({
 
       const ip = geo.ip ?? "127.0.0.1";
 
-      const data = await createTeamInvites(db, {
-        teamId: teamId!,
-        invites: input.map((invite) => ({
-          ...invite,
-          invitedBy: session.user.id,
-        })),
-      });
+      type InviteData = Awaited<ReturnType<typeof createTeamInvites>>;
+      let data: InviteData | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamCreateInvites(
+          input.map((invite) => ({
+            email: invite.email,
+            role: invite.role,
+          })),
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.result as InviteData;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          data = await createTeamInvites(db, {
+            teamId: teamId!,
+            invites: input.map((invite) => ({
+              ...invite,
+              invitedBy: session.user.id,
+            })),
+          });
+        }
+      } else {
+        data = await createTeamInvites(db, {
+          teamId: teamId!,
+          invites: input.map((invite) => ({
+            ...invite,
+            invitedBy: session.user.id,
+          })),
+        });
+      }
 
       const results = data?.results ?? [];
       const skippedInvites = data?.skippedInvites ?? [];

@@ -436,6 +436,10 @@ export const mocks = {
     meta: { hasNextPage: false, hasPreviousPage: false, cursor: undefined },
   })) as MockFn,
   getDocumentById: mock(() => null) as MockFn,
+  updateDocumentProcessingStatus: mock(() => ({})) as MockFn,
+  updateDocuments: mock(() => []) as MockFn,
+  getAppByAppId: mock(() => null) as MockFn,
+  getInboxAccountById: mock(() => null) as MockFn,
   getRelatedDocuments: mock(() => Promise.resolve([])) as MockFn,
   checkDocumentAttachments: mock(() => Promise.resolve([])) as MockFn,
   deleteDocument: mock(() => null) as MockFn,
@@ -976,7 +980,7 @@ const dbQueriesMock = new Proxy(
     getInboxByStatus: mocks.getInboxByStatus,
     getInboxSearch: mocks.getInboxSearch,
     getInboxAccounts: mocks.getInboxAccounts,
-    getInboxAccountById: createDefaultMock(),
+    getInboxAccountById: mocks.getInboxAccountById,
     upsertInboxAccount: createDefaultMock(),
     updateInboxAccount: createDefaultMock(),
     deleteInboxAccount: mocks.deleteInboxAccount,
@@ -1090,8 +1094,8 @@ const dbQueriesMock = new Proxy(
     // Short links
     getShortLinkByShortId: mocks.getShortLinkByShortId,
     createShortLink: mocks.createShortLink,
-    updateDocumentProcessingStatus: createDefaultMock(),
-    updateDocuments: createDefaultMock(),
+    updateDocumentProcessingStatus: mocks.updateDocumentProcessingStatus,
+    updateDocuments: mocks.updateDocuments,
 
     // Search
     globalSearchQuery: mocks.globalSearchQuery,
@@ -1134,7 +1138,7 @@ const dbQueriesMock = new Proxy(
     getAppBySlackTeamId: mocks.getAppBySlackTeamId,
     getPlatformIdentity: mocks.getPlatformIdentity,
     updatePlatformIdentityMetadata: mocks.updatePlatformIdentityMetadata,
-    getAppByAppId: createDefaultMock(),
+    getAppByAppId: mocks.getAppByAppId,
     deleteApp: createDefaultMock(),
 
     // Accounting sync

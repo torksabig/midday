@@ -16,6 +16,7 @@ import {
   tryDelegateDocumentsCheckAttachments,
   tryDelegateDocumentsDelete,
   tryDelegateDocumentProcessingStatus,
+  tryDelegateDocumentsProcessingStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -169,7 +170,7 @@ export const documentsRouter = createTRPCRouter({
 
   processDocument: protectedProcedure
     .input(processDocumentSchema)
-    .mutation(async ({ ctx: { teamId, db }, input }) => {
+    .mutation(async ({ ctx: { teamId, db, accessToken }, input }) => {
       const supportedDocuments = input.filter((item) =>
         isMimeTypeSupportedForProcessing(item.mimetype),
       );
@@ -183,11 +184,27 @@ export const documentsRouter = createTRPCRouter({
           doc.filePath.join("/"),
         );
 
-        await updateDocuments(db, {
-          ids: unsupportedNames,
-          teamId: teamId!,
-          processingStatus: "completed",
-        });
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateDocumentsProcessingStatus(
+            unsupportedNames,
+            "completed",
+            accessToken,
+          );
+          if (!delegated.delegated) {
+            assertLegacyIdentityFallbackAllowed();
+            await updateDocuments(db, {
+              ids: unsupportedNames,
+              teamId: teamId!,
+              processingStatus: "completed",
+            });
+          }
+        } else {
+          await updateDocuments(db, {
+            ids: unsupportedNames,
+            teamId: teamId!,
+            processingStatus: "completed",
+          });
+        }
       }
 
       if (supportedDocuments.length === 0) {
