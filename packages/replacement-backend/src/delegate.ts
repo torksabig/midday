@@ -63,6 +63,8 @@ import {
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
+  mapReplacementToOAuthApplication,
+  mapReplacementToOAuthApplicationDelete,
   mapReplacementToInboxAccountsGet,
   type MiddayAccountingConnectionShape,
   type MiddayNotificationsListShape,
@@ -153,6 +155,8 @@ export {
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
+  mapReplacementToOAuthApplication,
+  mapReplacementToOAuthApplicationDelete,
   mapReplacementToInboxAccountsGet,
   type MiddayBankAccountsGetShape,
   type MiddayNotificationsListShape,
@@ -2036,6 +2040,96 @@ export async function fetchReplacementOAuthApplicationsList(
     token,
   );
   return mapReplacementToOAuthApplicationsList(payload);
+}
+
+export type ReplacementOAuthAppCreateInput = {
+  name: string;
+  description?: string;
+  overview?: string;
+  developerName?: string;
+  logoUrl?: string;
+  website?: string;
+  installUrl?: string;
+  screenshots?: string[];
+  redirectUris: string[];
+  scopes?: string[];
+  isPublic?: boolean;
+};
+
+export type ReplacementOAuthAppUpdateInput = {
+  name?: string;
+  description?: string;
+  overview?: string;
+  developerName?: string;
+  logoUrl?: string;
+  website?: string;
+  installUrl?: string;
+  screenshots?: string[];
+  redirectUris?: string[];
+  scopes?: string[];
+  isPublic?: boolean;
+  active?: boolean;
+};
+
+export async function fetchReplacementOAuthApplicationGet(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/oauth-applications/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToOAuthApplication(payload);
+}
+
+export async function fetchReplacementOAuthApplicationCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementOAuthAppCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/oauth-applications`,
+    token,
+    input,
+  );
+  return mapReplacementToOAuthApplication(payload);
+}
+
+export async function fetchReplacementOAuthApplicationUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  input: ReplacementOAuthAppUpdateInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/oauth-applications/${encodeURIComponent(id)}`,
+    token,
+    input,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToOAuthApplication(payload);
+}
+
+export async function fetchReplacementOAuthApplicationDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string; name: string } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/oauth-applications/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToOAuthApplicationDelete(payload);
 }
 
 export async function fetchReplacementInboxAccountsGet(

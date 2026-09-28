@@ -1845,6 +1845,23 @@ export function mapReplacementToOAuthApplicationsList(payload: unknown): {
   };
 }
 
+/** Single OAuth app row (get/create/update). May include one-time `clientSecret`. */
+export function mapReplacementToOAuthApplication(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToOAuthApplicationDelete(
+  payload: unknown,
+): { id: string; name: string } {
+  const row = deepCamelCaseKeys(
+    z.record(z.string(), z.unknown()).parse(payload),
+  ) as { id?: string; name?: string };
+  return {
+    id: String(row.id ?? ""),
+    name: String(row.name ?? ""),
+  };
+}
+
 export function mapReplacementToInboxAccountsGet(payload: unknown): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }

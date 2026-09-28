@@ -13,6 +13,10 @@ import { resend } from "@api/services/resend";
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateOAuthApplicationsList,
+  tryDelegateOAuthApplicationGet,
+  tryDelegateOAuthApplicationCreate,
+  tryDelegateOAuthApplicationUpdate,
+  tryDelegateOAuthApplicationDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -236,7 +240,18 @@ export const oauthApplicationsRouter = createTRPCRouter({
   create: protectedProcedure
     .input(createOAuthApplicationSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, teamId, session } = ctx;
+      const { db, teamId, session, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApplicationCreate(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.application;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const application = await createOAuthApplication(db, {
         ...input,
@@ -250,7 +265,21 @@ export const oauthApplicationsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getOAuthApplicationSchema)
     .query(async ({ ctx, input }) => {
-      const { db, teamId } = ctx;
+      const { db, teamId, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApplicationGet(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.application) {
+            throw new Error("OAuth application not found");
+          }
+          return delegated.application;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const application = await getOAuthApplicationById(db, input.id, teamId!);
 
@@ -264,8 +293,23 @@ export const oauthApplicationsRouter = createTRPCRouter({
   update: protectedProcedure
     .input(updateOAuthApplicationSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, teamId } = ctx;
+      const { db, teamId, accessToken } = ctx;
       const { id, ...updateData } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApplicationUpdate(
+          id,
+          updateData,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.application) {
+            throw new Error("OAuth application not found");
+          }
+          return delegated.application;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const application = await updateOAuthApplication(db, {
         ...updateData,
@@ -283,7 +327,21 @@ export const oauthApplicationsRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(deleteOAuthApplicationSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, teamId } = ctx;
+      const { db, teamId, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthApplicationDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.result) {
+            throw new Error("OAuth application not found");
+          }
+          return { success: true };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const result = await deleteOAuthApplication(db, {
         id: input.id,
