@@ -30,6 +30,8 @@ import {
   fetchReplacementTrackerProjectById,
   fetchReplacementTrackerCurrentTimer,
   fetchReplacementTrackerTimerStatus,
+  fetchReplacementTrackerStartTimer,
+  fetchReplacementTrackerStopTimer,
   fetchReplacementAccountingSyncStatus,
   fetchReplacementAccountingConnections,
   fetchReplacementBankConnections,
@@ -124,6 +126,8 @@ import {
   type ReplacementTrackerBillableHoursQuery,
   type ReplacementTrackerEntriesByDateQuery,
   type ReplacementTrackerTimerQuery,
+  type ReplacementStartTimerInput,
+  type ReplacementStopTimerInput,
   type ReplacementAccountingSyncStatusQuery,
   type ReplacementBankConnectionsListQuery,
 } from "@midday/replacement-backend";
@@ -1338,6 +1342,92 @@ export async function tryDelegateTrackerTimerStatus(
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementTrackerTimerStatus(baseUrl, token, input),
   );
+}
+
+export type DelegateTrackerTimerMutationResult =
+  | { delegated: false }
+  | { delegated: true; entry: unknown };
+
+export async function tryDelegateTrackerStartTimer(
+  input: ReplacementStartTimerInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTrackerTimerMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const entry = await fetchReplacementTrackerStartTimer(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, entry };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateTrackerStopTimer(
+  input: ReplacementStopTimerInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTrackerTimerMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const entry = await fetchReplacementTrackerStopTimer(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, entry };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
 }
 
 export async function tryDelegateAccountingSyncStatus(

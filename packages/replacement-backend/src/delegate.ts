@@ -1467,6 +1467,56 @@ export async function fetchReplacementTrackerTimerStatus(
   return mapReplacementToTrackerTimerStatus(payload);
 }
 
+export type ReplacementStartTimerInput = {
+  projectId: string;
+  assignedId?: string | null;
+  description?: string | null;
+  start?: string;
+};
+
+export type ReplacementStopTimerInput = {
+  entryId?: string;
+  assignedId?: string | null;
+  stop?: string;
+};
+
+export async function fetchReplacementTrackerStartTimer(
+  baseUrl: string,
+  token: string,
+  input: ReplacementStartTimerInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tracker/timer/start`,
+    token,
+    {
+      projectId: input.projectId,
+      assignedId: input.assignedId ?? undefined,
+      description: input.description ?? undefined,
+      start: input.start,
+    },
+  );
+  return mapReplacementToTrackerCurrentTimer(payload);
+}
+
+export async function fetchReplacementTrackerStopTimer(
+  baseUrl: string,
+  token: string,
+  input: ReplacementStopTimerInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tracker/timer/stop`,
+    token,
+    {
+      entryId: input.entryId,
+      assignedId: input.assignedId ?? undefined,
+      stop: input.stop,
+    },
+  );
+  return mapReplacementToTrackerCurrentTimer(payload ?? {});
+}
+
 export type ReplacementAccountingSyncStatusQuery = {
   transactionIds?: string[] | null;
   providerId?: string | null;

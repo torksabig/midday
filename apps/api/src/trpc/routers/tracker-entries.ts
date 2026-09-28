@@ -14,6 +14,8 @@ import {
   tryDelegateTrackerCurrentTimer,
   tryDelegateTrackerEntriesByDate,
   tryDelegateTrackerEntriesByRange,
+  tryDelegateTrackerStartTimer,
+  tryDelegateTrackerStopTimer,
   tryDelegateTrackerTimerStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -123,20 +125,53 @@ export const trackerEntriesRouter = createTRPCRouter({
   // Timer procedures
   startTimer: protectedProcedure
     .input(startTimerSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      const assignedId = input.assignedId ?? session.user.id;
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerStartTimer(
+          {
+            projectId: input.projectId,
+            assignedId,
+            description: input.description,
+            start: input.start,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.entry;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return startTimer(db, {
         teamId: teamId!,
-        assignedId: input.assignedId ?? session.user.id,
+        assignedId,
         ...input,
       });
     }),
 
   stopTimer: protectedProcedure
     .input(stopTimerSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      const assignedId = input.assignedId ?? session.user.id;
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerStopTimer(
+          {
+            entryId: input.entryId,
+            assignedId,
+            stop: input.stop,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.entry;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return stopTimer(db, {
         teamId: teamId!,
-        assignedId: input.assignedId ?? session.user.id,
+        assignedId,
         ...input,
       });
     }),
