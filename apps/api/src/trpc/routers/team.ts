@@ -11,6 +11,7 @@ import {
   updateTeamByIdSchema,
   updateTeamMemberSchema,
 } from "@api/schemas/team";
+import { tryDelegateTeamCurrent } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import type { InviteTeamMembersPayload } from "@jobs/schema";
 
@@ -43,6 +44,11 @@ import { TRPCError } from "@trpc/server";
 
 export const teamRouter = createTRPCRouter({
   current: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+    const delegated = await tryDelegateTeamCurrent();
+    if (delegated) {
+      return delegated;
+    }
+
     if (!teamId) {
       return null;
     }

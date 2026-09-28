@@ -33,6 +33,7 @@
     "@midday/location": "workspace:*",
     "@midday/mcp-apps": "workspace:*",
     "@midday/plans": "workspace:*",
+    "@midday/replacement-backend": "workspace:*",
     "@midday/supabase": "workspace:*",
     "@midday/trpc": "workspace:*",
     "@midday/ui": "workspace:*",

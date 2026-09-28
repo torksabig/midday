@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   getBackendMode,
   getReplacementApiUrl,
+  shouldDelegateToReplacementBackend,
   shouldProbeReplacementBackend,
 } from "./config";
 
@@ -22,6 +23,12 @@ describe("replacement backend config", () => {
     process.env.MIDDAY_BACKEND_MODE = "dual";
     expect(getBackendMode()).toBe("dual");
     expect(shouldProbeReplacementBackend()).toBe(true);
+    expect(shouldDelegateToReplacementBackend()).toBe(true);
+  });
+
+  test("legacy mode does not delegate", () => {
+    delete process.env.MIDDAY_BACKEND_MODE;
+    expect(shouldDelegateToReplacementBackend()).toBe(false);
   });
 
   test("normalizes replacement API URL", () => {

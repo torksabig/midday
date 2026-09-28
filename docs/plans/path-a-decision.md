@@ -1,24 +1,23 @@
-# Decision: Path A confirmed 2026-09-28
+# Path A — historical note (superseded)
 
-**Chosen path:** Clean-room revival of sibling repo `fintech/clone` (../clone from this monorepo root) — Rust Axum API + Vite React (CSS Modules), Midday **UX parity** as reference only.
+**Canonical plan:** [Clean Rust replacement — no permanent proxy](./2026-09-28-clean-rust-replacement-no-proxy.md) (2026-09-28)
 
-**Not active:** Strangler fig (Midday Next.js dashboard + `@midday/replacement-backend` wiring). That approach remains documented in [`2026-09-28-midday-stack-replacement.md`](./2026-09-28-midday-stack-replacement.md) for historical context but is **deferred** until Path A reaches production readiness.
+## What was Path A?
 
-## Implications
+Clean-room revival of sibling `fintech/clone` with **Vite React** as the product shell and Rust Axum API — Midday UX as reference only, no `@midday/*` in clone.
 
-| Topic | Path A |
-|--------|--------|
-| Product surface | `clone/apps/web` |
-| API | `clone/crates/api` at `http://127.0.0.1:8787` |
-| Midday repo | Reference for screens/flows/look — **no** `@midday/*` in clone |
-| Banking | CSV import + mocks only |
-| Phase 1 / U1 | Clone foundation: local API + web dev, JWT + demo session, env/docs |
+## Current strategy (active)
 
-## Next units (clone umbrella)
+| Layer | Choice |
+|-------|--------|
+| **UI** | `apps/dashboard` (Next.js) — **frozen**; sync from Downloads baseline only |
+| **Backend** | Full **Rust** replacement (`fintech/clone` Axum API); all business logic in Rust |
+| **Cutover** | Temporary `apps/api` tRPC thin-fetch to Rust only until procedures move or dashboard calls Rust directly |
+| **End state** | **Delete** Node stack (`apps/api`, `packages/db`, `packages/replacement-backend`, workers, legacy domain packages) |
 
-- **U2:** Domain hardening / data seed polish (transactions, inbox CSV flows) per clone plans 02+
-- **U3:** Assistant (OpenRouter optional), vault edge cases, Postgres portability when Docker available
+Path A **Vite clone UI is not active** — clone is **API/backend only**, not the product shell.
 
-## Midday repo hygiene
+## Deferred / archived
 
-Uncommitted strangler wiring (replacement-backend transpile, dashboard env flags) should be **reverted or ignored** while Path A is active. Do not mix clone code into Midday packages without a documented license boundary review.
+- Path A as product surface (`clone/apps/web`)
+- Strangler fig with permanent dual-mode or `@midday/replacement-backend` bridge — see [enterprise strangler (archived)](./2026-09-28-enterprise-strangler-rust-migration.md) and [midday stack replacement](./2026-09-28-midday-stack-replacement.md) for history

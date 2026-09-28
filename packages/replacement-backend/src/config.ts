@@ -25,6 +25,13 @@ export function shouldProbeReplacementBackend(): boolean {
   return mode === "dual" || mode === "replacement";
 }
 
+/** True when reads/writes should prefer the replacement API (replacement-only mode). */
 export function shouldRouteToReplacementBackend(): boolean {
   return getBackendMode() === "replacement";
+}
+
+/** True when tRPC may delegate compatible procedures to the replacement REST API. */
+export function shouldDelegateToReplacementBackend(): boolean {
+  const mode = getBackendMode();
+  return mode === "dual" || mode === "replacement";
 }

@@ -62,22 +62,25 @@ apps/api (Hono)
   └─ packages/db + Supabase service role
 ```
 
-Dashboard types import `AppRouter` from `@midday/api/trpc/routers/_app` — **preserve this contract** during strangler migration (either keep a tRPC layer on the new backend or implement a compatibility router in a slim `apps/api` shell).
+Dashboard types import `AppRouter` from `@midday/api/trpc/routers/_app` — **preserve this contract** until cutover completes (temporary tRPC in `apps/api` that fetches Rust, or dashboard-native Rust client later).
 
-## Strategy: strangler fig (not big-bang)
+## Strategy: clean Rust replacement (not permanent strangler)
+
+Prefer the [**clean Rust replacement plan**](./2026-09-28-clean-rust-replacement-no-proxy.md): one Rust backend for all business logic, **temporary** `apps/api` tRPC boundary only, **delete** Drizzle/legacy TypeScript per domain as soon as Rust owns that router. No long-lived `@midday/replacement-backend` or `MIDDAY_BACKEND_MODE` dual forever—those exist only as optional short-term cutover aids already in the repo.
 
 | Phase | Focus |
 |-------|--------|
-| **0** | Baseline: sync workspace UI to Downloads; env + health probe; document modes |
-| **1** | New backend repo wired via `REPLACEMENT_API_URL`; dual-run probes |
-| **2** | Domain-by-domain: `apps/api` tRPC handlers delegate to new REST (or replace `apps/api` with tRPC shim only) |
-| **3** | Auth: Supabase session → replacement JWT; minimal login/MFA adapter (no login page redesign) |
-| **4** | DB cutover per domain; remove Supabase realtime where needed |
-| **5** | Retire `apps/worker`, Trigger tasks; delete legacy packages |
+| **0** | Baseline: sync workspace UI to Downloads; env + health probe |
+| **1** | Supabase JWKS on Rust; session bearer passthrough; first domains (`user`, `team`) + immediate legacy delete |
+| **2** | Domain loop: implement Rust → swap tRPC fetch → delete `packages/db` usage for that domain |
+| **3** | Rust workers + connectors; retire `apps/worker` / `packages/jobs` |
+| **4** | Delete `apps/api`, `packages/replacement-backend`, remaining legacy packages; final tree: `dashboard`, `clone`, `packages/ui` |
 
-**Why not big-bang:** ~40 tRPC routers and Supabase usage across dashboard BFF routes; one cutover breaks every screen.
+**Why not big-bang:** ~40 tRPC routers and Supabase usage across dashboard BFF routes; one cutover breaks every screen—use the **3-step domain protocol** in the canonical plan instead.
 
 **Why not Path A clone UI:** User goal requires **identical** Midday Next dashboard, not Vite reimplementation.
+
+**Deprecated (archived):** Permanent façade-first strangler — [enterprise strangler doc](./2026-09-28-enterprise-strangler-rust-migration.md).
 
 ## Recommended single approach
 
@@ -132,5 +135,7 @@ Practical mitigations (require legal counsel):
 
 ## Related docs
 
-- Deferred strangler detail: [2026-09-28-midday-stack-replacement.md](./2026-09-28-midday-stack-replacement.md)
+- **Canonical migration:** [Clean Rust replacement — no permanent proxy](./2026-09-28-clean-rust-replacement-no-proxy.md) — architecture, 4-stage deletion table, 3-step domain protocol, final tree (`dashboard`, `clone`, `packages/ui`).
+- Archived strangler: [2026-09-28-enterprise-strangler-rust-migration.md](./2026-09-28-enterprise-strangler-rust-migration.md) — superseded; kept for historical CDC/shadow-read notes only.
+- Deferred outline: [2026-09-28-midday-stack-replacement.md](./2026-09-28-midday-stack-replacement.md)
 - Path A (clone UI): [path-a-decision.md](./path-a-decision.md) — not aligned with frozen Midday UI goal
