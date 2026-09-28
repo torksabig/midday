@@ -54,6 +54,9 @@ import {
   mapReplacementToTeamUpdate,
   buildReplacementTeamUpdateBody,
   mapReplacementToTagMutation,
+  mapReplacementToDocumentTagCreate,
+  mapReplacementToDocumentTagDelete,
+  mapReplacementToDocumentTagAssignment,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -64,6 +67,9 @@ import {
   type MiddayUserUpdateShape,
   type MiddayTeamUpdateShape,
   type MiddayTagMutationShape,
+  type MiddayDocumentTagMutationShape,
+  type MiddayDocumentTagDeleteShape,
+  type MiddayDocumentTagAssignmentShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -137,6 +143,9 @@ export {
   mapReplacementToTeamUpdate,
   buildReplacementTeamUpdateBody,
   mapReplacementToTagMutation,
+  mapReplacementToDocumentTagCreate,
+  mapReplacementToDocumentTagDelete,
+  mapReplacementToDocumentTagAssignment,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -147,6 +156,9 @@ export {
   type MiddayUserUpdateShape,
   type MiddayTeamUpdateShape,
   type MiddayTagMutationShape,
+  type MiddayDocumentTagMutationShape,
+  type MiddayDocumentTagDeleteShape,
+  type MiddayDocumentTagAssignmentShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
@@ -255,6 +267,33 @@ async function replacementDelete<T>(
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function replacementDeleteWithBody<T>(
+  url: string,
+  token: string,
+  body: unknown,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T | null> {
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -2057,6 +2096,70 @@ export async function fetchReplacementTagDelete(
     return null;
   }
   return mapReplacementToTagMutation(payload);
+}
+
+export async function fetchReplacementDocumentTagCreate(
+  baseUrl: string,
+  token: string,
+  name: string,
+  slug: string,
+): Promise<MiddayDocumentTagMutationShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/document-tags`,
+    token,
+    { name, slug },
+  );
+  return mapReplacementToDocumentTagCreate(payload);
+}
+
+export async function fetchReplacementDocumentTagDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<MiddayDocumentTagDeleteShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/document-tags/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToDocumentTagDelete(payload);
+}
+
+export async function fetchReplacementDocumentTagAssignmentCreate(
+  baseUrl: string,
+  token: string,
+  documentId: string,
+  tagId: string,
+): Promise<MiddayDocumentTagAssignmentShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/document-tag-assignments`,
+    token,
+    { documentId, tagId },
+  );
+  return mapReplacementToDocumentTagAssignment(payload);
+}
+
+export async function fetchReplacementDocumentTagAssignmentDelete(
+  baseUrl: string,
+  token: string,
+  documentId: string,
+  tagId: string,
+): Promise<MiddayDocumentTagAssignmentShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDeleteWithBody<unknown>(
+    `${root}/api/v1/document-tag-assignments`,
+    token,
+    { documentId, tagId },
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToDocumentTagAssignment(payload);
 }
 
 export { shouldDelegateToReplacementBackend };

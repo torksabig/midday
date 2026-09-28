@@ -9,8 +9,14 @@ const TAG_ID = "c3d4e5f6-a7b8-9012-cdef-123456789012";
 
 const createCaller = createCallerFactory(documentTagAssignmentsRouter);
 
+function forceLegacyBackend() {
+  process.env.MIDDAY_BACKEND_MODE = "legacy";
+  delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+}
+
 describe("tRPC: documentTagAssignments.create", () => {
   beforeEach(() => {
+    forceLegacyBackend();
     mocks.createDocumentTagAssignment.mockReset();
     mocks.createDocumentTagAssignment.mockImplementation(() =>
       Promise.resolve({
@@ -50,6 +56,7 @@ describe("tRPC: documentTagAssignments.create", () => {
 
 describe("tRPC: documentTagAssignments.delete", () => {
   beforeEach(() => {
+    forceLegacyBackend();
     mocks.deleteDocumentTagAssignment.mockReset();
     mocks.deleteDocumentTagAssignment.mockImplementation(() =>
       Promise.resolve({}),

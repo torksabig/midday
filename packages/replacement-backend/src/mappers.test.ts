@@ -38,6 +38,9 @@ import {
   mapReplacementToTeamUpdate,
   buildReplacementTeamUpdateBody,
   mapReplacementToTagMutation,
+  mapReplacementToDocumentTagCreate,
+  mapReplacementToDocumentTagDelete,
+  mapReplacementToDocumentTagAssignment,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -833,6 +836,36 @@ describe("replacement mappers", () => {
     expect(mapReplacementToTagMutation({ id: "tag-1", name: "Urgent" })).toEqual({
       id: "tag-1",
       name: "Urgent",
+    });
+  });
+
+  test("mapReplacementToDocumentTagCreate returns id name slug", () => {
+    expect(
+      mapReplacementToDocumentTagCreate({
+        id: "dt-1",
+        name: "Tax",
+        slug: "tax",
+      }),
+    ).toEqual({ id: "dt-1", name: "Tax", slug: "tax" });
+  });
+
+  test("mapReplacementToDocumentTagDelete returns id", () => {
+    expect(mapReplacementToDocumentTagDelete({ id: "dt-1" })).toEqual({
+      id: "dt-1",
+    });
+  });
+
+  test("mapReplacementToDocumentTagAssignment returns camelCase keys", () => {
+    expect(
+      mapReplacementToDocumentTagAssignment({
+        documentId: "doc-1",
+        tagId: "tag-1",
+        teamId: "team-1",
+      }),
+    ).toEqual({
+      documentId: "doc-1",
+      tagId: "tag-1",
+      teamId: "team-1",
     });
   });
 

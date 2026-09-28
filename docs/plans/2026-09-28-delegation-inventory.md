@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **15** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **19** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -61,7 +61,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.getRelatedDocuments` | yes | read · `match_similar_documents_by_title()` (Phase 5 slice 3) |
 | `documents.*` (other) | no | attachments, vault mutations |
 | `documentTags.get` | yes | read · vault tag list (Phase 10) |
-| `documentTags.*` (other) | no | create, delete |
+| `documentTags.create` | yes | **write** · insert tag (AP-23); embedding stays in Node |
+| `documentTags.delete` | yes | **write** · delete tag (AP-23) |
+| `documentTagAssignments.create` | yes | **write** · assign tag to document (AP-23) |
+| `documentTagAssignments.delete` | yes | **write** · unassign tag (AP-23) |
 | `customers.get` | yes | read · list (Phase 4) |
 | `customers.getById` | yes | read (Phase 4) |
 | `customers.*` (other) | no | portal public, CRUD, enrichment |
@@ -111,7 +114,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.delete` | yes | **write** · delete tag (AP-22) |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team` (**PUT**), `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/notifications/:id/status` (**PUT**), `/notifications/status` (**PUT** bulk), `/user` (**PUT**), `/user/invites`, `/workers/noop` (**POST** Stage-3 sketch), `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags` (GET + **POST**), `/tags/:id` (**PUT** + **DELETE**), `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team` (**PUT**), `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/notifications/:id/status` (**PUT**), `/notifications/status` (**PUT** bulk), `/user` (**PUT**), `/user/invites`, `/workers/noop` (**POST** Stage-3 sketch), `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags` (GET + **POST**), `/document-tags/:id` (**DELETE**), `/document-tag-assignments` (**POST** + **DELETE**), `/tags` (GET + **POST**), `/tags/:id` (**PUT** + **DELETE**), `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -262,6 +265,15 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.create` / `update` / `delete` | Yes · POST/PUT/DELETE `/tags` | Same |
 | Tag return `{ id, name }` | Yes | Same |
 
+### `documentTags` / `documentTagAssignments` write parity (AP-23)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| `documentTags.create` insert | Yes · POST `/document-tags` | Same |
+| Embedding after create | Node façade after delegate | Same Embed service |
+| `documentTags.delete` | Yes · DELETE `/document-tags/:id` | Same |
+| Assignment create/delete | Yes · POST/DELETE `/document-tag-assignments` | Same |
+
 ### AP-STAGE3 — Rust job consumer sketch
 
 | Concern | Status |
@@ -290,8 +302,9 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-21 | DONE | `notifications.updateAllStatus` + `user.update` writes | write |
 | AP-STAGE3 | DONE | Thin `job_consumers` sketch + `POST /workers/noop` (Node workers untouched) | infra |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
+| AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** More write gaps (`customers.upsert` without enrichment, document-tags CRUD) or parity hardening. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** Customers metadata writes (`customers.delete`, `customers.upsert` without enrichment), tracker timer start/stop, transaction categories getById/CRUD, invoice draft fields. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
-**Autopilot AP-12–22 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Autopilot AP-12–23 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.

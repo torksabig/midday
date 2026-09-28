@@ -4,6 +4,8 @@ import {
 } from "@api/schemas/document-tags";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateDocumentTagCreate,
+  tryDelegateDocumentTagDelete,
   tryDelegateDocumentTagsGet,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -32,14 +34,32 @@ export const documentTagsRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createDocumentTagSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
-      const data = await createDocumentTag(db, {
-        teamId: teamId!,
-        name: input.name,
-        slug: slugify(input.name),
-      });
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      const slug = slugify(input.name);
+      let data: { id: string; name: string; slug: string } | null | undefined;
 
-      // If a tag is created, we need to embed it
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentTagCreate(
+          input.name,
+          slug,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.tag;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (data === undefined) {
+        data = await createDocumentTag(db, {
+          teamId: teamId!,
+          name: input.name,
+          slug,
+        });
+      }
+
+      // Embedding stays in the Node façade (parity with legacy create path).
       if (data) {
         const embedService = new Embed();
         const { embedding, model } = await embedService.embed(input.name);
@@ -57,7 +77,18 @@ export const documentTagsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteDocumentTagSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentTagDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.tag ?? undefined;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteDocumentTag(db, {
         id: input.id,
         teamId: teamId!,

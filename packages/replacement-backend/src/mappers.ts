@@ -1921,3 +1921,53 @@ export function mapReplacementToTagMutation(
 ): MiddayTagMutationShape {
   return replacementTagMutationSchema.parse(payload);
 }
+
+const replacementDocumentTagMutationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+});
+
+export type MiddayDocumentTagMutationShape = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export function mapReplacementToDocumentTagCreate(
+  payload: unknown,
+): MiddayDocumentTagMutationShape {
+  return replacementDocumentTagMutationSchema.parse(payload);
+}
+
+const replacementDocumentTagDeleteSchema = z.object({
+  id: z.string(),
+});
+
+export type MiddayDocumentTagDeleteShape = {
+  id: string;
+};
+
+export function mapReplacementToDocumentTagDelete(
+  payload: unknown,
+): MiddayDocumentTagDeleteShape {
+  return replacementDocumentTagDeleteSchema.parse(payload);
+}
+
+const replacementDocumentTagAssignmentSchema = z.object({
+  documentId: z.string(),
+  tagId: z.string(),
+  teamId: z.string(),
+});
+
+export type MiddayDocumentTagAssignmentShape = {
+  documentId: string;
+  tagId: string;
+  teamId: string;
+};
+
+export function mapReplacementToDocumentTagAssignment(
+  payload: unknown,
+): MiddayDocumentTagAssignmentShape {
+  return replacementDocumentTagAssignmentSchema.parse(payload);
+}

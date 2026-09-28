@@ -49,6 +49,10 @@ import {
   fetchReplacementTagCreate,
   fetchReplacementTagUpdate,
   fetchReplacementTagDelete,
+  fetchReplacementDocumentTagCreate,
+  fetchReplacementDocumentTagDelete,
+  fetchReplacementDocumentTagAssignmentCreate,
+  fetchReplacementDocumentTagAssignmentDelete,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -1847,6 +1851,198 @@ export async function tryDelegateTagDelete(
       id,
     );
     return { delegated: true, tag };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateDocumentTagCreateResult =
+  | { delegated: false }
+  | {
+      delegated: true;
+      tag: { id: string; name: string; slug: string } | null;
+    };
+
+export async function tryDelegateDocumentTagCreate(
+  name: string,
+  slug: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateDocumentTagCreateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const tag = await fetchReplacementDocumentTagCreate(
+      getReplacementApiUrl(),
+      token,
+      name,
+      slug,
+    );
+    return { delegated: true, tag };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateDocumentTagDeleteResult =
+  | { delegated: false }
+  | { delegated: true; tag: { id: string } | null };
+
+export async function tryDelegateDocumentTagDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateDocumentTagDeleteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const tag = await fetchReplacementDocumentTagDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, tag };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateDocumentTagAssignmentResult =
+  | { delegated: false }
+  | {
+      delegated: true;
+      assignment: {
+        documentId: string;
+        tagId: string;
+        teamId: string;
+      } | null;
+    };
+
+export async function tryDelegateDocumentTagAssignmentCreate(
+  documentId: string,
+  tagId: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateDocumentTagAssignmentResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const assignment = await fetchReplacementDocumentTagAssignmentCreate(
+      getReplacementApiUrl(),
+      token,
+      documentId,
+      tagId,
+    );
+    return { delegated: true, assignment };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateDocumentTagAssignmentDelete(
+  documentId: string,
+  tagId: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateDocumentTagAssignmentResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const assignment = await fetchReplacementDocumentTagAssignmentDelete(
+      getReplacementApiUrl(),
+      token,
+      documentId,
+      tagId,
+    );
+    return { delegated: true, assignment };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({
