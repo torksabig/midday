@@ -23,6 +23,7 @@ import {
   tryDelegateTransactionsUpdateMany,
   tryDelegateTransactionsDeleteMany,
   tryDelegateMoveToReview,
+  tryDelegateSimilarTransactions,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -202,7 +203,22 @@ export const transactionsRouter = createTRPCRouter({
 
   getSimilarTransactions: protectedProcedure
     .input(getSimilarTransactionsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateSimilarTransactions(
+          {
+            name: input.name,
+            categorySlug: input.categorySlug,
+            transactionId: input.transactionId,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.rows;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getSimilarTransactions(db, {
         name: input.name,
         categorySlug: input.categorySlug,

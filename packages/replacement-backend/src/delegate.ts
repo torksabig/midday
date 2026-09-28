@@ -54,6 +54,12 @@ import {
   mapReplacementToCustomerInvoiceSummary,
   mapReplacementToCustomerEnrichmentAction,
   mapReplacementToMoveToReview,
+  mapReplacementToSimilarTransactions,
+  mapReplacementToTogglePortal,
+  mapReplacementToApplicationInfo,
+  mapReplacementToPortalCustomer,
+  mapReplacementToPortalInvoices,
+  mapReplacementToAvailablePlans,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -178,6 +184,12 @@ export {
   mapReplacementToCustomerInvoiceSummary,
   mapReplacementToCustomerEnrichmentAction,
   mapReplacementToMoveToReview,
+  mapReplacementToSimilarTransactions,
+  mapReplacementToTogglePortal,
+  mapReplacementToApplicationInfo,
+  mapReplacementToPortalCustomer,
+  mapReplacementToPortalInvoices,
+  mapReplacementToAvailablePlans,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -3298,6 +3310,114 @@ export async function fetchReplacementMoveToReview(
     {},
   );
   return mapReplacementToMoveToReview(payload ?? { success: true });
+}
+
+export async function fetchReplacementSimilarTransactions(
+  baseUrl: string,
+  token: string,
+  query: {
+    name: string;
+    categorySlug?: string;
+    transactionId?: string;
+  },
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const params = new URLSearchParams({ name: query.name });
+  if (query.categorySlug) params.set("categorySlug", query.categorySlug);
+  if (query.transactionId) params.set("transactionId", query.transactionId);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/transactions/similar?${params}`,
+    token,
+  );
+  return mapReplacementToSimilarTransactions(payload);
+}
+
+export async function fetchReplacementTogglePortal(
+  baseUrl: string,
+  token: string,
+  input: { customerId: string; enabled: boolean },
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/customers/toggle-portal`,
+    token,
+    input,
+  );
+  return mapReplacementToTogglePortal(payload);
+}
+
+export async function fetchReplacementApplicationInfo(
+  baseUrl: string,
+  token: string,
+  query: {
+    clientId: string;
+    redirectUri: string;
+    scope: string;
+    state?: string;
+  },
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const params = new URLSearchParams({
+    clientId: query.clientId,
+    redirectUri: query.redirectUri,
+    scope: query.scope,
+  });
+  if (query.state) params.set("state", query.state);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/oauth-applications/application-info?${params}`,
+    token,
+  );
+  return mapReplacementToApplicationInfo(payload);
+}
+
+export async function fetchReplacementPortalCustomer(
+  baseUrl: string,
+  portalId: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  // Public route — no bearer required; still use replacementFetch with empty token if needed.
+  const res = await fetch(
+    `${root}/api/v1/portal/${encodeURIComponent(portalId)}`,
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`replacement portal customer: HTTP ${res.status}`);
+  }
+  const payload = await res.json();
+  if (payload == null) return null;
+  return mapReplacementToPortalCustomer(payload);
+}
+
+export async function fetchReplacementPortalInvoices(
+  baseUrl: string,
+  portalId: string,
+  query: { cursor?: string | null; pageSize?: number },
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const params = new URLSearchParams();
+  if (query.cursor) params.set("cursor", query.cursor);
+  if (query.pageSize != null) params.set("pageSize", String(query.pageSize));
+  const qs = params.toString();
+  const res = await fetch(
+    `${root}/api/v1/portal/${encodeURIComponent(portalId)}/invoices${qs ? `?${qs}` : ""}`,
+  );
+  if (!res.ok) {
+    throw new Error(`replacement portal invoices: HTTP ${res.status}`);
+  }
+  const payload = await res.json();
+  return mapReplacementToPortalInvoices(payload);
+}
+
+export async function fetchReplacementAvailablePlans(
+  baseUrl: string,
+  token: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/team/available-plans`,
+    token,
+  );
+  return mapReplacementToAvailablePlans(payload);
 }
 
 export async function fetchReplacementInboxDelete(

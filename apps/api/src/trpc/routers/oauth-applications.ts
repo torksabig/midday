@@ -20,6 +20,7 @@ import {
   tryDelegateOAuthApplicationRegenerateSecret,
   tryDelegateOAuthAuthorized,
   tryDelegateOAuthRevokeAccess,
+  tryDelegateApplicationInfo,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -68,8 +69,19 @@ export const oauthApplicationsRouter = createTRPCRouter({
   getApplicationInfo: protectedProcedure
     .input(getApplicationInfoSchema)
     .query(async ({ ctx, input }) => {
-      const { db } = ctx;
+      const { db, accessToken } = ctx;
       const { clientId, redirectUri, scope, state } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateApplicationInfo(
+          { clientId, redirectUri, scope, state },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.info;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       // Validate client_id
       const application = await getOAuthApplicationByClientId(db, clientId);

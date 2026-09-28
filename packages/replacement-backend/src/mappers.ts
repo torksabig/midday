@@ -1464,6 +1464,35 @@ export function mapReplacementToMoveToReview(payload: unknown): {
   return { success: true };
 }
 
+export function mapReplacementToSimilarTransactions(
+  payload: unknown,
+): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
+export function mapReplacementToTogglePortal(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToApplicationInfo(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToPortalCustomer(
+  payload: unknown,
+): unknown | null {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToPortalInvoices(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToAvailablePlans(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

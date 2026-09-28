@@ -26,6 +26,7 @@ import {
   tryDelegateTeamUpdateMember,
   tryDelegateTeamLeave,
   tryDelegateUserInvites,
+  tryDelegateAvailablePlans,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -522,9 +523,19 @@ export const teamRouter = createTRPCRouter({
       });
     }),
 
-  availablePlans: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    return getAvailablePlans(db, teamId!);
-  }),
+  availablePlans: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAvailablePlans(accessToken);
+        if (delegated.delegated) {
+          return delegated.plans;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return getAvailablePlans(db, teamId!);
+    },
+  ),
 
   updateBaseCurrency: protectedProcedure
     .input(updateBaseCurrencySchema)

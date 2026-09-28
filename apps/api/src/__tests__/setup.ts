@@ -374,7 +374,9 @@ export const mocks = {
       skippedInvites: [],
     }),
   ) as MockFn,
-  getAvailablePlans: mock(() => Promise.resolve([])) as MockFn,
+  getAvailablePlans: mock(() =>
+    Promise.resolve({ starter: true, pro: true }),
+  ) as MockFn,
   hasTeamAccess: mock(() => Promise.resolve(true)) as MockFn,
   getTeamMemberRole: mock(() => Promise.resolve(null)) as MockFn,
   getTeamMembersByTeamId: mock(() => Promise.resolve([])) as MockFn,
@@ -451,6 +453,7 @@ export const mocks = {
   // OAuth applications (team apps list / CRUD used by router)
   getOAuthApplicationsByTeam: mock(() => []) as MockFn,
   getOAuthApplicationById: mock(() => null) as MockFn,
+  getOAuthApplicationByClientId: mock(() => null) as MockFn,
   createOAuthApplication: mock(() =>
     Promise.resolve({
       id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -1159,7 +1162,7 @@ const dbQueriesMock = new Proxy(
     // OAuth applications router (additional @midday/db/queries named imports)
     claimDCRApplication: createDefaultMock(),
     createAuthorizationCode: createDefaultMock(),
-    getOAuthApplicationByClientId: createDefaultMock(),
+    getOAuthApplicationByClientId: mocks.getOAuthApplicationByClientId,
     hasUserEverAuthorizedApp: createDefaultMock(),
     updateOAuthApplicationstatus: createDefaultMock(),
 

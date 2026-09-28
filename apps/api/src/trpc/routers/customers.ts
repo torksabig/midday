@@ -18,6 +18,9 @@ import {
   tryDelegateCustomerInvoiceSummary,
   tryDelegateCustomerCancelEnrichment,
   tryDelegateCustomerClearEnrichment,
+  tryDelegateTogglePortal,
+  tryDelegatePortalCustomer,
+  tryDelegatePortalInvoices,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -335,7 +338,21 @@ export const customersRouter = createTRPCRouter({
 
   togglePortal: protectedProcedure
     .input(toggleCustomerPortalSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTogglePortal(
+          {
+            customerId: input.customerId,
+            enabled: input.enabled,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return toggleCustomerPortal(db, {
         customerId: input.customerId,
         teamId: teamId!,
@@ -346,6 +363,14 @@ export const customersRouter = createTRPCRouter({
   getByPortalId: publicProcedure
     .input(getCustomerByPortalIdSchema)
     .query(async ({ ctx: { db }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegatePortalCustomer(input.portalId);
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const customer = await getCustomerByPortalId(db, {
         portalId: input.portalId,
       });
@@ -369,6 +394,17 @@ export const customersRouter = createTRPCRouter({
   getPortalInvoices: publicProcedure
     .input(getPortalInvoicesSchema)
     .query(async ({ ctx: { db }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegatePortalInvoices(input.portalId, {
+          cursor: input.cursor,
+          pageSize: input.pageSize,
+        });
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const customer = await getCustomerByPortalId(db, {
         portalId: input.portalId,
       });
