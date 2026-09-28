@@ -7,7 +7,13 @@ import {
   pauseResumeInvoiceRecurringSchema,
   updateInvoiceRecurringSchema,
 } from "@api/schemas/invoice-recurring";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInvoiceRecurringGet,
+  tryDelegateInvoiceRecurringList,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   createInvoiceRecurring,
   deleteInvoiceRecurring,
@@ -453,12 +459,23 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   get: protectedProcedure
     .input(getInvoiceRecurringByIdSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringGet(
+          input.id,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const result = await getInvoiceRecurringById(db, {
@@ -478,12 +495,28 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   list: protectedProcedure
     .input(getInvoiceRecurringListSchema.optional())
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Team context required",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceRecurringList(
+          {
+            cursor: input?.cursor ?? null,
+            pageSize: input?.pageSize ?? 25,
+            status: input?.status ?? undefined,
+            customerId: input?.customerId ?? undefined,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       return getInvoiceRecurringList(db, {

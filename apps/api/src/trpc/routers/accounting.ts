@@ -8,6 +8,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateAccountingConnections,
   tryDelegateAccountingSyncStatus,
+  tryDelegateAccountingDisconnect,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -186,7 +187,7 @@ export const accountingRouter = createTRPCRouter({
    */
   disconnect: protectedProcedure
     .input(disconnectProviderSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       const { providerId } = input;
 
       if (!teamId) {
@@ -194,6 +195,17 @@ export const accountingRouter = createTRPCRouter({
           code: "UNAUTHORIZED",
           message: "Team not found",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAccountingDisconnect(
+          providerId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       // Delete the app

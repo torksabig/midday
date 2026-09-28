@@ -38,6 +38,8 @@ import {
   mapReplacementToReportCreate,
   mapReplacementToTeamInviteMutation,
   mapReplacementToShortLink,
+  mapReplacementToInvoiceRecurringList,
+  mapReplacementToInvoiceRecurring,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -146,6 +148,8 @@ export {
   mapReplacementToReportCreate,
   mapReplacementToTeamInviteMutation,
   mapReplacementToShortLink,
+  mapReplacementToInvoiceRecurringList,
+  mapReplacementToInvoiceRecurring,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2465,6 +2469,69 @@ export async function fetchReplacementShortLinkCreate(
     input,
   );
   return mapReplacementToShortLink(payload);
+}
+
+export type ReplacementInvoiceRecurringListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  status?: string[];
+  customerId?: string;
+};
+
+export async function fetchReplacementInvoiceRecurringList(
+  baseUrl: string,
+  token: string,
+  query: ReplacementInvoiceRecurringListQuery = {},
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams();
+  if (query.cursor) search.set("cursor", query.cursor);
+  if (query.pageSize != null) search.set("pageSize", String(query.pageSize));
+  if (query.status?.length) search.set("status", query.status.join(","));
+  if (query.customerId) search.set("customerId", query.customerId);
+  const qs = search.toString();
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-recurring${qs ? `?${qs}` : ""}`,
+    token,
+  );
+  return mapReplacementToInvoiceRecurringList(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringGet(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToInvoiceRecurring(payload);
+}
+
+/** accounting.disconnect reuses apps DELETE; returns `{ success: true }`. */
+export async function fetchReplacementAccountingDisconnect(
+  baseUrl: string,
+  token: string,
+  providerId: string,
+): Promise<{ success: true }> {
+  await fetchReplacementAppsDisconnect(baseUrl, token, providerId);
+  return { success: true };
+}
+
+export async function fetchReplacementTeamLeave(
+  baseUrl: string,
+  token: string,
+  teamId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/leave`,
+    token,
+    { teamId },
+  );
+  return mapReplacementToTeamInviteMutation(payload);
 }
 
 export async function fetchReplacementInvoiceTemplates(

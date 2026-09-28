@@ -24,6 +24,7 @@ import {
   tryDelegateTeamDeleteInvite,
   tryDelegateTeamDeleteMember,
   tryDelegateTeamUpdateMember,
+  tryDelegateTeamLeave,
   tryDelegateUserInvites,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -138,7 +139,20 @@ export const teamRouter = createTRPCRouter({
 
   leave: protectedProcedure
     .input(leaveTeamSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamLeave(input.teamId, accessToken);
+        if (delegated.delegated) {
+          try {
+            await teamCache.invalidateForUser(session.user.id, input.teamId);
+          } catch {
+            // Non-fatal — cache will expire naturally
+          }
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const teamMembersData = await getTeamMembersByTeamId(db, input.teamId);
 
       const currentUser = teamMembersData?.find(
