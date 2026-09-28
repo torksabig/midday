@@ -2,7 +2,12 @@ import {
   createDocumentTagSchema,
   deleteDocumentTagSchema,
 } from "@api/schemas/document-tags";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateDocumentTagsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   createDocumentTag,
   createDocumentTagEmbedding,
@@ -13,7 +18,15 @@ import { Embed } from "@midday/documents/embed";
 import slugify from "@sindresorhus/slugify";
 
 export const documentTagsRouter = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  get: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateDocumentTagsGet(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getDocumentTags(db, teamId!);
   }),
 

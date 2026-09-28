@@ -35,6 +35,14 @@ import {
   mapReplacementToGlobalSearch,
   mapReplacementToRelatedDocuments,
   mapReplacementToReportJson,
+  mapReplacementToUserInvites,
+  mapReplacementToBankAccountsBalances,
+  mapReplacementToBankAccountsCurrencies,
+  mapReplacementToDocumentTagsGet,
+  mapReplacementToMostActiveClient,
+  mapReplacementToCountMetric,
+  mapReplacementToAverageInvoiceSize,
+  mapReplacementToTopRevenueClient,
   type MiddayAccountingConnectionShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
@@ -90,6 +98,14 @@ export {
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  mapReplacementToUserInvites,
+  mapReplacementToBankAccountsBalances,
+  mapReplacementToBankAccountsCurrencies,
+  mapReplacementToDocumentTagsGet,
+  mapReplacementToMostActiveClient,
+  mapReplacementToCountMetric,
+  mapReplacementToAverageInvoiceSize,
+  mapReplacementToTopRevenueClient,
   type MiddayBankAccountsGetShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
@@ -1360,6 +1376,126 @@ export async function fetchReplacementBankConnections(
     token,
   );
   return mapReplacementToBankConnectionsGet(payload);
+}
+
+export async function fetchReplacementUserInvites(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/user/invites`,
+    token,
+  );
+  return mapReplacementToUserInvites(payload);
+}
+
+export async function fetchReplacementBankAccountsBalances(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/bank-accounts/balances`,
+    token,
+  );
+  return mapReplacementToBankAccountsBalances(payload);
+}
+
+export async function fetchReplacementBankAccountsCurrencies(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/bank-accounts/currencies`,
+    token,
+  );
+  return mapReplacementToBankAccountsCurrencies(payload);
+}
+
+export async function fetchReplacementDocumentTags(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/document-tags`,
+    token,
+  );
+  return mapReplacementToDocumentTagsGet(payload);
+}
+
+export async function fetchReplacementMostActiveClient(
+  baseUrl: string,
+  token: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown | null>(
+    `${root}/api/v1/invoices/metrics/most-active-client`,
+    token,
+  );
+  return mapReplacementToMostActiveClient(payload);
+}
+
+export async function fetchReplacementInactiveClientsCount(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/metrics/inactive-clients-count`,
+    token,
+  );
+  return mapReplacementToCountMetric(payload);
+}
+
+export async function fetchReplacementAverageDaysToPayment(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/metrics/average-days-to-payment`,
+    token,
+  );
+  return mapReplacementToCountMetric(payload);
+}
+
+export async function fetchReplacementAverageInvoiceSize(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/metrics/average-invoice-size`,
+    token,
+  );
+  return mapReplacementToAverageInvoiceSize(payload);
+}
+
+export async function fetchReplacementTopRevenueClient(
+  baseUrl: string,
+  token: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown | null>(
+    `${root}/api/v1/invoices/metrics/top-revenue-client`,
+    token,
+  );
+  return mapReplacementToTopRevenueClient(payload);
+}
+
+export async function fetchReplacementNewCustomersCount(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/metrics/new-customers-count`,
+    token,
+  );
+  return mapReplacementToCountMetric(payload);
 }
 
 export async function fetchReplacementInvoicePublicById(

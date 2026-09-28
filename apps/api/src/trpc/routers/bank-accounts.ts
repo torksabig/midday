@@ -8,6 +8,8 @@ import {
 } from "@api/schemas/bank-accounts";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateBankAccountsBalances,
+  tryDelegateBankAccountsCurrencies,
   tryDelegateBankAccountsGet,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -86,13 +88,33 @@ export const bankAccountsRouter = createTRPCRouter({
     },
   ),
 
-  currencies: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    return getBankAccountsCurrencies(db, teamId!);
-  }),
+  currencies: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountsCurrencies(accessToken);
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
-  balances: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    return getBankAccountsBalances(db, teamId!);
-  }),
+      return getBankAccountsCurrencies(db, teamId!);
+    },
+  ),
+
+  balances: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountsBalances(accessToken);
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return getBankAccountsBalances(db, teamId!);
+    },
+  ),
 
   delete: protectedProcedure
     .input(deleteBankAccountSchema)

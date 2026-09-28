@@ -24,6 +24,13 @@ import {
   mapReplacementToTrackerTimerStatus,
   mapReplacementToAccountingConnections,
   mapReplacementToBankConnectionsGet,
+  mapReplacementToUserInvites,
+  mapReplacementToBankAccountsBalances,
+  mapReplacementToDocumentTagsGet,
+  mapReplacementToMostActiveClient,
+  mapReplacementToAverageInvoiceSize,
+  mapReplacementToTopRevenueClient,
+  mapReplacementToCountMetric,
 } from "./mappers";
 
 describe("replacement mappers", () => {
@@ -570,5 +577,76 @@ describe("replacement mappers", () => {
       logoUrl: "https://x",
       bankAccounts: [{ accountId: "a1", errorRetries: 0 }],
     });
+  });
+
+  test("mapReplacementToUserInvites maps nested team invite rows", () => {
+    const mapped = mapReplacementToUserInvites([
+      {
+        id: "inv1",
+        email: "a@b.com",
+        code: "abc",
+        role: "member",
+        user: { id: "u1", full_name: "Ada", email: "ada@b.com" },
+        team: { id: "t1", name: "Acme", logo_url: "https://logo" },
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      id: "inv1",
+      user: { fullName: "Ada" },
+      team: { logoUrl: "https://logo" },
+    });
+  });
+
+  test("mapReplacementToBankAccountsBalances preserves logo_url", () => {
+    const mapped = mapReplacementToBankAccountsBalances([
+      {
+        id: "ba1",
+        currency: "USD",
+        balance: 100,
+        name: "Checking",
+        logo_url: "",
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({ logo_url: "" });
+  });
+
+  test("mapReplacementToMostActiveClient camelCases client metrics", () => {
+    const mapped = mapReplacementToMostActiveClient({
+      customer_id: "c1",
+      customer_name: "Acme",
+      invoice_count: 2,
+      total_tracker_time: 3600,
+    });
+    expect(mapped).toMatchObject({
+      customerId: "c1",
+      totalTrackerTime: 3600,
+    });
+  });
+
+  test("mapReplacementToCountMetric parses scalar counts", () => {
+    expect(mapReplacementToCountMetric(7)).toBe(7);
+  });
+
+  test("mapReplacementToAverageInvoiceSize maps currency rows", () => {
+    const mapped = mapReplacementToAverageInvoiceSize([
+      { currency: "EUR", average_amount: 99.5, invoice_count: 3 },
+    ]);
+    expect(mapped[0]).toMatchObject({ averageAmount: 99.5, invoiceCount: 3 });
+  });
+
+  test("mapReplacementToTopRevenueClient maps revenue row", () => {
+    const mapped = mapReplacementToTopRevenueClient({
+      customer_id: "c1",
+      customer_name: "Big Co",
+      total_revenue: 5000,
+      currency: "USD",
+      invoice_count: 4,
+    });
+    expect(mapped).toMatchObject({ totalRevenue: 5000, invoiceCount: 4 });
+  });
+
+  test("mapReplacementToDocumentTagsGet maps vault tag list", () => {
+    const mapped = mapReplacementToDocumentTagsGet([{ id: "t1", name: "Tax" }]);
+    expect(mapped[0]).toEqual({ id: "t1", name: "Tax" });
   });
 });

@@ -33,6 +33,16 @@ import {
   fetchReplacementAccountingSyncStatus,
   fetchReplacementAccountingConnections,
   fetchReplacementBankConnections,
+  fetchReplacementUserInvites,
+  fetchReplacementBankAccountsBalances,
+  fetchReplacementBankAccountsCurrencies,
+  fetchReplacementDocumentTags,
+  fetchReplacementMostActiveClient,
+  fetchReplacementInactiveClientsCount,
+  fetchReplacementAverageDaysToPayment,
+  fetchReplacementAverageInvoiceSize,
+  fetchReplacementTopRevenueClient,
+  fetchReplacementNewCustomersCount,
   fetchReplacementInvoicePublicById,
   ReplacementPublicFetchError,
   fetchReplacementInboxById,
@@ -1307,5 +1317,126 @@ export async function tryDelegateBankConnectionsGet(
 export async function tryDelegateInvoiceGetByToken(id: string) {
   return tryDelegateReplacementPublicRead((baseUrl) =>
     fetchReplacementInvoicePublicById(baseUrl, id),
+  );
+}
+
+export async function tryDelegateUserInvites(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementUserInvites(baseUrl, token),
+  );
+}
+
+export async function tryDelegateBankAccountsBalances(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementBankAccountsBalances(baseUrl, token),
+  );
+}
+
+export async function tryDelegateBankAccountsCurrencies(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementBankAccountsCurrencies(baseUrl, token),
+  );
+}
+
+export async function tryDelegateDocumentTagsGet(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementDocumentTags(baseUrl, token),
+  );
+}
+
+export type DelegateNullableReadResult<T> =
+  | { delegated: false }
+  | { delegated: true; value: T | null };
+
+async function tryDelegateNullableReplacementRead<T>(
+  sessionAccessToken: string | null | undefined,
+  run: (baseUrl: string, token: string) => Promise<T | null>,
+): Promise<DelegateNullableReadResult<T>> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const value = await run(getReplacementApiUrl(), token);
+    return { delegated: true, value };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateMostActiveClient(
+  sessionAccessToken?: string | null,
+): Promise<DelegateNullableReadResult<unknown>> {
+  return tryDelegateNullableReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementMostActiveClient(baseUrl, token),
+  );
+}
+
+export async function tryDelegateInactiveClientsCount(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInactiveClientsCount(baseUrl, token),
+  );
+}
+
+export async function tryDelegateAverageDaysToPayment(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementAverageDaysToPayment(baseUrl, token),
+  );
+}
+
+export async function tryDelegateAverageInvoiceSize(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementAverageInvoiceSize(baseUrl, token),
+  );
+}
+
+export async function tryDelegateTopRevenueClient(
+  sessionAccessToken?: string | null,
+): Promise<DelegateNullableReadResult<unknown>> {
+  return tryDelegateNullableReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTopRevenueClient(baseUrl, token),
+  );
+}
+
+export async function tryDelegateNewCustomersCount(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementNewCustomersCount(baseUrl, token),
   );
 }

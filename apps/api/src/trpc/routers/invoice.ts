@@ -25,6 +25,12 @@ import {
   tryDelegateInvoicePaymentStatus,
   tryDelegateInvoiceSummary,
   tryDelegateInvoiceGetByToken,
+  tryDelegateMostActiveClient,
+  tryDelegateInactiveClientsCount,
+  tryDelegateAverageDaysToPayment,
+  tryDelegateAverageInvoiceSize,
+  tryDelegateTopRevenueClient,
+  tryDelegateNewCustomersCount,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -849,37 +855,85 @@ export const invoiceRouter = createTRPCRouter({
     }),
 
   mostActiveClient: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateMostActiveClient(accessToken);
+        if (delegated.delegated) {
+          return delegated.value;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getMostActiveClient(db, { teamId: teamId! });
     },
   ),
 
   inactiveClientsCount: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInactiveClientsCount(accessToken);
+        if (delegated !== null && delegated !== undefined) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInactiveClientsCount(db, { teamId: teamId! });
     },
   ),
 
   averageDaysToPayment: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAverageDaysToPayment(accessToken);
+        if (delegated !== null && delegated !== undefined) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getAverageDaysToPayment(db, { teamId: teamId! });
     },
   ),
 
   averageInvoiceSize: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAverageInvoiceSize(accessToken);
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getAverageInvoiceSize(db, { teamId: teamId! });
     },
   ),
 
   topRevenueClient: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTopRevenueClient(accessToken);
+        if (delegated.delegated) {
+          return delegated.value;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTopRevenueClient(db, { teamId: teamId! });
     },
   ),
 
   newCustomersCount: protectedProcedure.query(
-    async ({ ctx: { db, teamId } }) => {
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNewCustomersCount(accessToken);
+        if (delegated !== null && delegated !== undefined) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getNewCustomersCount(db, { teamId: teamId! });
     },
   ),

@@ -1,6 +1,7 @@
 import { updateUserSchema } from "@api/schemas/users";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateUserInvites,
   tryDelegateUserMe,
 } from "@api/services/replacement-delegation";
 import { resend } from "@api/services/resend";
@@ -106,9 +107,17 @@ export const userRouter = createTRPCRouter({
     return data;
   }),
 
-  invites: protectedProcedure.query(async ({ ctx: { db, session } }) => {
+  invites: protectedProcedure.query(async ({ ctx: { db, session, accessToken } }) => {
     if (!session.user.email) {
       return [];
+    }
+
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateUserInvites(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
     }
 
     return getUserInvites(db, session.user.email);

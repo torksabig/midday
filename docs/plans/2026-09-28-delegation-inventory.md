@@ -2,7 +2,7 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Counts:** **47 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~18.4%). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **57 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~22.3%). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -10,11 +10,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `user.update` | no | write |
 | `user.switchTeam` | no | write |
 | `user.delete` | no | write |
-| `user.invites` | no | read |
+| `user.invites` | yes | read · pending team invites by email (Phase 10) |
 | `team.current` | yes | read · identity |
 | `team.*` (other) | no | writes / team admin reads |
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
-| `bankAccounts.*` (other) | no | balances, details, writes |
+| `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
+| `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
+| `bankAccounts.*` (other) | no | details, payment info, writes |
 | `bankConnections.get` | yes | read · list + nested accounts (Phase 6 slice 1) |
 | `bankConnections.*` (other) | no | create, delete, reconnect |
 | `transactionCategories.get` | yes | read · full tree |
@@ -34,6 +36,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.getById` | yes | read (Phase 4) |
 | `documents.getRelatedDocuments` | yes | read · `match_similar_documents_by_title()` (Phase 5 slice 3) |
 | `documents.*` (other) | no | attachments, vault mutations |
+| `documentTags.get` | yes | read · vault tag list (Phase 10) |
+| `documentTags.*` (other) | no | create, delete |
 | `customers.get` | yes | read · list (Phase 4) |
 | `customers.getById` | yes | read (Phase 4) |
 | `customers.*` (other) | no | portal public, CRUD, enrichment |
@@ -42,6 +46,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.getInvoiceByToken` | yes | public · token verified in API, read by id (Phase 6 slice 1) |
 | `invoice.paymentStatus` | yes | read · weighted score (Phase 5 slice 1) |
 | `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
+| `invoice.mostActiveClient` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.inactiveClientsCount` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.averageDaysToPayment` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.averageInvoiceSize` | yes | read · 30d by currency (Phase 10) |
+| `invoice.topRevenueClient` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.newCustomersCount` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.*` (other) | no | mutations |
 | `trackerProjects.get` | yes | read · list (Phase 6 slice 1) |
 | `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
@@ -70,9 +80,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
 | `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | no | write |
-| All other routers | no | banking balances, vault tags, notifications, oauth, metrics, etc. |
+| All other routers | no | notifications, oauth, transaction tags, banking adapters, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/bank-connections`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-connections`, `/document-tags`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -117,6 +127,16 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Timer current / status | Yes · local day bounds for running entry | Same |
 | Timer `project` alias on current entry | Yes · duplicated from `tracker_project` | Legacy shape |
 
+### Phase 10 invoice dashboard metrics parity
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| 30-day rolling window | Yes · `NOW() - INTERVAL '30 days'` | JS `Date` math |
+| Tracker date filter on `byDate` | Yes · cast to date | ISO date string split |
+| Nullable “no client” rows | Yes · explicit `{ delegated, value }` in glue | Same `null` |
+
 **Phase 9:** Tracker byDate, getById, timer reads; accounting sync status + connections list.
 
-**Next slice (Phase 10):** `user.invites`, `bankAccounts` balance/currency reads, vault tag list, `metrics.*` — reads before first write family (e.g. `transactions.update`).
+**Phase 10:** `user.invites`, `bankAccounts.balances`/`currencies`, `documentTags.get`, invoice dashboard metric reads (`mostActiveClient`, `inactiveClientsCount`, `averageDaysToPayment`, `averageInvoiceSize`, `topRevenueClient`, `newCustomersCount`).
+
+**Next slice (Phase 11 reads):** `bankAccounts.getTransactionCount`, `tags.get` (transaction tags), `notifications.*` list reads — then first write family (`transactions.update` or `inbox` match/ignore).

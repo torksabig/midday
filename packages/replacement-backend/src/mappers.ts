@@ -1482,3 +1482,151 @@ export function mapReplacementToRelatedDocuments(
 export function mapReplacementToReportJson(payload: unknown): unknown {
   return deepCamelCaseKeys(payload);
 }
+
+const replacementUserInviteSchema = z.object({
+  id: z.string(),
+  email: z.string().nullable().optional(),
+  code: z.string().nullable().optional(),
+  role: z.string().nullable().optional(),
+  user: z
+    .object({
+      id: z.string(),
+      full_name: z.string().nullable().optional(),
+      email: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  team: z
+    .object({
+      id: z.string(),
+      name: z.string().nullable().optional(),
+      logo_url: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export function mapReplacementToUserInvites(payload: unknown): unknown[] {
+  return z.array(replacementUserInviteSchema).parse(payload).map((row) => ({
+    id: row.id,
+    email: row.email,
+    code: row.code,
+    role: row.role,
+    user: row.user
+      ? {
+          id: row.user.id,
+          fullName: row.user.full_name ?? null,
+          email: row.user.email ?? null,
+        }
+      : null,
+    team: row.team
+      ? {
+          id: row.team.id,
+          name: row.team.name ?? null,
+          logoUrl: row.team.logo_url ?? null,
+        }
+      : null,
+  }));
+}
+
+const replacementBankBalanceRowSchema = z.object({
+  id: z.string(),
+  currency: z.string(),
+  balance: z.coerce.number(),
+  name: z.string(),
+  logo_url: z.string(),
+});
+
+export function mapReplacementToBankAccountsBalances(
+  payload: unknown,
+): unknown[] {
+  return z.array(replacementBankBalanceRowSchema).parse(payload);
+}
+
+const replacementBankCurrencyRowSchema = z.object({
+  currency: z.string(),
+});
+
+export function mapReplacementToBankAccountsCurrencies(
+  payload: unknown,
+): unknown[] {
+  return z.array(replacementBankCurrencyRowSchema).parse(payload);
+}
+
+const replacementDocumentTagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export function mapReplacementToDocumentTagsGet(payload: unknown): unknown[] {
+  return z.array(replacementDocumentTagSchema).parse(payload);
+}
+
+const replacementMostActiveClientSchema = z.object({
+  customer_id: z.string(),
+  customer_name: z.string(),
+  invoice_count: z.number(),
+  total_tracker_time: z.number(),
+});
+
+export function mapReplacementToMostActiveClient(
+  payload: unknown,
+): unknown | null {
+  if (payload == null) {
+    return null;
+  }
+  const parsed = replacementMostActiveClientSchema.parse(payload);
+  return {
+    customerId: parsed.customer_id,
+    customerName: parsed.customer_name,
+    invoiceCount: parsed.invoice_count,
+    totalTrackerTime: parsed.total_tracker_time,
+  };
+}
+
+export function mapReplacementToCountMetric(payload: unknown): number {
+  return z.number().parse(payload);
+}
+
+const replacementAverageInvoiceSizeRowSchema = z.object({
+  currency: z.string(),
+  average_amount: z.number(),
+  invoice_count: z.number(),
+});
+
+export function mapReplacementToAverageInvoiceSize(
+  payload: unknown,
+): unknown[] {
+  return z
+    .array(replacementAverageInvoiceSizeRowSchema)
+    .parse(payload)
+    .map((row) => ({
+      currency: row.currency,
+      averageAmount: row.average_amount,
+      invoiceCount: row.invoice_count,
+    }));
+}
+
+const replacementTopRevenueClientSchema = z.object({
+  customer_id: z.string(),
+  customer_name: z.string(),
+  total_revenue: z.number(),
+  currency: z.string(),
+  invoice_count: z.number(),
+});
+
+export function mapReplacementToTopRevenueClient(
+  payload: unknown,
+): unknown | null {
+  if (payload == null) {
+    return null;
+  }
+  const parsed = replacementTopRevenueClientSchema.parse(payload);
+  return {
+    customerId: parsed.customer_id,
+    customerName: parsed.customer_name,
+    totalRevenue: parsed.total_revenue,
+    currency: parsed.currency,
+    invoiceCount: parsed.invoice_count,
+  };
+}
