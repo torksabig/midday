@@ -41,6 +41,8 @@ import {
   mapReplacementToDocumentTagCreate,
   mapReplacementToDocumentTagDelete,
   mapReplacementToDocumentTagAssignment,
+  mapReplacementToTransactionTagCreate,
+  mapReplacementToCategoryById,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -866,6 +868,40 @@ describe("replacement mappers", () => {
       documentId: "doc-1",
       tagId: "tag-1",
       teamId: "team-1",
+    });
+  });
+
+  test("mapReplacementToTransactionTagCreate returns array of links", () => {
+    expect(
+      mapReplacementToTransactionTagCreate([
+        {
+          teamId: "team-1",
+          transactionId: "tx-1",
+          tagId: "tag-1",
+        },
+      ]),
+    ).toEqual([
+      {
+        teamId: "team-1",
+        transactionId: "tx-1",
+        tagId: "tag-1",
+      },
+    ]);
+  });
+
+  test("mapReplacementToCategoryById returns camelCase category tree", () => {
+    expect(
+      mapReplacementToCategoryById({
+        id: "cat-1",
+        name: "Office",
+        taxRate: 0.2,
+        children: [{ id: "cat-2", name: "Supplies" }],
+      }),
+    ).toMatchObject({
+      id: "cat-1",
+      name: "Office",
+      taxRate: 0.2,
+      children: [{ id: "cat-2", name: "Supplies" }],
     });
   });
 

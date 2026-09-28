@@ -8,6 +8,7 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTransactionCategoriesGet,
+  tryDelegateTransactionCategoriesGetById,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -46,7 +47,18 @@ export const transactionCategoriesRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getCategoryByIdSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionCategoriesGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.category ?? null;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getCategoryById(db, { id: input.id, teamId: teamId! });
     }),
 

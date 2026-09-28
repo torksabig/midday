@@ -57,6 +57,9 @@ import {
   mapReplacementToDocumentTagCreate,
   mapReplacementToDocumentTagDelete,
   mapReplacementToDocumentTagAssignment,
+  mapReplacementToTransactionTagCreate,
+  mapReplacementToTransactionTagDelete,
+  mapReplacementToCategoryById,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -70,6 +73,7 @@ import {
   type MiddayDocumentTagMutationShape,
   type MiddayDocumentTagDeleteShape,
   type MiddayDocumentTagAssignmentShape,
+  type MiddayTransactionTagCreateShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -2160,6 +2164,76 @@ export async function fetchReplacementDocumentTagAssignmentDelete(
     return null;
   }
   return mapReplacementToDocumentTagAssignment(payload);
+}
+
+export async function fetchReplacementTransactionTagCreate(
+  baseUrl: string,
+  token: string,
+  transactionId: string,
+  tagId: string,
+): Promise<MiddayTransactionTagCreateShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transaction-tags`,
+    token,
+    { transactionId, tagId },
+  );
+  return mapReplacementToTransactionTagCreate(payload);
+}
+
+export async function fetchReplacementTransactionTagDelete(
+  baseUrl: string,
+  token: string,
+  transactionId: string,
+  tagId: string,
+): Promise<Record<string, unknown>> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDeleteWithBody<unknown>(
+    `${root}/api/v1/transaction-tags`,
+    token,
+    { transactionId, tagId },
+  );
+  return mapReplacementToTransactionTagDelete(payload ?? {});
+}
+
+export async function fetchReplacementCustomerDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/customers/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToCustomerById(payload);
+}
+
+export async function fetchReplacementCategoryById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const res = await fetch(
+    `${root}/api/v1/categories/${encodeURIComponent(id)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    },
+  );
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(
+      `replacement API ${root}/api/v1/categories/${id} HTTP ${res.status}`,
+    );
+  }
+  return mapReplacementToCategoryById(await res.json());
 }
 
 export { shouldDelegateToReplacementBackend };

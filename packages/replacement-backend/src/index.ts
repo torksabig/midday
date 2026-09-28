@@ -97,6 +97,10 @@ export {
   fetchReplacementDocumentTagDelete,
   fetchReplacementDocumentTagAssignmentCreate,
   fetchReplacementDocumentTagAssignmentDelete,
+  fetchReplacementTransactionTagCreate,
+  fetchReplacementTransactionTagDelete,
+  fetchReplacementCustomerDelete,
+  fetchReplacementCategoryById,
   fetchReplacementMostActiveClient,
   fetchReplacementInactiveClientsCount,
   fetchReplacementAverageDaysToPayment,
@@ -231,6 +235,9 @@ export {
   mapReplacementToDocumentTagCreate,
   mapReplacementToDocumentTagDelete,
   mapReplacementToDocumentTagAssignment,
+  mapReplacementToTransactionTagCreate,
+  mapReplacementToTransactionTagDelete,
+  mapReplacementToCategoryById,
   mapReplacementToTransactionsUpdateMany,
 } from "./mappers";
 export {

@@ -1971,3 +1971,96 @@ export function mapReplacementToDocumentTagAssignment(
 ): MiddayDocumentTagAssignmentShape {
   return replacementDocumentTagAssignmentSchema.parse(payload);
 }
+
+const replacementTransactionTagCreateSchema = z.array(
+  z.object({
+    id: z.string().optional(),
+    createdAt: z.string().optional(),
+    teamId: z.string(),
+    transactionId: z.string(),
+    tagId: z.string(),
+  }),
+);
+
+export type MiddayTransactionTagCreateShape = Array<{
+  id?: string;
+  createdAt?: string;
+  teamId: string;
+  transactionId: string;
+  tagId: string;
+}>;
+
+export function mapReplacementToTransactionTagCreate(
+  payload: unknown,
+): MiddayTransactionTagCreateShape {
+  return replacementTransactionTagCreateSchema.parse(payload);
+}
+
+export function mapReplacementToTransactionTagDelete(
+  payload: unknown,
+): Record<string, unknown> {
+  return z.record(z.string(), z.unknown()).parse(payload ?? {});
+}
+
+const replacementCategoryByIdSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  system: z.boolean().nullable().optional(),
+  taxRate: z.number().nullable().optional(),
+  taxType: z.string().nullable().optional(),
+  taxReportingCode: z.string().nullable().optional(),
+  excluded: z.boolean().nullable().optional(),
+  parentId: z.string().nullable().optional(),
+  createdAt: z.string().nullable().optional(),
+  children: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        color: z.string().nullable().optional(),
+        slug: z.string().nullable().optional(),
+        description: z.string().nullable().optional(),
+        system: z.boolean().nullable().optional(),
+        taxRate: z.number().nullable().optional(),
+        taxType: z.string().nullable().optional(),
+        taxReportingCode: z.string().nullable().optional(),
+        excluded: z.boolean().nullable().optional(),
+        parentId: z.string().nullable().optional(),
+      }),
+    )
+    .optional(),
+});
+
+export function mapReplacementToCategoryById(payload: unknown): unknown {
+  const row = replacementCategoryByIdSchema.parse(payload);
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color ?? null,
+    slug: row.slug ?? null,
+    description: row.description ?? null,
+    system: row.system ?? null,
+    taxRate: row.taxRate ?? null,
+    taxType: row.taxType ?? null,
+    taxReportingCode: row.taxReportingCode ?? null,
+    excluded: row.excluded ?? null,
+    parentId: row.parentId ?? null,
+    createdAt: row.createdAt ?? null,
+    children: (row.children ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: c.color ?? null,
+      slug: c.slug ?? null,
+      description: c.description ?? null,
+      system: c.system ?? null,
+      taxRate: c.taxRate ?? null,
+      taxType: c.taxType ?? null,
+      taxReportingCode: c.taxReportingCode ?? null,
+      excluded: c.excluded ?? null,
+      parentId: c.parentId ?? null,
+    })),
+  };
+}

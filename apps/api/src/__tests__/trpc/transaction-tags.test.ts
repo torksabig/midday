@@ -9,8 +9,14 @@ const TAG_ID = "e2d3c4b5-a6f7-8901-bcde-f12345678901";
 
 const createCaller = createCallerFactory(transactionTagsRouter);
 
+function forceLegacyBackend() {
+  process.env.MIDDAY_BACKEND_MODE = "legacy";
+  delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+}
+
 describe("tRPC: transactionTags.create", () => {
   beforeEach(() => {
+    forceLegacyBackend();
     mocks.createTransactionTag.mockReset();
     mocks.createTransactionTag.mockImplementation(() =>
       Promise.resolve([
@@ -59,6 +65,7 @@ describe("tRPC: transactionTags.create", () => {
 
 describe("tRPC: transactionTags.delete", () => {
   beforeEach(() => {
+    forceLegacyBackend();
     mocks.deleteTransactionTag.mockReset();
     mocks.deleteTransactionTag.mockImplementation(() => Promise.resolve({}));
   });

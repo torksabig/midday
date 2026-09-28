@@ -13,6 +13,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateCustomersGet,
   tryDelegateCustomersGetById,
+  tryDelegateCustomerDelete,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -86,7 +87,24 @@ export const customersRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteCustomerSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (delegated.customer == null) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Customer not found",
+            });
+          }
+          return delegated.customer;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteCustomer(db, {
         id: input.id,
         teamId: teamId!,
