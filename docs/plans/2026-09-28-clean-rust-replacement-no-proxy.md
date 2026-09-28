@@ -184,7 +184,7 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 ## Immediate next engineering step (Phase 2 → 3)
 
 1. **Phase 2 list read** — landed: clone paginated `GET /api/v1/transactions`, tRPC `transactions.get` delegation, mapper tests.
-2. Next: `transactions.getById`, remaining list filters (status, tags, sort columns), attachments/tags JSON on Rust path.
+2. **Done (read path):** `transactions.getById` delegates to `GET /api/v1/transactions/{id}`. Next: remaining list filters (status, tags, sort columns), attachments/tags JSON on Rust path.
 3. Contract tests + smoke; delete Drizzle for transactions when stable.
 
 Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` + `packages/ui` only, per [UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md).

@@ -270,6 +270,138 @@ export type MiddayTransactionsGetShape = {
   }>;
 };
 
+const replacementTransactionSuggestionSchema = z
+  .object({
+    suggestion_id: z.string().nullable().optional(),
+    inbox_id: z.string().nullable().optional(),
+    document_name: z.string().nullable().optional(),
+    document_amount: z.number().nullable().optional(),
+    document_currency: z.string().nullable().optional(),
+    document_path: z.string().nullable().optional(),
+    confidence_score: z.number().nullable().optional(),
+  })
+  .optional();
+
+export const replacementTransactionDetailSchema =
+  replacementTransactionItemSchema.extend({
+    suggestion: replacementTransactionSuggestionSchema,
+  });
+
+export type MiddayTransactionListItemShape =
+  MiddayTransactionsGetShape["data"][number];
+
+export type MiddayTransactionByIdShape = MiddayTransactionListItemShape & {
+  suggestion: {
+    suggestionId: string | null;
+    inboxId: string | null;
+    documentName: string | null;
+    documentAmount: number | null;
+    documentCurrency: string | null;
+    documentPath: string | null;
+    confidenceScore: number | null;
+  };
+};
+
+function mapReplacementTransactionListItem(
+  row: z.infer<typeof replacementTransactionItemSchema>,
+): MiddayTransactionListItemShape {
+  const assigned = row.assigned
+    ? {
+        id: row.assigned.id,
+        fullName: row.assigned.full_name ?? null,
+        avatarUrl: row.assigned.avatar_url ?? null,
+      }
+    : null;
+
+  const category = row.category
+    ? {
+        id: row.category.id,
+        name: row.category.name,
+        color: row.category.color ?? null,
+        slug: row.category.slug,
+        taxRate: row.category.tax_rate ?? null,
+        taxType: row.category.tax_type ?? null,
+      }
+    : null;
+
+  const account = row.account
+    ? {
+        id: row.account.id,
+        name: row.account.name,
+        currency: row.account.currency,
+        connection: row.account.connection
+          ? {
+              id: row.account.connection.id,
+              name: row.account.connection.name ?? null,
+              logoUrl: row.account.connection.logo_url ?? null,
+            }
+          : null,
+      }
+    : null;
+
+  return {
+    id: row.id,
+    date: row.date,
+    amount: row.amount,
+    currency: row.currency,
+    method: row.method,
+    status: row.status,
+    note: row.note ?? null,
+    manual: row.manual,
+    internal: row.internal,
+    recurring: row.recurring ?? null,
+    counterpartyName: row.counterparty_name ?? null,
+    frequency: row.frequency ?? null,
+    name: row.name,
+    description: row.description ?? null,
+    createdAt: row.created_at,
+    taxRate: row.tax_rate ?? null,
+    taxType: row.tax_type ?? null,
+    taxAmount: row.tax_amount ?? null,
+    baseAmount: row.base_amount ?? null,
+    baseCurrency: row.base_currency ?? null,
+    enrichmentCompleted: row.enrichment_completed,
+    isFulfilled: row.is_fulfilled,
+    hasPendingSuggestion: row.has_pending_suggestion,
+    isExported: row.is_exported,
+    hasExportError: row.has_export_error,
+    exportProvider: row.export_provider ?? null,
+    exportedAt: row.exported_at ?? null,
+    exportErrorCode: row.export_error_code ?? null,
+    attachments: [],
+    tags: [],
+    assigned,
+    category,
+    account,
+  };
+}
+
+function mapReplacementTransactionSuggestion(
+  suggestion: z.infer<typeof replacementTransactionSuggestionSchema>,
+): MiddayTransactionByIdShape["suggestion"] {
+  if (!suggestion) {
+    return {
+      suggestionId: null,
+      inboxId: null,
+      documentName: null,
+      documentAmount: null,
+      documentCurrency: null,
+      documentPath: null,
+      confidenceScore: null,
+    };
+  }
+
+  return {
+    suggestionId: suggestion.suggestion_id ?? null,
+    inboxId: suggestion.inbox_id ?? null,
+    documentName: suggestion.document_name ?? null,
+    documentAmount: suggestion.document_amount ?? null,
+    documentCurrency: suggestion.document_currency ?? null,
+    documentPath: suggestion.document_path ?? null,
+    confidenceScore: suggestion.confidence_score ?? null,
+  };
+}
+
 export function mapReplacementToTransactionsGet(
   payload: unknown,
 ): MiddayTransactionsGetShape {
@@ -281,76 +413,18 @@ export function mapReplacementToTransactionsGet(
       hasPreviousPage: parsed.meta.has_previous_page,
       hasNextPage: parsed.meta.has_next_page,
     },
-    data: parsed.data.map((row) => {
-      const assigned = row.assigned
-        ? {
-            id: row.assigned.id,
-            fullName: row.assigned.full_name ?? null,
-            avatarUrl: row.assigned.avatar_url ?? null,
-          }
-        : null;
+    data: parsed.data.map(mapReplacementTransactionListItem),
+  };
+}
 
-      const category = row.category
-        ? {
-            id: row.category.id,
-            name: row.category.name,
-            color: row.category.color ?? null,
-            slug: row.category.slug,
-            taxRate: row.category.tax_rate ?? null,
-            taxType: row.category.tax_type ?? null,
-          }
-        : null;
+export function mapReplacementToTransactionById(
+  payload: unknown,
+): MiddayTransactionByIdShape {
+  const parsed = replacementTransactionDetailSchema.parse(payload);
+  const { suggestion, ...itemFields } = parsed;
 
-      const account = row.account
-        ? {
-            id: row.account.id,
-            name: row.account.name,
-            currency: row.account.currency,
-            connection: row.account.connection
-              ? {
-                  id: row.account.connection.id,
-                  name: row.account.connection.name ?? null,
-                  logoUrl: row.account.connection.logo_url ?? null,
-                }
-              : null,
-          }
-        : null;
-
-      return {
-        id: row.id,
-        date: row.date,
-        amount: row.amount,
-        currency: row.currency,
-        method: row.method,
-        status: row.status,
-        note: row.note ?? null,
-        manual: row.manual,
-        internal: row.internal,
-        recurring: row.recurring ?? null,
-        counterpartyName: row.counterparty_name ?? null,
-        frequency: row.frequency ?? null,
-        name: row.name,
-        description: row.description ?? null,
-        createdAt: row.created_at,
-        taxRate: row.tax_rate ?? null,
-        taxType: row.tax_type ?? null,
-        taxAmount: row.tax_amount ?? null,
-        baseAmount: row.base_amount ?? null,
-        baseCurrency: row.base_currency ?? null,
-        enrichmentCompleted: row.enrichment_completed,
-        isFulfilled: row.is_fulfilled,
-        hasPendingSuggestion: row.has_pending_suggestion,
-        isExported: row.is_exported,
-        hasExportError: row.has_export_error,
-        exportProvider: row.export_provider ?? null,
-        exportedAt: row.exported_at ?? null,
-        exportErrorCode: row.export_error_code ?? null,
-        attachments: [],
-        tags: [],
-        assigned,
-        category,
-        account,
-      };
-    }),
+  return {
+    ...mapReplacementTransactionListItem(itemFields),
+    suggestion: mapReplacementTransactionSuggestion(suggestion),
   };
 }

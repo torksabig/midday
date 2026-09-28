@@ -15,17 +15,21 @@ export {
 export {
   fetchReplacementAuthMePayload,
   fetchReplacementTeamCurrent,
+  fetchReplacementTransactionById,
   fetchReplacementTransactionsList,
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionById,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
   replacementDelegationRequiresSuccess,
   resolveReplacementBearerToken,
+  type MiddayTransactionByIdShape,
   type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
   type ReplacementTransactionsListQuery,
 } from "./delegate";
 export {
+  replacementTransactionDetailSchema,
   replacementTransactionsListSchema,
 } from "./mappers";

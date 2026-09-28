@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionById,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
 } from "./mappers";
@@ -91,6 +92,43 @@ describe("replacement mappers", () => {
       amount: -49.5,
       counterpartyName: "Figma",
       account: { id: "ba1", name: "Main", currency: "USD" },
+    });
+  });
+
+  test("mapReplacementToTransactionById maps detail payload with suggestion", () => {
+    const mapped = mapReplacementToTransactionById({
+      id: "tx1",
+      date: "2026-09-01",
+      amount: -49.5,
+      currency: "USD",
+      method: "card",
+      status: "posted",
+      manual: false,
+      internal: false,
+      name: "Software",
+      created_at: "2026-09-01T12:00:00Z",
+      enrichment_completed: false,
+      is_fulfilled: false,
+      has_pending_suggestion: true,
+      is_exported: false,
+      has_export_error: false,
+      suggestion: {
+        suggestion_id: "s1",
+        inbox_id: "in1",
+        document_name: "Receipt.pdf",
+        confidence_score: 0.92,
+      },
+    });
+
+    expect(mapped).toMatchObject({
+      id: "tx1",
+      hasPendingSuggestion: true,
+      suggestion: {
+        suggestionId: "s1",
+        inboxId: "in1",
+        documentName: "Receipt.pdf",
+        confidenceScore: 0.92,
+      },
     });
   });
 });

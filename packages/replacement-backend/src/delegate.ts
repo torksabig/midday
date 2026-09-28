@@ -3,15 +3,19 @@ import {
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionById,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayTransactionByIdShape,
   type MiddayTransactionsGetShape,
 } from "./mappers";
 
 export {
   mapReplacementToTeamCurrent,
+  mapReplacementToTransactionById,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayTransactionByIdShape,
   type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
@@ -146,6 +150,30 @@ export async function fetchReplacementTransactionsList(
     token,
   );
   return mapReplacementToTransactionsGet(payload);
+}
+
+export async function fetchReplacementTransactionById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<MiddayTransactionByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/transactions/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  const payload = (await res.json()) as unknown;
+  return mapReplacementToTransactionById(payload);
 }
 
 export { shouldDelegateToReplacementBackend };
