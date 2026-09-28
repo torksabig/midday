@@ -51,6 +51,9 @@ import {
   mapReplacementToNotificationsUpdateAll,
   mapReplacementToUserUpdate,
   buildReplacementUserUpdateBody,
+  mapReplacementToTeamUpdate,
+  buildReplacementTeamUpdateBody,
+  mapReplacementToTagMutation,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -59,6 +62,8 @@ import {
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
   type MiddayUserUpdateShape,
+  type MiddayTeamUpdateShape,
+  type MiddayTagMutationShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -129,6 +134,9 @@ export {
   mapReplacementToNotificationsUpdateAll,
   mapReplacementToUserUpdate,
   buildReplacementUserUpdateBody,
+  mapReplacementToTeamUpdate,
+  buildReplacementTeamUpdateBody,
+  mapReplacementToTagMutation,
   mapReplacementToTransactionsUpdateMany,
   mapReplacementToAppsGet,
   mapReplacementToOAuthApplicationsList,
@@ -137,6 +145,8 @@ export {
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
   type MiddayUserUpdateShape,
+  type MiddayTeamUpdateShape,
+  type MiddayTagMutationShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
@@ -221,6 +231,30 @@ async function replacementPut<T>(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function replacementDelete<T>(
+  url: string,
+  token: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T | null> {
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -1958,6 +1992,71 @@ export async function fetchReplacementInvoicePublicById(
     }
     throw error;
   }
+}
+
+export async function fetchReplacementTeamUpdate(
+  baseUrl: string,
+  token: string,
+  input: Record<string, unknown>,
+): Promise<MiddayTeamUpdateShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/team`,
+    token,
+    buildReplacementTeamUpdateBody(input),
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToTeamUpdate(payload);
+}
+
+export async function fetchReplacementTagCreate(
+  baseUrl: string,
+  token: string,
+  name: string,
+): Promise<MiddayTagMutationShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tags`,
+    token,
+    { name },
+  );
+  return mapReplacementToTagMutation(payload);
+}
+
+export async function fetchReplacementTagUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  name: string,
+): Promise<MiddayTagMutationShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/tags/${encodeURIComponent(id)}`,
+    token,
+    { name },
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToTagMutation(payload);
+}
+
+export async function fetchReplacementTagDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<MiddayTagMutationShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/tags/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToTagMutation(payload);
 }
 
 export { shouldDelegateToReplacementBackend };

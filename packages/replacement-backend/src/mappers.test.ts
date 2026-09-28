@@ -35,6 +35,9 @@ import {
   mapReplacementToNotificationsUpdateAll,
   mapReplacementToUserUpdate,
   buildReplacementUserUpdateBody,
+  mapReplacementToTeamUpdate,
+  buildReplacementTeamUpdateBody,
+  mapReplacementToTagMutation,
   mapReplacementToMostActiveClient,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
@@ -786,6 +789,51 @@ describe("replacement mappers", () => {
         locale: null,
       }),
     ).toEqual({ fullName: "Ada", locale: null });
+  });
+
+  test("mapReplacementToTeamUpdate camelCases team fields", () => {
+    expect(
+      mapReplacementToTeamUpdate({
+        id: "t1",
+        name: "Acme",
+        logo_url: null,
+        email: "team@acme.com",
+        inbox_id: "abc123",
+        plan: "pro",
+        subscription_status: "active",
+        base_currency: "USD",
+        country_code: "US",
+        fiscal_year_start_month: 4,
+      }),
+    ).toEqual({
+      id: "t1",
+      name: "Acme",
+      logoUrl: null,
+      email: "team@acme.com",
+      inboxId: "abc123",
+      plan: "pro",
+      subscriptionStatus: "active",
+      baseCurrency: "USD",
+      countryCode: "US",
+      fiscalYearStartMonth: 4,
+    });
+  });
+
+  test("buildReplacementTeamUpdateBody omits undefined fields", () => {
+    expect(
+      buildReplacementTeamUpdateBody({
+        name: "Acme",
+        email: undefined,
+        baseCurrency: "EUR",
+      }),
+    ).toEqual({ name: "Acme", baseCurrency: "EUR" });
+  });
+
+  test("mapReplacementToTagMutation returns id and name", () => {
+    expect(mapReplacementToTagMutation({ id: "tag-1", name: "Urgent" })).toEqual({
+      id: "tag-1",
+      name: "Urgent",
+    });
   });
 
   test("buildReplacementTransactionUpdateBody omits id and undefined fields", () => {

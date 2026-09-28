@@ -17,6 +17,7 @@ import {
   tryDelegateTeamInvites,
   tryDelegateTeamList,
   tryDelegateTeamMembers,
+  tryDelegateTeamUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -68,7 +69,15 @@ export const teamRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateTeamByIdSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamUpdate(input, accessToken);
+        if (delegated.delegated) {
+          return delegated.team;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateTeamById(db, {
         id: teamId!,
         data: input,

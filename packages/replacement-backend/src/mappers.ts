@@ -1848,3 +1848,76 @@ export function mapReplacementToOAuthApplicationsList(payload: unknown): {
 export function mapReplacementToInboxAccountsGet(payload: unknown): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }
+
+const replacementTeamUpdateSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable().optional(),
+  logo_url: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  inbox_id: z.string().nullable().optional(),
+  plan: z.string().nullable().optional(),
+  subscription_status: z.string().nullable().optional(),
+  base_currency: z.string().nullable().optional(),
+  country_code: z.string().nullable().optional(),
+  fiscal_year_start_month: z.number().nullable().optional(),
+});
+
+export type MiddayTeamUpdateShape = {
+  id: string;
+  name: string | null;
+  logoUrl: string | null;
+  email: string | null;
+  inboxId: string | null;
+  plan: string | null;
+  subscriptionStatus: string | null;
+  baseCurrency: string | null;
+  countryCode: string | null;
+  fiscalYearStartMonth: number | null;
+};
+
+export function mapReplacementToTeamUpdate(
+  payload: unknown,
+): MiddayTeamUpdateShape {
+  const row = replacementTeamUpdateSchema.parse(payload);
+  return {
+    id: row.id,
+    name: row.name ?? null,
+    logoUrl: row.logo_url ?? null,
+    email: row.email ?? null,
+    inboxId: row.inbox_id ?? null,
+    plan: row.plan ?? null,
+    subscriptionStatus: row.subscription_status ?? null,
+    baseCurrency: row.base_currency ?? null,
+    countryCode: row.country_code ?? null,
+    fiscalYearStartMonth: row.fiscal_year_start_month ?? null,
+  };
+}
+
+export function buildReplacementTeamUpdateBody(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) {
+      continue;
+    }
+    body[key] = value;
+  }
+  return body;
+}
+
+const replacementTagMutationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export type MiddayTagMutationShape = {
+  id: string;
+  name: string;
+};
+
+export function mapReplacementToTagMutation(
+  payload: unknown,
+): MiddayTagMutationShape {
+  return replacementTagMutationSchema.parse(payload);
+}

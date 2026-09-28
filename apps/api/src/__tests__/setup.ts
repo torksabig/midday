@@ -297,6 +297,27 @@ export const mocks = {
   getUser: mock(() => null) as MockFn,
   updateUser: mock(() => ({})) as MockFn,
 
+  // Tags
+  getTags: mock(() => Promise.resolve([])) as MockFn,
+  createTag: mock(() =>
+    Promise.resolve({
+      id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
+      name: "Tag",
+    }),
+  ) as MockFn,
+  updateTag: mock(() =>
+    Promise.resolve({
+      id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
+      name: "Updated",
+    }),
+  ) as MockFn,
+  deleteTag: mock(() =>
+    Promise.resolve({
+      id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
+      name: "Deleted",
+    }),
+  ) as MockFn,
+
   // Teams
   getTeamById: mock(() => null) as MockFn,
   getTeam: mock(() => null) as MockFn,
@@ -979,25 +1000,10 @@ const dbQueriesMock = new Proxy(
     updateTeamMember: mocks.updateTeamMember,
 
     // Tags
-    getTags: mock(() => Promise.resolve([])) as MockFn,
-    createTag: mock(() =>
-      Promise.resolve({
-        id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
-        name: "Tag",
-      }),
-    ) as MockFn,
-    updateTag: mock(() =>
-      Promise.resolve({
-        id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
-        name: "Updated",
-      }),
-    ) as MockFn,
-    deleteTag: mock(() =>
-      Promise.resolve({
-        id: "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f",
-        name: "Deleted",
-      }),
-    ) as MockFn,
+    getTags: mocks.getTags,
+    createTag: mocks.createTag,
+    updateTag: mocks.updateTag,
+    deleteTag: mocks.deleteTag,
 
     // Users (additional query exports used by routers)
     getUserInvites: createDefaultMock(),
