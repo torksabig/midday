@@ -8,7 +8,10 @@ import {
   mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
   mapReplacementToInboxSearch,
+  mapReplacementToGlobalSearch,
+  mapReplacementToInvoiceSummary,
   mapReplacementToOverviewSummary,
+  mapReplacementToPaymentStatus,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
@@ -390,6 +393,52 @@ describe("replacement mappers", () => {
     expect(mapped.data[0]).toMatchObject({
       billingEmail: "bill@co.com",
       invoiceCount: 2,
+    });
+  });
+
+  test("mapReplacementToPaymentStatus maps score label", () => {
+    const mapped = mapReplacementToPaymentStatus({
+      score: 85,
+      payment_status: "good",
+    });
+    expect(mapped).toEqual({ score: 85, paymentStatus: "good" });
+  });
+
+  test("mapReplacementToInvoiceSummary maps FX breakdown", () => {
+    const mapped = mapReplacementToInvoiceSummary({
+      total_amount: 100.5,
+      invoice_count: 2,
+      currency: "USD",
+      breakdown: [
+        {
+          currency: "EUR",
+          original_amount: 50,
+          converted_amount: 55,
+          count: 1,
+        },
+      ],
+    });
+    expect(mapped).toMatchObject({
+      totalAmount: 100.5,
+      invoiceCount: 2,
+      breakdown: [{ originalAmount: 50, convertedAmount: 55 }],
+    });
+  });
+
+  test("mapReplacementToGlobalSearch preserves FTS row shape", () => {
+    const mapped = mapReplacementToGlobalSearch([
+      {
+        id: "1",
+        type: "customer",
+        title: "Acme",
+        relevance: 0.9,
+        created_at: "2026-01-01",
+        data: { name: "Acme" },
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      type: "customer",
+      created_at: "2026-01-01",
     });
   });
 

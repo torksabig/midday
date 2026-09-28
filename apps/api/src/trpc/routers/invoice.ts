@@ -22,6 +22,8 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateInvoicesGet,
   tryDelegateInvoicesGetById,
+  tryDelegateInvoicePaymentStatus,
+  tryDelegateInvoiceSummary,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -141,9 +143,19 @@ export const invoiceRouter = createTRPCRouter({
       });
     }),
 
-  paymentStatus: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    return getPaymentStatus(db, teamId!);
-  }),
+  paymentStatus: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoicePaymentStatus(accessToken);
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return getPaymentStatus(db, teamId!);
+    },
+  ),
 
   searchInvoiceNumber: protectedProcedure
     .input(searchInvoiceNumberSchema)
@@ -156,7 +168,18 @@ export const invoiceRouter = createTRPCRouter({
 
   invoiceSummary: protectedProcedure
     .input(invoiceSummarySchema.optional())
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceSummary(
+          { statuses: input?.statuses ?? null },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInvoiceSummary(db, {
         teamId: teamId!,
         statuses: input?.statuses,

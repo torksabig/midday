@@ -1272,3 +1272,94 @@ export function mapReplacementToCustomerById(payload: unknown): unknown {
 export function mapReplacementToInvoiceById(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
+
+const replacementPaymentStatusSchema = z.object({
+  score: z.number(),
+  payment_status: z.string(),
+});
+
+export type MiddayPaymentStatusShape = {
+  score: number;
+  paymentStatus: string;
+};
+
+export function mapReplacementToPaymentStatus(
+  payload: unknown,
+): MiddayPaymentStatusShape {
+  const parsed = replacementPaymentStatusSchema.parse(payload);
+  return {
+    score: parsed.score,
+    paymentStatus: parsed.payment_status,
+  };
+}
+
+const replacementInvoiceSummaryBreakdownSchema = z.object({
+  currency: z.string(),
+  original_amount: z.number(),
+  converted_amount: z.number(),
+  count: z.number(),
+});
+
+const replacementInvoiceSummarySchema = z.object({
+  total_amount: z.number(),
+  invoice_count: z.number(),
+  currency: z.string(),
+  breakdown: z.array(replacementInvoiceSummaryBreakdownSchema).optional(),
+});
+
+export type MiddayInvoiceSummaryShape = {
+  totalAmount: number;
+  invoiceCount: number;
+  currency: string;
+  breakdown?: Array<{
+    currency: string;
+    originalAmount: number;
+    convertedAmount: number;
+    count: number;
+  }>;
+};
+
+export function mapReplacementToInvoiceSummary(
+  payload: unknown,
+): MiddayInvoiceSummaryShape {
+  const parsed = replacementInvoiceSummarySchema.parse(payload);
+  return {
+    totalAmount: parsed.total_amount,
+    invoiceCount: parsed.invoice_count,
+    currency: parsed.currency,
+    ...(parsed.breakdown
+      ? {
+          breakdown: parsed.breakdown.map((row) => ({
+            currency: row.currency,
+            originalAmount: row.original_amount,
+            convertedAmount: row.converted_amount,
+            count: row.count,
+          })),
+        }
+      : {}),
+  };
+}
+
+const replacementGlobalSearchRowSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  relevance: z.number(),
+  created_at: z.string(),
+  data: z.unknown(),
+});
+
+export type MiddayGlobalSearchRowShape = {
+  id: string;
+  type: string;
+  title: string;
+  relevance: number;
+  created_at: string;
+  data: unknown;
+};
+
+export function mapReplacementToGlobalSearch(
+  payload: unknown,
+): MiddayGlobalSearchRowShape[] {
+  return z.array(replacementGlobalSearchRowSchema).parse(payload);
+}

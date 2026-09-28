@@ -2,7 +2,7 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Counts:** **20 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~8%). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **23 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~9%). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -36,9 +36,22 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `customers.*` (other) | no | portal public, CRUD, enrichment |
 | `invoice.get` | yes | read · list (Phase 4) |
 | `invoice.getById` | yes | read (Phase 4) |
-| `invoice.*` (other) | no | public token, summary, mutations |
-| All other routers | no | accounting, banking, billing, reports, search, tracker, vault tags, notifications, oauth, etc. |
+| `invoice.paymentStatus` | yes | read · weighted score (Phase 5 slice 1) |
+| `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
+| `invoice.*` (other) | no | public token, mutations |
+| `search.global` | yes | read · `global_search()` RPC (Phase 5 slice 2) |
+| `search.attachments` | no | composite inbox + invoice ILIKE |
+| All other routers | no | accounting, banking, billing, reports, tracker, vault tags, notifications, oauth, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/payment-status`, `/invoices/summary`, `/search/global`.
 
-**Phase 4 agent note:** Subagent `232b8ce9` left uncommitted `crates/api/src/documents_read.rs` in `fintech/clone` (plus unrelated Vite web edits — not committed per Path A freeze). Phase 4 completed in this pass with wired routes, mappers, tRPC delegation, and mapper tests.
+### `search.global` parity (Rust vs Drizzle façade)
+
+| Concern | Rust / delegated path | Legacy Drizzle path |
+| --- | --- | --- |
+| Primary FTS | Yes · calls Postgres `global_search()` with same arg order as `@midday/db` | Same stored procedure |
+| Multi-word empty → LLM semantic fallback | No · still runs in `apps/api` via `global_semantic_search()` + `generateLLMFilters` when delegated FTS returns `[]` | Same |
+| `global_semantic_search` filters (amount, dates, types, …) | Not in Rust | LLM fallback only |
+| Exchange-rate cache (4h TTL) on unrelated paths | N/A | N/A |
+
+**Phase 5 slice 1–2:** Invoice metrics + global search read delegation; mapper tests in `@midday/replacement-backend`.

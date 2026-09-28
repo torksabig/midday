@@ -20,6 +20,9 @@ import {
   mapReplacementToDocumentById,
   mapReplacementToInvoicesGet,
   mapReplacementToInvoiceById,
+  mapReplacementToPaymentStatus,
+  mapReplacementToInvoiceSummary,
+  mapReplacementToGlobalSearch,
   type MiddayBankAccountsGetShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
@@ -33,24 +36,46 @@ import {
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
+  type MiddayPaymentStatusShape,
+  type MiddayInvoiceSummaryShape,
+  type MiddayGlobalSearchRowShape,
 } from "./mappers";
 
 export {
   mapReplacementToBankAccountsGet,
+  mapReplacementToCustomerById,
+  mapReplacementToCustomersGet,
+  mapReplacementToDocumentById,
+  mapReplacementToDocumentsGet,
+  mapReplacementToGlobalSearch,
   mapReplacementToInboxById,
+  mapReplacementToInboxByStatus,
+  mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
+  mapReplacementToInboxSearch,
+  mapReplacementToInvoiceById,
+  mapReplacementToInvoiceSummary,
+  mapReplacementToInvoicesGet,
+  mapReplacementToOverviewSummary,
+  mapReplacementToPaymentStatus,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
   type MiddayBankAccountsGetShape,
+  type MiddayCustomersGetShape,
+  type MiddayDocumentsGetShape,
+  type MiddayGlobalSearchRowShape,
+  type MiddayInvoiceSummaryShape,
+  type MiddayInvoicesGetShape,
   type MiddayInboxByIdShape,
   type MiddayInboxByStatusItemShape,
   type MiddayInboxCheckAttachmentsShape,
   type MiddayInboxGetShape,
   type MiddayInboxSearchItemShape,
   type MiddayOverviewSummaryShape,
+  type MiddayPaymentStatusShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -690,6 +715,84 @@ export async function fetchReplacementInvoiceById(
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
   return mapReplacementToInvoiceById(await res.json());
+}
+
+export async function fetchReplacementInvoicePaymentStatus(
+  baseUrl: string,
+  token: string,
+): Promise<MiddayPaymentStatusShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/payment-status`,
+    token,
+  );
+  return mapReplacementToPaymentStatus(payload);
+}
+
+export type ReplacementInvoiceSummaryQuery = {
+  statuses?: string[] | null;
+};
+
+export function buildInvoiceSummaryQuery(
+  params: ReplacementInvoiceSummaryQuery,
+): string {
+  const search = new URLSearchParams();
+  for (const v of params.statuses ?? []) search.append("statuses", v);
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementInvoiceSummary(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInvoiceSummaryQuery,
+): Promise<MiddayInvoiceSummaryShape> {
+  const root = trimBase(baseUrl);
+  const query = buildInvoiceSummaryQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices/summary${query}`,
+    token,
+  );
+  return mapReplacementToInvoiceSummary(payload);
+}
+
+export type ReplacementGlobalSearchQuery = {
+  searchTerm?: string | null;
+  language?: string | null;
+  limit?: number;
+  itemsPerTableLimit?: number;
+  relevanceThreshold?: number | null;
+};
+
+export function buildGlobalSearchQuery(
+  params: ReplacementGlobalSearchQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.searchTerm) search.set("searchTerm", params.searchTerm);
+  if (params.language) search.set("language", params.language);
+  if (params.limit != null) search.set("limit", String(params.limit));
+  if (params.itemsPerTableLimit != null) {
+    search.set("itemsPerTableLimit", String(params.itemsPerTableLimit));
+  }
+  if (params.relevanceThreshold != null) {
+    search.set("relevanceThreshold", String(params.relevanceThreshold));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementSearchGlobal(
+  baseUrl: string,
+  token: string,
+  params: ReplacementGlobalSearchQuery,
+): Promise<MiddayGlobalSearchRowShape[]> {
+  const root = trimBase(baseUrl);
+  const query = buildGlobalSearchQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/search/global${query}`,
+    token,
+  );
+  return mapReplacementToGlobalSearch(payload);
 }
 
 export { shouldDelegateToReplacementBackend };
