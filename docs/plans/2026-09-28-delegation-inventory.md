@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **79 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~30.9%). **61** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apiKeys.delete`, `reports.create`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **80 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~31.3%). **64** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `team.acceptInvite`, `team.declineInvite`, `team.deleteInvite`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apiKeys.delete`, `reports.create`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -19,7 +19,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `team.teamInvites` | yes | read · AP-13 |
 | `team.update` | yes | **write** · name/currency/settings PATCH (AP-22) |
 | `team.connectionStatus` | yes | read · bank + inbox status summary (AP-26) |
-| `team.*` (other) | no | writes / admin reads |
+| `team.acceptInvite` | yes | **write** · join team from invite (AP-41) |
+| `team.declineInvite` | yes | **write** · delete invite by email (AP-41) |
+| `team.deleteInvite` | yes | **write** · owner cancels invite (AP-41) |
+| `team.invitesByEmail` | yes | read · reuse `/user/invites` (AP-41) |
+| `team.*` (other) | no | create/leave/delete/invite emails / members |
 | `notifications.list` | yes | read · activities feed (AP-12) |
 | `notifications.updateStatus` | yes | **write** · single activity status (AP-20 follow-on) |
 | `notifications.updateAllStatus` | yes | **write** · bulk status for current user (AP-21) |
@@ -385,10 +389,11 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-38 | DONE | `trackerProjects.upsert`/`delete` + `oauthApplications.regenerateSecret` | write |
 | AP-39 | DONE | `invoiceProducts.saveLineItemAsProduct` + `apps.disconnect`/`update`/`updateSettings` | write |
 | AP-40 | DONE | `inbox.blocklist.*` + `apiKeys.delete` + `reports.create` | write+read |
+| AP-41 | DONE | `team.acceptInvite`/`declineInvite`/`deleteInvite`/`invitesByEmail` | write+read |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** team.acceptInvite/declineInvite/deleteInvite/deleteMember/updateMember, shortLinks, then blocked/email/external leftovers. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** team.deleteMember/updateMember, shortLinks.get/createForUrl, then blocked/email/external leftovers. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
 **Blocked:** AP-15 `bankAccounts.getDetails` (decrypt); `user.delete` (Supabase admin + Resend); `apiKeys.upsert` email side-effect; live bank OAuth token exchange; accounting.getAccounts / external provider APIs; email/Resend sends; oauth authorize / updateApprovalStatus (Resend).
 
-**Autopilot AP-12–40 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Autopilot AP-12–41 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
