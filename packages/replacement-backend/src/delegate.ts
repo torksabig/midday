@@ -31,6 +31,8 @@ import {
   mapReplacementToIdOnly,
   mapReplacementToInvoiceProducts,
   mapReplacementToInvoiceProduct,
+  mapReplacementToSaveLineItemAsProduct,
+  mapReplacementToAppMutation,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -132,6 +134,8 @@ export {
   mapReplacementToIdOnly,
   mapReplacementToInvoiceProducts,
   mapReplacementToInvoiceProduct,
+  mapReplacementToSaveLineItemAsProduct,
+  mapReplacementToAppMutation,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2175,6 +2179,84 @@ export async function fetchReplacementInvoiceProductUpdate(
   );
   if (payload == null) return null;
   return mapReplacementToInvoiceProduct(payload);
+}
+
+export type ReplacementSaveLineItemAsProductInput = {
+  name: string;
+  price?: number | null;
+  unit?: string | null;
+  productId?: string;
+  currency?: string | null;
+};
+
+export async function fetchReplacementInvoiceProductSaveLineItem(
+  baseUrl: string,
+  token: string,
+  input: ReplacementSaveLineItemAsProductInput,
+): Promise<{ product: unknown | null; shouldClearProductId: boolean }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-products/save-line-item`,
+    token,
+    input,
+  );
+  return mapReplacementToSaveLineItemAsProduct(payload);
+}
+
+export async function fetchReplacementAppsDisconnect(
+  baseUrl: string,
+  token: string,
+  appId: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/apps/${encodeURIComponent(appId)}`,
+    token,
+  );
+  if (payload == null) return null;
+  return mapReplacementToAppMutation(payload);
+}
+
+export type ReplacementAppsUpdateInput = {
+  option: { id: string; value: string | number | boolean };
+};
+
+export async function fetchReplacementAppsUpdate(
+  baseUrl: string,
+  token: string,
+  appId: string,
+  input: ReplacementAppsUpdateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/apps/${encodeURIComponent(appId)}/settings`,
+    token,
+    input,
+  );
+  return mapReplacementToAppMutation(payload);
+}
+
+export type ReplacementAppsUpdateSettingsInput = {
+  settings: Array<{
+    id: string;
+    value: unknown;
+    [key: string]: unknown;
+  }>;
+};
+
+export async function fetchReplacementAppsUpdateSettings(
+  baseUrl: string,
+  token: string,
+  appId: string,
+  input: ReplacementAppsUpdateSettingsInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/apps/${encodeURIComponent(appId)}/settings/bulk`,
+    token,
+    input,
+  );
+  return mapReplacementToAppMutation(payload);
 }
 
 export async function fetchReplacementInvoiceTemplates(

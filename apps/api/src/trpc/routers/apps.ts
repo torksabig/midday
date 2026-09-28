@@ -7,6 +7,9 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateAppsGet,
+  tryDelegateAppsDisconnect,
+  tryDelegateAppsUpdate,
+  tryDelegateAppsUpdateSettings,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -35,16 +38,36 @@ export const appsRouter = createTRPCRouter({
 
   disconnect: protectedProcedure
     .input(disconnectAppSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
       const { appId } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppsDisconnect(appId, accessToken);
+        if (delegated.delegated) {
+          return delegated.app;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return disconnectApp(db, { appId, teamId: teamId! });
     }),
 
   update: protectedProcedure
     .input(updateAppSettingsSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
       const { appId, option } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppsUpdate(
+          appId,
+          { option },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.app;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return updateAppSettings(db, {
         appId,
@@ -69,8 +92,20 @@ export const appsRouter = createTRPCRouter({
         ),
       }),
     )
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
       const { appId, settings } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppsUpdateSettings(
+          appId,
+          { settings },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.app;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return updateAppSettingsBulk(db, {
         appId,

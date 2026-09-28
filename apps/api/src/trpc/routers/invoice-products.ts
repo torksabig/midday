@@ -16,6 +16,7 @@ import {
   tryDelegateInvoiceProductCreate,
   tryDelegateInvoiceProductUpsert,
   tryDelegateInvoiceProductUpdate,
+  tryDelegateInvoiceProductSaveLineItem,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -212,7 +213,7 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   saveLineItemAsProduct: protectedProcedure
     .input(saveLineItemAsProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
       // Convert input to LineItem format
       const lineItem = {
         name: input.name,
@@ -220,6 +221,26 @@ export const invoiceProductsRouter = createTRPCRouter({
         unit: input.unit || undefined,
         productId: input.productId,
       };
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductSaveLineItem(
+          {
+            name: input.name,
+            price: input.price,
+            unit: input.unit,
+            productId: input.productId,
+            currency: input.currency,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return {
+            product: delegated.result.product,
+            shouldClearProductId: delegated.result.shouldClearProductId,
+          };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const result = await saveLineItemAsProduct(
         db,

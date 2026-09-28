@@ -1324,6 +1324,31 @@ export function mapReplacementToInvoiceProduct(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToSaveLineItemAsProduct(
+  payload: unknown,
+): { product: unknown | null; shouldClearProductId: boolean } {
+  const row = z
+    .object({
+      product: z.unknown().nullable().optional(),
+      shouldClearProductId: z.boolean().optional(),
+      should_clear_product_id: z.boolean().optional(),
+    })
+    .passthrough()
+    .parse(payload);
+  const shouldClear =
+    row.shouldClearProductId ?? row.should_clear_product_id ?? false;
+  const product =
+    row.product == null
+      ? null
+      : mapReplacementToInvoiceProduct(row.product);
+  return { product, shouldClearProductId: shouldClear };
+}
+
+export function mapReplacementToAppMutation(payload: unknown): unknown {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

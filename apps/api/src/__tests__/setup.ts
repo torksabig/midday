@@ -189,6 +189,11 @@ export const mocks = {
     shouldClearProductId: false,
   })) as MockFn,
 
+  // Apps mutations
+  disconnectApp: mock(() => null) as MockFn,
+  updateAppSettings: mock(() => ({})) as MockFn,
+  updateAppSettingsBulk: mock(() => ({})) as MockFn,
+
   // Customer queries
   getCustomers: mock(() => ({
     data: [],
@@ -1124,9 +1129,9 @@ const dbQueriesMock = new Proxy(
     deleteTransactionTag: mocks.deleteTransactionTag,
 
     // Apps (mutations on router)
-    disconnectApp: createDefaultMock(),
-    updateAppSettings: createDefaultMock(),
-    updateAppSettingsBulk: createDefaultMock(),
+    disconnectApp: mocks.disconnectApp,
+    updateAppSettings: mocks.updateAppSettings,
+    updateAppSettingsBulk: mocks.updateAppSettingsBulk,
     removeWhatsAppConnection: createDefaultMock(),
 
     // Bank connections (mutations on router)
