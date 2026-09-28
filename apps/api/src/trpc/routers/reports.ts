@@ -22,6 +22,9 @@ import {
   tryDelegateReportsRunway,
   tryDelegateReportsSpending,
   tryDelegateReportsTaxSummary,
+  tryDelegateReportsRevenueForecast,
+  tryDelegateReportsGetByLinkId,
+  tryDelegateReportsGetChartDataByLinkId,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -240,7 +243,24 @@ export const reportsRouter = createTRPCRouter({
 
   revenueForecast: protectedProcedure
     .input(getRevenueForecastSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsRevenueForecast(
+          {
+            from: input.from,
+            to: input.to,
+            currency: input.currency,
+            revenueType: input.revenueType,
+            forecastMonths: input.forecastMonths,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getRevenueForecast(db, {
         teamId: teamId!,
         from: input.from,
@@ -297,12 +317,30 @@ export const reportsRouter = createTRPCRouter({
   getByLinkId: publicProcedure
     .input(getReportByLinkIdSchema)
     .query(async ({ ctx: { db }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsGetByLinkId(input.linkId);
+        if (delegated !== null) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getReportByLinkId(db, input.linkId);
     }),
 
   getChartDataByLinkId: publicProcedure
     .input(getChartDataByLinkIdSchema)
     .query(async ({ ctx: { db }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportsGetChartDataByLinkId(
+          input.linkId,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       try {
         return await getChartDataByLinkId(db, input.linkId);
       } catch (error: unknown) {

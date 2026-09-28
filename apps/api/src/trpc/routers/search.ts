@@ -5,6 +5,7 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateSearchGlobal,
+  tryDelegateSearchAttachments,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { generateLLMFilters } from "@api/utils/search-filters";
@@ -77,8 +78,23 @@ export const searchRouter = createTRPCRouter({
 
   attachments: protectedProcedure
     .input(searchAttachmentsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       const { q, transactionId, limit = 30 } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateSearchAttachments(
+          {
+            q: q ?? null,
+            transactionId: transactionId ?? null,
+            limit,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       const [inboxResults, invoiceResults] = await Promise.all([
         getInboxSearch(db, {

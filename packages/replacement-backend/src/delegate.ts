@@ -112,6 +112,35 @@ async function replacementFetch<T>(
   return (await res.json()) as T;
 }
 
+/** Public report share routes (no bearer). */
+export class ReplacementPublicFetchError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ReplacementPublicFetchError";
+    this.status = status;
+  }
+}
+
+async function replacementFetchPublic<T>(
+  url: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!res.ok) {
+    throw new ReplacementPublicFetchError(
+      `replacement API ${url} HTTP ${res.status}`,
+      res.status,
+    );
+  }
+
+  return (await res.json()) as T;
+}
+
 /** Bearer for delegation: session JWT, explicit env, or demo login when enabled. */
 export async function resolveReplacementBearerToken(
   baseUrl = getReplacementApiUrl(),
@@ -969,6 +998,88 @@ export async function fetchReplacementReportsAccountBalances(
     "account-balances",
     qs ? `?${qs}` : "",
   );
+}
+
+export type ReplacementRevenueForecastQuery = ReplacementReportDateRangeQuery & {
+  forecastMonths?: number | null;
+};
+
+function buildRevenueForecastQuery(params: ReplacementRevenueForecastQuery): string {
+  const search = new URLSearchParams({ from: params.from, to: params.to });
+  if (params.currency) search.set("currency", params.currency);
+  if (params.revenueType) search.set("revenueType", params.revenueType);
+  if (params.forecastMonths != null) {
+    search.set("forecastMonths", String(params.forecastMonths));
+  }
+  return `?${search.toString()}`;
+}
+
+export async function fetchReplacementReportsRevenueForecast(
+  baseUrl: string,
+  token: string,
+  params: ReplacementRevenueForecastQuery,
+): Promise<unknown> {
+  return fetchReplacementReportPath(
+    baseUrl,
+    token,
+    "revenue-forecast",
+    buildRevenueForecastQuery(params),
+  );
+}
+
+export async function fetchReplacementReportByLinkId(
+  baseUrl: string,
+  linkId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetchPublic<unknown>(
+    `${root}/api/v1/reports/public/${encodeURIComponent(linkId)}`,
+  );
+  if (payload === null) {
+    return undefined;
+  }
+  return mapReplacementToReportJson(payload);
+}
+
+export async function fetchReplacementReportChartByLinkId(
+  baseUrl: string,
+  linkId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetchPublic<unknown>(
+    `${root}/api/v1/reports/public/${encodeURIComponent(linkId)}/chart`,
+  );
+  return mapReplacementToReportJson(payload);
+}
+
+export type ReplacementSearchAttachmentsQuery = {
+  q?: string | null;
+  transactionId?: string | null;
+  limit?: number | null;
+};
+
+export function buildSearchAttachmentsQuery(
+  params: ReplacementSearchAttachmentsQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.transactionId) search.set("transactionId", params.transactionId);
+  if (params.limit != null) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementSearchAttachments(
+  baseUrl: string,
+  token: string,
+  params: ReplacementSearchAttachmentsQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown[]>(
+    `${root}/api/v1/search/attachments${buildSearchAttachmentsQuery(params)}`,
+    token,
+  );
+  return mapReplacementToReportJson(payload) as unknown[];
 }
 
 export { shouldDelegateToReplacementBackend };

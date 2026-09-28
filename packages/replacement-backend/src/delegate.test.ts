@@ -3,6 +3,7 @@ import {
   buildInboxByStatusQuery,
   buildInboxListQuery,
   buildInboxSearchQuery,
+  buildSearchAttachmentsQuery,
   buildTransactionsListQuery,
   resolveReplacementBearerToken,
 } from "./delegate";
@@ -109,6 +110,20 @@ describe("buildTransactionsListQuery", () => {
     expect(params.getAll("amount")).toEqual(["gte", "100"]);
     expect(params.get("type")).toBe("expense");
     expect(params.get("manual")).toBe("exclude");
+  });
+});
+
+describe("buildSearchAttachmentsQuery", () => {
+  test("encodes attachment search params", () => {
+    const qs = buildSearchAttachmentsQuery({
+      q: "receipt",
+      transactionId: "tx-1",
+      limit: 20,
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("q")).toBe("receipt");
+    expect(params.get("transactionId")).toBe("tx-1");
+    expect(params.get("limit")).toBe("20");
   });
 });
 

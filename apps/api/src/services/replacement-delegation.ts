@@ -19,6 +19,11 @@ import {
   fetchReplacementReportsRunway,
   fetchReplacementReportsSpending,
   fetchReplacementReportsTaxSummary,
+  fetchReplacementReportsRevenueForecast,
+  fetchReplacementReportByLinkId,
+  fetchReplacementReportChartByLinkId,
+  fetchReplacementSearchAttachments,
+  ReplacementPublicFetchError,
   fetchReplacementInboxById,
   fetchReplacementInboxByStatus,
   fetchReplacementInboxCheckAttachments,
@@ -48,6 +53,8 @@ import {
   type ReplacementInboxListQuery,
   type ReplacementInboxSearchQuery,
   type ReplacementReportDateRangeQuery,
+  type ReplacementRevenueForecastQuery,
+  type ReplacementSearchAttachmentsQuery,
   type ReplacementTaxSummaryQuery,
   type ReplacementTransactionsListQuery,
 } from "@midday/replacement-backend";
@@ -1050,5 +1057,70 @@ export async function tryDelegateReportsAccountBalances(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementReportsAccountBalances(baseUrl, token, currency),
+  );
+}
+
+async function tryDelegateReplacementPublicRead<T>(
+  run: (baseUrl: string) => Promise<T>,
+): Promise<T | null> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return null;
+  }
+
+  try {
+    return await run(getReplacementApiUrl());
+  } catch (error) {
+    if (error instanceof ReplacementPublicFetchError) {
+      if (error.status === 404) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: error.message,
+        });
+      }
+      if (error.status === 400) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: error.message,
+        });
+      }
+    }
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return null;
+  }
+}
+
+export async function tryDelegateReportsRevenueForecast(
+  input: ReplacementRevenueForecastQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementReportsRevenueForecast(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateReportsGetByLinkId(linkId: string) {
+  return tryDelegateReplacementPublicRead((baseUrl) =>
+    fetchReplacementReportByLinkId(baseUrl, linkId),
+  );
+}
+
+export async function tryDelegateReportsGetChartDataByLinkId(linkId: string) {
+  return tryDelegateReplacementPublicRead((baseUrl) =>
+    fetchReplacementReportChartByLinkId(baseUrl, linkId),
+  );
+}
+
+export async function tryDelegateSearchAttachments(
+  input: ReplacementSearchAttachmentsQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementSearchAttachments(baseUrl, token, input),
   );
 }

@@ -2,7 +2,7 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Counts:** **32 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~12.5%). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **36 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~14.1%). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
 | `invoice.*` (other) | no | public token, mutations |
 | `search.global` | yes | read · `global_search()` RPC (Phase 5 slice 2) |
-| `search.attachments` | no | composite inbox + invoice ILIKE |
+| `search.attachments` | yes | read · inbox ILIKE + invoice list (Phase 5 slice 4) |
 | `reports.revenue` | yes | read · chart YoY (Phase 5 slice 3) |
 | `reports.profit` | yes | read · chart YoY |
 | `reports.burnRate` | yes | read · monthly burn |
@@ -50,13 +50,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.spending` | yes | read · category breakdown |
 | `reports.taxSummary` | yes | read · VAT-style rollup |
 | `reports.getAccountBalances` | yes | read · cash accounts |
-| `reports.revenueForecast` | no | bottom-up forecast (invoices, recurring, billable hours) |
-| `reports.getByLinkId` | no | public share link |
-| `reports.getChartDataByLinkId` | no | public chart |
+| `reports.revenueForecast` | yes | read · bottom-up forecast (Phase 5 slice 4) |
+| `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
+| `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | no | write |
 | All other routers | no | accounting, banking, billing, tracker, vault tags, notifications, oauth, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/payment-status`, `/invoices/summary`, `/search/global`, `/reports/revenue`, `/reports/profit`, `/reports/burn-rate`, `/reports/runway`, `/reports/expense`, `/reports/spending`, `/reports/tax-summary`, `/reports/account-balances`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/payment-status`, `/invoices/summary`, `/search/global`, `/search/attachments`, `/reports/revenue`, `/reports/profit`, `/reports/burn-rate`, `/reports/runway`, `/reports/expense`, `/reports/spending`, `/reports/tax-summary`, `/reports/account-balances`, `/reports/revenue-forecast`, `/reports/public/:link_id`, `/reports/public/:link_id/chart`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -67,16 +67,26 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `global_semantic_search` filters (amount, dates, types, …) | Not in Rust | LLM fallback only |
 | Exchange-rate cache (4h TTL) on unrelated paths | N/A | N/A |
 
-### Dashboard `reports.*` parity (Phase 5 slice 3)
+### `search.attachments` parity (Phase 5 slice 4)
 
-| Concern | Rust `reports_read.rs` | Legacy `@midday/db` |
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| Inbox ILIKE / amount tolerance | Yes · reuses `/inbox/search` SQL | Same + optional FTS |
+| Invoice ILIKE list | Yes · `statuses` unpaid/overdue/paid | Same |
+| `transactionId` smart ranking | **No** | Yes · tx-context re-rank |
+
+### Dashboard `reports.*` parity (Phase 5 slice 3–4)
+
+| Concern | Rust | Legacy `@midday/db` |
 | --- | --- | --- |
 | Currency resolution | Team `base_currency` or input | Same |
 | `resolvedAmount` + `exchange_rates` subquery | Yes | Same CASE expression |
 | Revenue slugs / contra-revenue | Yes · shared constants | Same |
 | Profit COGS tree | Yes · `cost-of-goods-sold` children | Same |
 | Chart YoY wrapper (`getReports`) | Yes · in Rust | Drizzle |
-| `revenueForecast` | **Not delegated** | Full bottom-up model |
-| Public share links | **Not delegated** | Drizzle |
+| `revenueForecast` bottom-up | Yes · `reports_forecast.rs` | Full Drizzle model |
+| Recurring invoice schedule TZ | **UTC calendar math** | `@date-fns/tz` |
+| Recurring tx FX batch | Partial · skips unmatched currency | Full batch rates |
+| Public share links | Yes · public router, linkId only | Drizzle |
 
-**Phase 5 slice 1–3:** Invoice metrics, global search, related documents, and dashboard metric reads; mapper tests in `@midday/replacement-backend`.
+**Phase 5 slice 4:** Revenue forecast, public report reads, attachment search; mapper tests in `@midday/replacement-backend`.

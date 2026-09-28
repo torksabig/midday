@@ -450,6 +450,14 @@ describe("replacement mappers", () => {
     expect(mapped.summary.currentTotal).toBe(100);
   });
 
+  test("mapReplacementToReportJson camelCases revenue forecast meta", () => {
+    const mapped = mapReplacementToReportJson({
+      meta: { forecast_method: "bottom_up", team_collection_metrics: { on_time_rate: 70 } },
+    }) as { meta: { forecastMethod: string; teamCollectionMetrics: { onTimeRate: number } } };
+    expect(mapped.meta.forecastMethod).toBe("bottom_up");
+    expect(mapped.meta.teamCollectionMetrics.onTimeRate).toBe(70);
+  });
+
   test("mapReplacementToGlobalSearch preserves FTS row shape", () => {
     const mapped = mapReplacementToGlobalSearch([
       {
