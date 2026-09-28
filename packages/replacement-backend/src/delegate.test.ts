@@ -27,6 +27,22 @@ describe("buildTransactionsListQuery", () => {
     expect(params.get("start")).toBe("2024-04-01T00:00:00.000Z");
     expect(params.get("end")).toBe("2024-04-30T23:59:59.999Z");
   });
+
+  test("encodes phase 2d list filters", () => {
+    const qs = buildTransactionsListQuery({
+      categories: ["food", "uncategorized"],
+      accounts: ["ba-1"],
+      tags: ["tag-1"],
+      exported: false,
+      fulfilled: true,
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.getAll("categories")).toEqual(["food", "uncategorized"]);
+    expect(params.getAll("accounts")).toEqual(["ba-1"]);
+    expect(params.getAll("tags")).toEqual(["tag-1"]);
+    expect(params.get("exported")).toBe("false");
+    expect(params.get("fulfilled")).toBe("true");
+  });
 });
 
 describe("resolveReplacementBearerToken", () => {

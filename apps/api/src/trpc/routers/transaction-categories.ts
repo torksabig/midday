@@ -5,7 +5,12 @@ import {
   getCategoryByIdSchema,
   updateTransactionCategorySchema,
 } from "@api/schemas/transaction-categories";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateTransactionCategoriesGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   createTransactionCategory,
   deleteTransactionCategory,
@@ -17,7 +22,20 @@ import {
 export const transactionCategoriesRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getCategoriesSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionCategoriesGet(
+          accessToken,
+        );
+        if (delegated) {
+          if (input?.limit != null && delegated.length > input.limit) {
+            return delegated.slice(0, input.limit);
+          }
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const data = await getCategories(db, {
         teamId: teamId!,
         limit: input?.limit,

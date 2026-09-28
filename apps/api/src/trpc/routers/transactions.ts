@@ -71,6 +71,11 @@ export const transactionsRouter = createTRPCRouter({
             statuses: input.statuses,
             start: input.start,
             end: input.end,
+            categories: input.categories,
+            accounts: input.accounts,
+            tags: input.tags,
+            exported: input.exported,
+            fulfilled: input.fulfilled,
           },
           accessToken,
         );

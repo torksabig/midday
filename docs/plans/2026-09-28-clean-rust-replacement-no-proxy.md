@@ -158,7 +158,8 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Backend mode** | `MIDDAY_BACKEND_MODE` = `legacy` \| `dual` \| `replacement` on `apps/api` | Env removed; no permanent dual |
 | **Delegation package** | `@midday/replacement-backend` REST client + Zod mappers | Temporary; delete with `apps/api` |
 | **Identity cutover** | **Done (replacement mode):** `user.me` / `team.current` use Rust only (throw on failure; no Drizzle). **Dual:** delegate first, Drizzle fallback. Demo bearer still available for smoke when no session. | Delete Drizzle identity paths entirely when `apps/api` goes away |
-| **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` delegates to `GET /api/v1/transactions` when dual/replacement; Postgres via `MIDDAY_DATABASE_URL`. **Phase 2c:** Rust list supports `sort`, `statuses`, `start`/`end` (+ `q`, cursor, `pageSize`). Remaining filters Drizzle-only in dual fallback. | Remaining list filters + delete Drizzle list |
+| **Transactions list (Phase 2)** | **Done (read path):** `transactions.get` delegates to `GET /api/v1/transactions` when dual/replacement; Postgres via `MIDDAY_DATABASE_URL`. **Phase 2c–2d:** Rust list supports `sort`, `statuses`, `start`/`end`, `categories`, `accounts`, `tags`, `exported`, `fulfilled` (+ `q`, cursor, `pageSize`). Dual fallback still Drizzle for assignees, attachments filter, recurring, amount/type/manual. Attachments/tags JSON on list rows still empty on Rust path. | Remaining list filters + delete Drizzle list |
+| **Categories / bank accounts (read)** | **Done:** `transactionCategories.get` → `GET /api/v1/categories`; `bankAccounts.get` → `GET /api/v1/bank-accounts` with delegation | Mutations still Drizzle-only |
 | **Auth on Rust** | **Done:** Supabase HS256 + JWKS path; session bearer from tRPC `accessToken` | Same |
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
 | **UI** | Frozen by policy; workspace may diverge from Downloads baseline | Same — sync UI from Downloads; no backend-driven UI redesign |
@@ -184,7 +185,7 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 ## Immediate next engineering step (Phase 2 → 3)
 
 1. **Phase 2 list read** — landed: clone paginated `GET /api/v1/transactions`, tRPC `transactions.get` delegation, mapper tests.
-2. **Done (read path):** `transactions.getById` delegates to `GET /api/v1/transactions/{id}`. Next: remaining list filters (status, tags, sort columns), attachments/tags JSON on Rust path.
+2. **Done (read path):** `transactions.getById` delegates to `GET /api/v1/transactions/{id}`. **Phase 2d done:** categories/accounts/tags/exported/fulfilled list filters + category/bank-account read lists. Next: assignees/recurring/amount/manual filters, attachments/tags JSON on Rust list rows.
 3. Contract tests + smoke; delete Drizzle for transactions when stable.
 
 Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` + `packages/ui` only, per [UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md).

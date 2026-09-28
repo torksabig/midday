@@ -3,19 +3,27 @@ import {
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
   mapReplacementToTeamCurrent,
+  mapReplacementToBankAccountsGet,
   mapReplacementToTransactionById,
+  mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayBankAccountsGetShape,
   type MiddayTransactionByIdShape,
+  type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
 } from "./mappers";
 
 export {
+  mapReplacementToBankAccountsGet,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
+  mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  type MiddayBankAccountsGetShape,
   type MiddayTransactionByIdShape,
+  type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
@@ -123,6 +131,16 @@ export type ReplacementTransactionsListQuery = {
   statuses?: string[] | null;
   start?: string | null;
   end?: string | null;
+  categories?: string[] | null;
+  accounts?: string[] | null;
+  tags?: string[] | null;
+  exported?: boolean | null;
+  fulfilled?: boolean | null;
+};
+
+export type ReplacementBankAccountsListQuery = {
+  enabled?: boolean;
+  manual?: boolean;
 };
 
 /** Encodes list query params for GET /api/v1/transactions (exported for tests). */
@@ -155,6 +173,41 @@ export function buildTransactionsListQuery(
       search.append("statuses", status);
     }
   }
+  for (const category of params.categories ?? []) {
+    if (category) {
+      search.append("categories", category);
+    }
+  }
+  for (const account of params.accounts ?? []) {
+    if (account) {
+      search.append("accounts", account);
+    }
+  }
+  for (const tag of params.tags ?? []) {
+    if (tag) {
+      search.append("tags", tag);
+    }
+  }
+  if (params.exported != null) {
+    search.set("exported", String(params.exported));
+  }
+  if (params.fulfilled != null) {
+    search.set("fulfilled", String(params.fulfilled));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function buildBankAccountsListQuery(
+  params: ReplacementBankAccountsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.enabled != null) {
+    search.set("enabled", String(params.enabled));
+  }
+  if (params.manual != null) {
+    search.set("manual", String(params.manual));
+  }
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 }
@@ -171,6 +224,32 @@ export async function fetchReplacementTransactionsList(
     token,
   );
   return mapReplacementToTransactionsGet(payload);
+}
+
+export async function fetchReplacementTransactionCategories(
+  baseUrl: string,
+  token: string,
+): Promise<MiddayTransactionCategoriesGetShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/categories`,
+    token,
+  );
+  return mapReplacementToTransactionCategoriesGet(payload);
+}
+
+export async function fetchReplacementBankAccounts(
+  baseUrl: string,
+  token: string,
+  params: ReplacementBankAccountsListQuery = {},
+): Promise<MiddayBankAccountsGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildBankAccountsListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/bank-accounts${query}`,
+    token,
+  );
+  return mapReplacementToBankAccountsGet(payload);
 }
 
 export async function fetchReplacementTransactionById(

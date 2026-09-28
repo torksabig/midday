@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  mapReplacementToBankAccountsGet,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
+  mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
 } from "./mappers";
@@ -129,6 +131,58 @@ describe("replacement mappers", () => {
         documentName: "Receipt.pdf",
         confidenceScore: 0.92,
       },
+    });
+  });
+
+  test("mapReplacementToTransactionCategoriesGet maps nested children", () => {
+    const mapped = mapReplacementToTransactionCategoriesGet([
+      {
+        id: "c1",
+        name: "Travel",
+        slug: "travel",
+        children: [
+          {
+            id: "c2",
+            name: "Flights",
+            slug: "flights",
+            parent_id: "c1",
+          },
+        ],
+      },
+    ]);
+
+    expect(mapped[0]?.children[0]).toMatchObject({
+      id: "c2",
+      name: "Flights",
+      slug: "flights",
+      parentId: "c1",
+    });
+  });
+
+  test("mapReplacementToBankAccountsGet maps bank connection without token", () => {
+    const mapped = mapReplacementToBankAccountsGet([
+      {
+        id: "ba1",
+        created_at: "2026-01-01T00:00:00Z",
+        created_by: "u1",
+        team_id: "t1",
+        enabled: true,
+        account_id: "ext-1",
+        bank_connection: {
+          id: "bc1",
+          created_at: "2026-01-01T00:00:00Z",
+          institution_id: "ins",
+          team_id: "t1",
+          name: "Chase",
+          provider: "plaid",
+        },
+      },
+    ]);
+
+    expect(mapped[0]?.bankConnection).toMatchObject({
+      id: "bc1",
+      name: "Chase",
+      accessToken: null,
     });
   });
 });

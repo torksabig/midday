@@ -428,3 +428,216 @@ export function mapReplacementToTransactionById(
     suggestion: mapReplacementTransactionSuggestion(suggestion),
   };
 }
+
+const replacementCategoryChildSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  system: z.boolean().nullable().optional(),
+  tax_rate: z.number().nullable().optional(),
+  tax_type: z.string().nullable().optional(),
+  tax_reporting_code: z.string().nullable().optional(),
+  excluded: z.boolean().nullable().optional(),
+  parent_id: z.string().nullable().optional(),
+});
+
+const replacementCategoryTreeSchema = replacementCategoryChildSchema.extend({
+  children: z.array(replacementCategoryChildSchema).optional(),
+});
+
+export type MiddayTransactionCategoriesGetShape = Array<{
+  id: string;
+  name: string;
+  color: string | null;
+  slug: string | null;
+  description: string | null;
+  system: boolean | null;
+  taxRate: number | null;
+  taxType: string | null;
+  taxReportingCode: string | null;
+  excluded: boolean | null;
+  parentId: string | null;
+  children: Array<{
+    id: string;
+    name: string;
+    color: string | null;
+    slug: string | null;
+    description: string | null;
+    system: boolean | null;
+    taxRate: number | null;
+    taxType: string | null;
+    taxReportingCode: string | null;
+    excluded: boolean | null;
+    parentId: string | null;
+  }>;
+}>;
+
+function mapReplacementCategoryChild(
+  row: z.infer<typeof replacementCategoryChildSchema>,
+) {
+  return {
+    id: row.id,
+    name: row.name,
+    color: row.color ?? null,
+    slug: row.slug ?? null,
+    description: row.description ?? null,
+    system: row.system ?? null,
+    taxRate: row.tax_rate ?? null,
+    taxType: row.tax_type ?? null,
+    taxReportingCode: row.tax_reporting_code ?? null,
+    excluded: row.excluded ?? null,
+    parentId: row.parent_id ?? null,
+  };
+}
+
+export function mapReplacementToTransactionCategoriesGet(
+  payload: unknown,
+): MiddayTransactionCategoriesGetShape {
+  const parsed = z.array(replacementCategoryTreeSchema).parse(payload);
+  return parsed.map((row) => ({
+    ...mapReplacementCategoryChild(row),
+    children: (row.children ?? []).map(mapReplacementCategoryChild),
+  }));
+}
+
+const replacementBankConnectionSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  institution_id: z.string(),
+  expires_at: z.string().nullable().optional(),
+  team_id: z.string(),
+  name: z.string(),
+  logo_url: z.string().nullable().optional(),
+  enrollment_id: z.string().nullable().optional(),
+  provider: z.string(),
+  last_accessed: z.string().nullable().optional(),
+  reference_id: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  error_details: z.string().nullable().optional(),
+  error_retries: z.number().nullable().optional(),
+});
+
+const replacementBankAccountSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  created_by: z.string(),
+  team_id: z.string(),
+  name: z.string().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  bank_connection_id: z.string().nullable().optional(),
+  enabled: z.boolean(),
+  account_id: z.string(),
+  balance: z.number().nullable().optional(),
+  manual: z.boolean().nullable().optional(),
+  type: z.string().nullable().optional(),
+  base_currency: z.string().nullable().optional(),
+  base_balance: z.number().nullable().optional(),
+  error_details: z.string().nullable().optional(),
+  error_retries: z.number().nullable().optional(),
+  account_reference: z.string().nullable().optional(),
+  subtype: z.string().nullable().optional(),
+  bic: z.string().nullable().optional(),
+  routing_number: z.string().nullable().optional(),
+  wire_routing_number: z.string().nullable().optional(),
+  sort_code: z.string().nullable().optional(),
+  available_balance: z.number().nullable().optional(),
+  credit_limit: z.number().nullable().optional(),
+  bank_connection: replacementBankConnectionSchema.nullable().optional(),
+});
+
+export type MiddayBankAccountsGetShape = Array<{
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  teamId: string;
+  name: string | null;
+  currency: string | null;
+  bankConnectionId: string | null;
+  enabled: boolean;
+  accountId: string;
+  balance: number | null;
+  manual: boolean | null;
+  type: string | null;
+  baseCurrency: string | null;
+  baseBalance: number | null;
+  errorDetails: string | null;
+  errorRetries: number | null;
+  accountReference: string | null;
+  subtype: string | null;
+  bic: string | null;
+  routingNumber: string | null;
+  wireRoutingNumber: string | null;
+  sortCode: string | null;
+  availableBalance: number | null;
+  creditLimit: number | null;
+  bankConnection: {
+    id: string;
+    createdAt: string;
+    institutionId: string;
+    expiresAt: string | null;
+    teamId: string;
+    name: string;
+    logoUrl: string | null;
+    enrollmentId: string | null;
+    provider: string;
+    lastAccessed: string | null;
+    referenceId: string | null;
+    status: string | null;
+    errorDetails: string | null;
+    errorRetries: number | null;
+    accessToken: null;
+  } | null;
+}>;
+
+export function mapReplacementToBankAccountsGet(
+  payload: unknown,
+): MiddayBankAccountsGetShape {
+  const parsed = z.array(replacementBankAccountSchema).parse(payload);
+  return parsed.map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    createdBy: row.created_by,
+    teamId: row.team_id,
+    name: row.name ?? null,
+    currency: row.currency ?? null,
+    bankConnectionId: row.bank_connection_id ?? null,
+    enabled: row.enabled,
+    accountId: row.account_id,
+    balance: row.balance ?? null,
+    manual: row.manual ?? null,
+    type: row.type ?? null,
+    baseCurrency: row.base_currency ?? null,
+    baseBalance: row.base_balance ?? null,
+    errorDetails: row.error_details ?? null,
+    errorRetries: row.error_retries ?? null,
+    accountReference: row.account_reference ?? null,
+    subtype: row.subtype ?? null,
+    bic: row.bic ?? null,
+    routingNumber: row.routing_number ?? null,
+    wireRoutingNumber: row.wire_routing_number ?? null,
+    sortCode: row.sort_code ?? null,
+    availableBalance: row.available_balance ?? null,
+    creditLimit: row.credit_limit ?? null,
+    bankConnection: row.bank_connection
+      ? {
+          id: row.bank_connection.id,
+          createdAt: row.bank_connection.created_at,
+          institutionId: row.bank_connection.institution_id,
+          expiresAt: row.bank_connection.expires_at ?? null,
+          teamId: row.bank_connection.team_id,
+          name: row.bank_connection.name,
+          logoUrl: row.bank_connection.logo_url ?? null,
+          enrollmentId: row.bank_connection.enrollment_id ?? null,
+          provider: row.bank_connection.provider,
+          lastAccessed: row.bank_connection.last_accessed ?? null,
+          referenceId: row.bank_connection.reference_id ?? null,
+          status: row.bank_connection.status ?? null,
+          errorDetails: row.bank_connection.error_details ?? null,
+          errorRetries: row.bank_connection.error_retries ?? null,
+          accessToken: null,
+        }
+      : null,
+  }));
+}
