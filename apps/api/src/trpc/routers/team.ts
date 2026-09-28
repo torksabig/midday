@@ -30,12 +30,18 @@ import {
   tryDelegateTeamCreateInvites,
   tryDelegateTeamDeletePrep,
   tryDelegateTeamDelete,
+  tryDelegateTeamCreate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import type { InviteTeamMembersPayload } from "@jobs/schema";
 
 import { teamCache } from "@midday/cache/team-cache";
+import {
+  CATEGORIES,
+  getTaxRateForCategory,
+  getTaxTypeForCountry,
+} from "@midday/categories";
 import {
   acceptTeamInvite,
   createTeam,
@@ -122,13 +128,76 @@ export const teamRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createTeamSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
-      const teamId = await createTeam(db, {
-        ...input,
-        userId: session.user.id,
-        email: session.user.email!,
-        companyType: input.companyType,
-      });
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
+      const buildCategorySeed = (countryCode?: string | null) =>
+        CATEGORIES.map((parent) => {
+          const taxRate = getTaxRateForCategory(countryCode, parent.slug);
+          const taxType = getTaxTypeForCountry(countryCode);
+          return {
+            name: parent.name,
+            slug: parent.slug,
+            color: parent.color,
+            system: parent.system,
+            excluded: parent.excluded,
+            taxRate: taxRate > 0 ? taxRate : null,
+            taxType: taxRate > 0 ? taxType : null,
+            children: parent.children.map((child) => {
+              const childTaxRate = getTaxRateForCategory(
+                countryCode,
+                child.slug,
+              );
+              return {
+                name: child.name,
+                slug: child.slug,
+                color: child.color,
+                system: child.system,
+                excluded: child.excluded,
+                taxRate: childTaxRate > 0 ? childTaxRate : null,
+                taxType: childTaxRate > 0 ? taxType : null,
+              };
+            }),
+          };
+        });
+
+      let teamId: string | undefined;
+
+      if (shouldDelegateToReplacementBackend()) {
+        if (!session.user.email) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Email is required to create a team",
+          });
+        }
+        const delegated = await tryDelegateTeamCreate(
+          {
+            name: input.name,
+            email: session.user.email,
+            baseCurrency: input.baseCurrency,
+            countryCode: input.countryCode,
+            fiscalYearStartMonth: input.fiscalYearStartMonth,
+            logoUrl: input.logoUrl,
+            companyType: input.companyType,
+            heardAbout: input.heardAbout,
+            switchTeam: input.switchTeam,
+            categories: buildCategorySeed(input.countryCode),
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          teamId = delegated.teamId;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!teamId) {
+        teamId = await createTeam(db, {
+          ...input,
+          userId: session.user.id,
+          email: session.user.email!,
+          companyType: input.companyType,
+        });
+      }
 
       if (input.switchTeam) {
         try {

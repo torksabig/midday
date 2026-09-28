@@ -22,6 +22,7 @@ import {
   tryDelegateOAuthRevokeAccess,
   tryDelegateApplicationInfo,
   tryDelegateOAuthApprovalStatus,
+  tryDelegateOAuthAuthorize,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -129,7 +130,7 @@ export const oauthApplicationsRouter = createTRPCRouter({
   authorize: protectedProcedure
     .input(authorizeOAuthApplicationSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, session } = ctx;
+      const { db, session, accessToken } = ctx;
       const {
         clientId,
         decision,
@@ -139,6 +140,77 @@ export const oauthApplicationsRouter = createTRPCRouter({
         codeChallenge,
         teamId,
       } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthAuthorize(
+          {
+            clientId,
+            decision,
+            scopes,
+            redirectUri,
+            state,
+            codeChallenge,
+            teamId,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const redirectUrl = new URL(redirectUri);
+
+          if (delegated.result.decision === "deny") {
+            redirectUrl.searchParams.set("error", "access_denied");
+            redirectUrl.searchParams.set(
+              "error_description",
+              "User denied access",
+            );
+            if (state) {
+              redirectUrl.searchParams.set("state", state);
+            }
+            return { redirect_url: redirectUrl.toString() };
+          }
+
+          // Send app installation email only if this is the first time authorizing
+          try {
+            if (
+              !delegated.result.hasAuthorizedBefore &&
+              delegated.result.teamName &&
+              (delegated.result.userEmail || session.user.email)
+            ) {
+              const email =
+                delegated.result.userEmail ?? session.user.email!;
+              const html = await render(
+                AppInstalledEmail({
+                  email,
+                  teamName: delegated.result.teamName,
+                  appName: delegated.result.application.name,
+                }),
+              );
+
+              await resend.emails.send({
+                from: "Midday <middaybot@midday.ai>",
+                to: email,
+                subject: "An app has been added to your team",
+                html,
+              });
+            }
+          } catch (error) {
+            logger.error("Failed to send app installation email", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+
+          if (!delegated.result.code) {
+            throw new Error("Failed to create authorization code");
+          }
+
+          redirectUrl.searchParams.set("code", delegated.result.code);
+          if (state) {
+            redirectUrl.searchParams.set("state", state);
+          }
+          return { redirect_url: redirectUrl.toString() };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       // Validate client_id first (needed for both allow and deny)
       const application = await getOAuthApplicationByClientId(db, clientId);

@@ -4486,6 +4486,115 @@ export async function fetchReplacementOAuthApprovalStatus(
   };
 }
 
+/** Midday `team.create` — Postgres multi-table insert; tax seed computed in Node. */
+export type ReplacementCreateTeamCategoryChild = {
+  name: string;
+  slug: string;
+  color?: string | null;
+  system?: boolean;
+  excluded?: boolean;
+  taxRate?: number | null;
+  taxType?: string | null;
+};
+
+export type ReplacementCreateTeamCategoryParent =
+  ReplacementCreateTeamCategoryChild & {
+    children?: ReplacementCreateTeamCategoryChild[];
+  };
+
+export type ReplacementCreateTeamInput = {
+  name: string;
+  email: string;
+  baseCurrency?: string;
+  countryCode?: string;
+  fiscalYearStartMonth?: number | null;
+  logoUrl?: string;
+  companyType?: string;
+  heardAbout?: string;
+  switchTeam?: boolean;
+  categories: ReplacementCreateTeamCategoryParent[];
+};
+
+export async function fetchReplacementTeamCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCreateTeamInput,
+): Promise<string> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/create`,
+    token,
+    input,
+  );
+  const row = deepCamelCaseKeys(payload) as { id?: string };
+  if (typeof row.id !== "string") {
+    throw new Error("team create payload missing id");
+  }
+  return row.id;
+}
+
+/** Midday `oauthApplications.authorize` — auth-code SQL; email stays Node. */
+export type ReplacementOAuthAuthorizeInput = {
+  clientId: string;
+  decision: "allow" | "deny";
+  scopes: string[];
+  redirectUri: string;
+  state?: string;
+  codeChallenge?: string;
+  teamId: string;
+};
+
+export type ReplacementOAuthAuthorizeResult = {
+  decision: "allow" | "deny";
+  code?: string;
+  application: {
+    id: string;
+    name: string;
+    scopes?: string[];
+    teamId?: string | null;
+    isPublic?: boolean;
+    active?: boolean;
+  };
+  teamName?: string | null;
+  userEmail?: string | null;
+  hasAuthorizedBefore?: boolean;
+};
+
+export async function fetchReplacementOAuthAuthorize(
+  baseUrl: string,
+  token: string,
+  input: ReplacementOAuthAuthorizeInput,
+): Promise<ReplacementOAuthAuthorizeResult> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/oauth-applications/authorize`,
+    token,
+    input,
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    decision?: string;
+    code?: string;
+    application?: ReplacementOAuthAuthorizeResult["application"];
+    teamName?: string | null;
+    userEmail?: string | null;
+    hasAuthorizedBefore?: boolean;
+  };
+  if (row.decision !== "allow" && row.decision !== "deny") {
+    throw new Error("oauth authorize payload missing decision");
+  }
+  if (!row.application || typeof row.application.id !== "string") {
+    throw new Error("oauth authorize payload missing application");
+  }
+  return {
+    decision: row.decision,
+    code: row.code,
+    application: row.application,
+    teamName: row.teamName ?? null,
+    userEmail: row.userEmail ?? null,
+    hasAuthorizedBefore: Boolean(row.hasAuthorizedBefore),
+  };
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */
