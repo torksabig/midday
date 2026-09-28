@@ -33,6 +33,9 @@ import {
   mapReplacementToInvoiceProduct,
   mapReplacementToSaveLineItemAsProduct,
   mapReplacementToAppMutation,
+  mapReplacementToInboxBlocklist,
+  mapReplacementToInboxBlocklistItem,
+  mapReplacementToReportCreate,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -136,6 +139,9 @@ export {
   mapReplacementToInvoiceProduct,
   mapReplacementToSaveLineItemAsProduct,
   mapReplacementToAppMutation,
+  mapReplacementToInboxBlocklist,
+  mapReplacementToInboxBlocklistItem,
+  mapReplacementToReportCreate,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2257,6 +2263,89 @@ export async function fetchReplacementAppsUpdateSettings(
     input,
   );
   return mapReplacementToAppMutation(payload);
+}
+
+export async function fetchReplacementInboxBlocklist(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox/blocklist`,
+    token,
+  );
+  return mapReplacementToInboxBlocklist(payload);
+}
+
+export type ReplacementInboxBlocklistCreateInput = {
+  type: "email" | "domain";
+  value: string;
+};
+
+export async function fetchReplacementInboxBlocklistCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInboxBlocklistCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/blocklist`,
+    token,
+    input,
+  );
+  return mapReplacementToInboxBlocklistItem(payload);
+}
+
+export async function fetchReplacementInboxBlocklistDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/inbox/blocklist/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) return null;
+  return mapReplacementToInboxBlocklistItem(payload);
+}
+
+export async function fetchReplacementApiKeyDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<string | undefined> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/api-keys/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null || typeof payload !== "object") return undefined;
+  const row = payload as Record<string, unknown>;
+  const keyHash = row.keyHash ?? row.key_hash;
+  return typeof keyHash === "string" ? keyHash : undefined;
+}
+
+export type ReplacementReportCreateInput = {
+  type: string;
+  from: string;
+  to: string;
+  currency?: string;
+  expireAt?: string;
+};
+
+export async function fetchReplacementReportCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementReportCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/reports`,
+    token,
+    input,
+  );
+  return mapReplacementToReportCreate(payload);
 }
 
 export async function fetchReplacementInvoiceTemplates(

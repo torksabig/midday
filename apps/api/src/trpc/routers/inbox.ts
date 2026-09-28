@@ -28,6 +28,9 @@ import {
   tryDelegateInboxMatch,
   tryDelegateInboxDelete,
   tryDelegateInboxDeleteMany,
+  tryDelegateInboxBlocklistGet,
+  tryDelegateInboxBlocklistCreate,
+  tryDelegateInboxBlocklistDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -397,7 +400,15 @@ export const inboxRouter = createTRPCRouter({
   blocklist: createTRPCRouter({
     get: protectedProcedure
       .input(getInboxBlocklistSchema)
-      .query(async ({ ctx: { db, teamId } }) => {
+      .query(async ({ ctx: { db, teamId, accessToken } }) => {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInboxBlocklistGet(accessToken);
+          if (delegated) {
+            return delegated;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
+
         return getInboxBlocklist(db, {
           teamId: teamId!,
         });
@@ -405,7 +416,18 @@ export const inboxRouter = createTRPCRouter({
 
     create: protectedProcedure
       .input(createInboxBlocklistSchema)
-      .mutation(async ({ ctx: { db, teamId }, input }) => {
+      .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInboxBlocklistCreate(
+            { type: input.type, value: input.value },
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.entry;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
+
         return createInboxBlocklist(db, {
           teamId: teamId!,
           type: input.type,
@@ -415,7 +437,18 @@ export const inboxRouter = createTRPCRouter({
 
     delete: protectedProcedure
       .input(deleteInboxBlocklistSchema)
-      .mutation(async ({ ctx: { db, teamId }, input }) => {
+      .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInboxBlocklistDelete(
+            input.id,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.entry;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
+
         return deleteInboxBlocklist(db, {
           id: input.id,
           teamId: teamId!,

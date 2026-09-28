@@ -1349,6 +1349,21 @@ export function mapReplacementToAppMutation(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToInboxBlocklist(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
+export function mapReplacementToInboxBlocklistItem(
+  payload: unknown,
+): unknown | null {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToReportCreate(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

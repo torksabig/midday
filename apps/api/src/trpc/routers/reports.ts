@@ -25,6 +25,7 @@ import {
   tryDelegateReportsRevenueForecast,
   tryDelegateReportsGetByLinkId,
   tryDelegateReportsGetChartDataByLinkId,
+  tryDelegateReportCreate,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -297,7 +298,22 @@ export const reportsRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createReportSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateReportCreate(input, accessToken);
+        if (delegated.delegated) {
+          const result = delegated.report as {
+            linkId?: string;
+            [key: string]: unknown;
+          };
+          return {
+            ...result,
+            shortUrl: `${process.env.MIDDAY_DASHBOARD_URL}/r/${result?.linkId}`,
+          };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await createReport(db, {
         type: input.type,
         from: input.from,

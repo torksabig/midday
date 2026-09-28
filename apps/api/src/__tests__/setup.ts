@@ -297,6 +297,11 @@ export const mocks = {
   deleteApiKey: mock(() => Promise.resolve("key-hash-for-cache")) as MockFn,
   updateApiKeyLastUsedAt: mock(() => ({})) as MockFn,
 
+  // Inbox blocklist
+  getInboxBlocklist: mock(() => []) as MockFn,
+  createInboxBlocklist: mock(() => ({})) as MockFn,
+  deleteInboxBlocklist: mock(() => ({})) as MockFn,
+
   // Users
   getUserById: mock(() => null) as MockFn,
   getUser: mock(() => null) as MockFn,
@@ -959,9 +964,9 @@ const dbQueriesMock = new Proxy(
     upsertInboxAccount: createDefaultMock(),
     updateInboxAccount: createDefaultMock(),
     deleteInboxAccount: mocks.deleteInboxAccount,
-    getInboxBlocklist: mock(() => []),
-    createInboxBlocklist: mock(() => ({})),
-    deleteInboxBlocklist: mock(() => ({})),
+    getInboxBlocklist: mocks.getInboxBlocklist,
+    createInboxBlocklist: mocks.createInboxBlocklist,
+    deleteInboxBlocklist: mocks.deleteInboxBlocklist,
     checkInboxAttachments: mock(() => []),
     matchTransaction: mock(() => ({})),
     unmatchTransaction: mock(() => ({})),

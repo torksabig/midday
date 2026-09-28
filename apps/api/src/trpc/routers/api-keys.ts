@@ -3,6 +3,7 @@ import { resend } from "@api/services/resend";
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateApiKeysGet,
+  tryDelegateApiKeyDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { apiKeyCache } from "@midday/cache/api-key-cache";
@@ -72,7 +73,18 @@ export const apiKeysRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteApiKeySchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateApiKeyDelete(input.id, accessToken);
+        if (delegated.delegated) {
+          if (delegated.keyHash) {
+            await apiKeyCache.delete(delegated.keyHash);
+          }
+          return delegated.keyHash;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const data = await deleteApiKey(db, {
         id: input.id,
         teamId: teamId!,
