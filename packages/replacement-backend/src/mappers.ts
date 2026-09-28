@@ -1744,3 +1744,23 @@ export function mapReplacementToTopRevenueClient(
     invoiceCount: parsed.invoice_count,
   };
 }
+
+/** Legacy `apps.get` uses snake_case `app_id` — preserve it. */
+export function mapReplacementToAppsGet(payload: unknown): unknown[] {
+  return z.array(z.record(z.string(), z.unknown())).parse(payload);
+}
+
+export function mapReplacementToOAuthApplicationsList(payload: unknown): {
+  data: unknown[];
+} {
+  const parsed = z
+    .object({ data: z.array(z.unknown()) })
+    .parse(payload);
+  return {
+    data: deepCamelCaseKeys(parsed.data) as unknown[],
+  };
+}
+
+export function mapReplacementToInboxAccountsGet(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}

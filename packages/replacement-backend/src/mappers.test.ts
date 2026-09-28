@@ -35,6 +35,9 @@ import {
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
   mapReplacementToCountMetric,
+  mapReplacementToAppsGet,
+  mapReplacementToOAuthApplicationsList,
+  mapReplacementToInboxAccountsGet,
 } from "./mappers";
 
 describe("replacement mappers", () => {
@@ -708,5 +711,51 @@ describe("replacement mappers", () => {
         categorySlug: null,
       }),
     ).toEqual({ name: "Updated", categorySlug: null });
+  });
+
+  test("mapReplacementToAppsGet preserves snake_case app_id", () => {
+    expect(
+      mapReplacementToAppsGet([{ app_id: "slack", settings: [], config: {} }]),
+    ).toEqual([{ app_id: "slack", settings: [], config: {} }]);
+  });
+
+  test("mapReplacementToOAuthApplicationsList camelCases nested user", () => {
+    expect(
+      mapReplacementToOAuthApplicationsList({
+        data: [
+          {
+            id: "oa1",
+            created_by_user: { id: "u1", full_name: "Ada", avatar_url: null },
+          },
+        ],
+      }),
+    ).toEqual({
+      data: [
+        {
+          id: "oa1",
+          createdByUser: { id: "u1", fullName: "Ada", avatarUrl: null },
+        },
+      ],
+    });
+  });
+
+  test("mapReplacementToInboxAccountsGet camelCases fields", () => {
+    expect(
+      mapReplacementToInboxAccountsGet([
+        {
+          id: "ia1",
+          email: "a@b.com",
+          last_accessed: "2026-01-01",
+          error_message: null,
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "ia1",
+        email: "a@b.com",
+        lastAccessed: "2026-01-01",
+        errorMessage: null,
+      },
+    ]);
   });
 });

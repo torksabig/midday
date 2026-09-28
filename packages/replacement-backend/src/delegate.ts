@@ -48,6 +48,9 @@ import {
   mapReplacementToTopRevenueClient,
   mapReplacementToNotificationsList,
   mapReplacementToTransactionsUpdateMany,
+  mapReplacementToAppsGet,
+  mapReplacementToOAuthApplicationsList,
+  mapReplacementToInboxAccountsGet,
   type MiddayAccountingConnectionShape,
   type MiddayNotificationsListShape,
   type MiddayBankAccountsGetShape,
@@ -117,6 +120,9 @@ export {
   mapReplacementToTopRevenueClient,
   mapReplacementToNotificationsList,
   mapReplacementToTransactionsUpdateMany,
+  mapReplacementToAppsGet,
+  mapReplacementToOAuthApplicationsList,
+  mapReplacementToInboxAccountsGet,
   type MiddayBankAccountsGetShape,
   type MiddayNotificationsListShape,
   type MiddayCustomersGetShape,
@@ -1724,6 +1730,42 @@ export async function fetchReplacementInvoiceUpdate(
     return null;
   }
   return mapReplacementToInvoiceById(payload);
+}
+
+export async function fetchReplacementAppsGet(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/apps`,
+    token,
+  );
+  return mapReplacementToAppsGet(payload);
+}
+
+export async function fetchReplacementOAuthApplicationsList(
+  baseUrl: string,
+  token: string,
+): Promise<{ data: unknown[] }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/oauth-applications`,
+    token,
+  );
+  return mapReplacementToOAuthApplicationsList(payload);
+}
+
+export async function fetchReplacementInboxAccountsGet(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/inbox-accounts`,
+    token,
+  );
+  return mapReplacementToInboxAccountsGet(payload);
 }
 
 export async function fetchReplacementTeamMembers(

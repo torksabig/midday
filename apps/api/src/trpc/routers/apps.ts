@@ -4,6 +4,10 @@ import {
   removeWhatsAppConnectionSchema,
   updateAppSettingsSchema,
 } from "@api/schemas/apps";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateAppsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
   createPlatformLinkToken,
@@ -13,10 +17,19 @@ import {
   updateAppSettings,
   updateAppSettingsBulk,
 } from "@midday/db/queries";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { z } from "zod";
 
 export const appsRouter = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  get: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateAppsGet(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getApps(db, teamId!);
   }),
 

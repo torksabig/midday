@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **63 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~24.6%). **4** write procedures delegate (`transactions.update`, `transactions.updateMany`, `inbox.update`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **4** write procedures delegate (`transactions.update`, `transactions.updateMany`, `inbox.update`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -27,6 +27,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `bankAccounts.*` (other) | no | getDetails (decrypt), payment info, writes |
 | `bankConnections.get` | yes | read · list + nested accounts (Phase 6 slice 1) |
 | `bankConnections.*` (other) | no | create, delete, reconnect |
+| `apps.get` | yes | read · team installed apps (AP-16); preserves `app_id` snake_case |
+| `apps.*` (other) | no | disconnect, settings writes |
+| `oauthApplications.list` | yes | read · team OAuth apps (AP-16) |
+| `oauthApplications.*` (other) | no | get, authorized, authorize, CRUD |
+| `inboxAccounts.get` | yes | read · connected inboxes (AP-16) |
+| `inboxAccounts.*` (other) | no | connect, sync, delete |
 | `transactionCategories.get` | yes | read · full tree |
 | `transactionCategories.*` (other) | no | getById, CRUD |
 | `transactions.get` | yes | read · list filters (Phase 2e matrix) |
@@ -96,7 +102,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.*` (other) | no | CRUD |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -155,7 +161,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Phase 11:** `tags.get`, `bankAccounts.getTransactionCount`; **first write** `transactions.update`.
 
-**Autopilot AP-12–14:** `notifications.list`; writes `transactions.updateMany`, `inbox.update`, `invoice.update`; team reads `members`, `list`, `teamInvites`.
+**Autopilot AP-12–16:** `notifications.list`; writes `transactions.updateMany`, `inbox.update`, `invoice.update`; team reads; OAuth/connection reads `apps.get`, `oauthApplications.list`, `inboxAccounts.get`.
 
 ### `transactions.update` write parity (Phase 11 — first delegated mutation)
 
@@ -202,7 +208,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-13 | DONE | `team.members`, `team.list`, `team.teamInvites` | read |
 | AP-14 | DONE | `invoice.update` (status/paidAt/internalNote/scheduledAt) | write |
 | AP-15 | BLOCKED | `bankAccounts.getDetails` — needs safe decrypt path | read |
-| AP-16 | PENDING | OAuth / connection reads from inventory gaps | read |
+| AP-16 | DONE | `apps.get`, `oauthApplications.list`, `inboxAccounts.get` | read |
 | AP-17 | PENDING | `transactions.create` or `transactions.delete` (one) | write |
 | AP-18 | PENDING | Inbox mutations batch | write |
 | AP-19 | PENDING | Parity: FTS `q`, tx update activity feed | parity |
@@ -210,4 +216,4 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** AP-16 (OAuth / connection reads; AP-15 blocked).
+**Next slice:** AP-17 (`transactions.create` or `transactions.delete`).

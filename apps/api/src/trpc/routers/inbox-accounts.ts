@@ -5,6 +5,10 @@ import {
   // initialSetupInboxAccountSchema,
   syncInboxAccountSchema,
 } from "@api/schemas/inbox-accounts";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInboxAccountsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
   deleteInboxAccount,
@@ -14,13 +18,22 @@ import {
 import { InboxConnector } from "@midday/inbox/connector";
 import { encryptOAuthState } from "@midday/inbox/utils";
 import { createLoggerWithContext } from "@midday/logger";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { schedules, tasks } from "@trigger.dev/sdk";
 import { TRPCError } from "@trpc/server";
 
 const logger = createLoggerWithContext("trpc:inbox-accounts");
 
 export const inboxAccountsRouter = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  get: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateInboxAccountsGet(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getInboxAccounts(db, teamId!);
   }),
 

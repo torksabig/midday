@@ -10,6 +10,10 @@ import {
 } from "@api/schemas/oauth-applications";
 import { revokeUserApplicationAccessSchema } from "@api/schemas/oauth-flow";
 import { resend } from "@api/services/resend";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateOAuthApplicationsList,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
   claimDCRApplication,
@@ -31,12 +35,21 @@ import { AppInstalledEmail } from "@midday/email/emails/app-installed";
 import { AppReviewRequestEmail } from "@midday/email/emails/app-review-request";
 import { render } from "@midday/email/render";
 import { createLoggerWithContext } from "@midday/logger";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 
 const logger = createLoggerWithContext("trpc:oauth-applications");
 
 export const oauthApplicationsRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const { db, teamId } = ctx;
+    const { db, teamId, accessToken } = ctx;
+
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateOAuthApplicationsList(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
 
     const applications = await getOAuthApplicationsByTeam(db, teamId!);
 

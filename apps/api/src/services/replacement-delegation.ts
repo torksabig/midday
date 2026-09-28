@@ -44,6 +44,9 @@ import {
   fetchReplacementNotificationsList,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
+  fetchReplacementAppsGet,
+  fetchReplacementOAuthApplicationsList,
+  fetchReplacementInboxAccountsGet,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,
@@ -1645,5 +1648,29 @@ export async function tryDelegateTeamInvites(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementTeamInvites(baseUrl, token),
+  );
+}
+
+export async function tryDelegateAppsGet(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementAppsGet(baseUrl, token),
+  );
+}
+
+export async function tryDelegateOAuthApplicationsList(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementOAuthApplicationsList(baseUrl, token),
+  );
+}
+
+export async function tryDelegateInboxAccountsGet(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInboxAccountsGet(baseUrl, token),
   );
 }
