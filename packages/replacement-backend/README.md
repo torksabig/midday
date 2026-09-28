@@ -25,7 +25,8 @@ Set `MIDDAY_BACKEND_MODE` on **`apps/api`** (and dashboard for `/api/replacement
 |----------------|------------------|-------|
 | `user.me` | `GET /api/v1/auth/me` + `GET /api/v1/settings` | Mapped to legacy shape; `fileKey` from encryption |
 | `team.current` | `GET /api/v1/team/current` | Currency from settings; other fields defaulted |
-| `transactions.get` | `GET /api/v1/transactions` | Paginated `{ meta, data }`; Postgres when Supabase JWT + `MIDDAY_DATABASE_URL`. **Replacement path filters:** `q`, cursor, `pageSize`, `sort`, `statuses`, `start`, `end`, `categories` (slug + `uncategorized`, expands parent→child), `accounts` (bank account ids), `tags` (tag ids), `exported`, `fulfilled`. Still Drizzle-only in dual fallback: `assignees`, `attachments`, `recurring`, `amount`/`amountRange`, `type`, `manual`. List rows still omit attachments/tags JSON on Rust path (empty arrays). |
+| `transactions.get` | `GET /api/v1/transactions` | Paginated `{ meta, data }`; Postgres when Supabase JWT + `MIDDAY_DATABASE_URL`. Filters: Phase 2b–2d plus **2e** `assignees`, `attachments`, `recurring`, `type`, `manual`, `amount`/`amountRange`. List rows include attachments/tags JSON. Dual fallback only for FTS-style `q` vs ILIKE mismatch edge cases. |
+| `transactions.getReviewCount` | `GET /api/v1/transactions/review-count` | Integer count; ready-for-export semantics (fulfilled, not exported/archived/excluded, not synced) |
 | `transactions.getById` | `GET /api/v1/transactions/{id}` | Detail shape + pending match suggestion; team-scoped |
 | `transactionCategories.get` | `GET /api/v1/categories` | Parent/child tree from `transaction_categories` when Supabase + `MIDDAY_DATABASE_URL`; clone SQLite demo shape otherwise |
 | `bankAccounts.get` | `GET /api/v1/bank-accounts` | Team-scoped list + `bank_connection` join (no `access_token`); query `enabled`, `manual` |

@@ -43,6 +43,26 @@ describe("buildTransactionsListQuery", () => {
     expect(params.get("exported")).toBe("false");
     expect(params.get("fulfilled")).toBe("true");
   });
+
+  test("encodes phase 2e list filters", () => {
+    const qs = buildTransactionsListQuery({
+      assignees: ["user-1"],
+      attachments: "include",
+      recurring: ["monthly"],
+      amountRange: [50, 200],
+      amount: ["gte", "100"],
+      type: "expense",
+      manual: "exclude",
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.getAll("assignees")).toEqual(["user-1"]);
+    expect(params.get("attachments")).toBe("include");
+    expect(params.getAll("recurring")).toEqual(["monthly"]);
+    expect(params.getAll("amountRange")).toEqual(["50", "200"]);
+    expect(params.getAll("amount")).toEqual(["gte", "100"]);
+    expect(params.get("type")).toBe("expense");
+    expect(params.get("manual")).toBe("exclude");
+  });
 });
 
 describe("resolveReplacementBearerToken", () => {

@@ -21,6 +21,7 @@ export {
   fetchReplacementTransactionById,
   fetchReplacementTransactionCategories,
   fetchReplacementTransactionsList,
+  fetchReplacementTransactionsReviewCount,
   mapReplacementToBankAccountsGet,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,

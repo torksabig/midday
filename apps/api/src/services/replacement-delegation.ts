@@ -5,6 +5,7 @@ import {
   fetchReplacementTransactionById,
   fetchReplacementTransactionCategories,
   fetchReplacementTransactionsList,
+  fetchReplacementTransactionsReviewCount,
   getReplacementApiUrl,
   mapReplacementToTeamCurrent,
   mapReplacementToUserMe,
@@ -208,6 +209,42 @@ export async function tryDelegateBankAccountsGet(
   try {
     const baseUrl = getReplacementApiUrl();
     return await fetchReplacementBankAccounts(baseUrl, token, input);
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return null;
+  }
+}
+
+export async function tryDelegateTransactionsGetReviewCount(
+  sessionAccessToken?: string | null,
+): Promise<number | null> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return null;
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return null;
+  }
+
+  try {
+    const baseUrl = getReplacementApiUrl();
+    return await fetchReplacementTransactionsReviewCount(baseUrl, token);
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

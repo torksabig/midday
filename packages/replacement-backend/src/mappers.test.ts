@@ -97,6 +97,55 @@ describe("replacement mappers", () => {
     });
   });
 
+  test("mapReplacementToTransactionsGet maps attachments and tags", () => {
+    const mapped = mapReplacementToTransactionsGet({
+      meta: {
+        has_previous_page: false,
+        has_next_page: false,
+      },
+      data: [
+        {
+          id: "tx1",
+          date: "2026-09-01",
+          amount: -10,
+          currency: "USD",
+          method: "card",
+          status: "posted",
+          manual: false,
+          internal: false,
+          name: "Item",
+          created_at: "2026-09-01T12:00:00Z",
+          enrichment_completed: false,
+          is_fulfilled: true,
+          has_pending_suggestion: false,
+          is_exported: false,
+          has_export_error: false,
+          attachments: [
+            {
+              id: "att1",
+              filename: "receipt.pdf",
+              path: "/p",
+              type: "application/pdf",
+              size: 42,
+            },
+          ],
+          tags: [{ id: "tag1", name: "Travel" }],
+        },
+      ],
+    });
+
+    expect(mapped.data[0]?.attachments).toEqual([
+      {
+        id: "att1",
+        filename: "receipt.pdf",
+        path: "/p",
+        type: "application/pdf",
+        size: 42,
+      },
+    ]);
+    expect(mapped.data[0]?.tags).toEqual([{ id: "tag1", name: "Travel" }]);
+  });
+
   test("mapReplacementToTransactionById maps detail payload with suggestion", () => {
     const mapped = mapReplacementToTransactionById({
       id: "tx1",

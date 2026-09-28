@@ -302,6 +302,27 @@ export type MiddayTransactionByIdShape = MiddayTransactionListItemShape & {
   };
 };
 
+function mapReplacementAttachmentRecords(
+  raw: Array<Record<string, unknown>> | undefined,
+): MiddayTransactionListItemShape["attachments"] {
+  return (raw ?? []).map((a) => ({
+    id: String(a.id ?? ""),
+    filename: (a.filename as string | null | undefined) ?? null,
+    path: (a.path as string | null | undefined) ?? null,
+    type: String(a.type ?? ""),
+    size: Number(a.size ?? 0),
+  }));
+}
+
+function mapReplacementTagRecords(
+  raw: Array<Record<string, unknown>> | undefined,
+): MiddayTransactionListItemShape["tags"] {
+  return (raw ?? []).map((t) => ({
+    id: String(t.id ?? ""),
+    name: (t.name as string | null | undefined) ?? null,
+  }));
+}
+
 function mapReplacementTransactionListItem(
   row: z.infer<typeof replacementTransactionItemSchema>,
 ): MiddayTransactionListItemShape {
@@ -368,8 +389,8 @@ function mapReplacementTransactionListItem(
     exportProvider: row.export_provider ?? null,
     exportedAt: row.exported_at ?? null,
     exportErrorCode: row.export_error_code ?? null,
-    attachments: [],
-    tags: [],
+    attachments: mapReplacementAttachmentRecords(row.attachments),
+    tags: mapReplacementTagRecords(row.tags),
     assigned,
     category,
     account,

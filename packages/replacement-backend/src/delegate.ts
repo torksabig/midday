@@ -136,6 +136,13 @@ export type ReplacementTransactionsListQuery = {
   tags?: string[] | null;
   exported?: boolean | null;
   fulfilled?: boolean | null;
+  assignees?: string[] | null;
+  attachments?: "include" | "exclude" | null;
+  recurring?: string[] | null;
+  amountRange?: number[] | null;
+  amount?: string[] | null;
+  type?: "income" | "expense" | null;
+  manual?: "include" | "exclude" | null;
 };
 
 export type ReplacementBankAccountsListQuery = {
@@ -194,8 +201,49 @@ export function buildTransactionsListQuery(
   if (params.fulfilled != null) {
     search.set("fulfilled", String(params.fulfilled));
   }
+  for (const assignee of params.assignees ?? []) {
+    if (assignee) {
+      search.append("assignees", assignee);
+    }
+  }
+  if (params.attachments) {
+    search.set("attachments", params.attachments);
+  }
+  for (const freq of params.recurring ?? []) {
+    if (freq) {
+      search.append("recurring", freq);
+    }
+  }
+  for (const part of params.amountRange ?? []) {
+    if (part != null && !Number.isNaN(part)) {
+      search.append("amountRange", String(part));
+    }
+  }
+  for (const part of params.amount ?? []) {
+    if (part) {
+      search.append("amount", part);
+    }
+  }
+  if (params.type) {
+    search.set("type", params.type);
+  }
+  if (params.manual) {
+    search.set("manual", params.manual);
+  }
   const qs = search.toString();
   return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementTransactionsReviewCount(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
+  const root = trimBase(baseUrl);
+  const count = await replacementFetch<number>(
+    `${root}/api/v1/transactions/review-count`,
+    token,
+  );
+  return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }
 
 export function buildBankAccountsListQuery(

@@ -39,6 +39,24 @@ echo "== team/current =="
 curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/api/v1/team/current"
 echo
 
+echo "== transactions (first page) =="
+curl -sf -H "Authorization: Bearer ${TOKEN}" \
+  "${BASE}/api/v1/transactions?pageSize=5"
+echo
+
+echo "== transactions review-count =="
+curl -sf -H "Authorization: Bearer ${TOKEN}" \
+  "${BASE}/api/v1/transactions/review-count"
+echo
+
+echo "== transactions filtered (review tab shape) =="
+curl -sf -G -H "Authorization: Bearer ${TOKEN}" \
+  --data-urlencode "fulfilled=true" \
+  --data-urlencode "exported=false" \
+  --data-urlencode "pageSize=5" \
+  "${BASE}/api/v1/transactions"
+echo
+
 if [[ -n "${MIDDAY_API_URL:-}" ]]; then
   MIDDAY="${MIDDAY_API_URL%/}"
   echo "== tRPC user.me (replacement mode requires apps/api env) =="

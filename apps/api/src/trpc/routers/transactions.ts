@@ -18,6 +18,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTransactionsGet,
   tryDelegateTransactionsGetById,
+  tryDelegateTransactionsGetReviewCount,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -76,6 +77,13 @@ export const transactionsRouter = createTRPCRouter({
             tags: input.tags,
             exported: input.exported,
             fulfilled: input.fulfilled,
+            assignees: input.assignees,
+            attachments: input.attachments,
+            recurring: input.recurring,
+            amountRange: input.amountRange,
+            amount: input.amount,
+            type: input.type,
+            manual: input.manual,
           },
           accessToken,
         );
@@ -119,9 +127,21 @@ export const transactionsRouter = createTRPCRouter({
       return deleteTransactions(db, { ids: input, teamId: teamId! });
     }),
 
-  getReviewCount: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
-    return getTransactionsReadyForExportCount(db, teamId!);
-  }),
+  getReviewCount: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTransactionsGetReviewCount(
+          accessToken,
+        );
+        if (delegated != null) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return getTransactionsReadyForExportCount(db, teamId!);
+    },
+  ),
 
   update: protectedProcedure
     .input(updateTransactionSchema)
