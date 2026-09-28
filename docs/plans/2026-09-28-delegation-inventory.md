@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **95 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~37.1%). **90** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `transactions.create`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.confirmMatch`, `inbox.declineMatch`, `inbox.unmatchTransaction`, `customers.cancelEnrichment`, `customers.clearEnrichment`, `transactions.moveToReview`, `customers.togglePortal`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `user.switchTeam`, `team.update`, `team.acceptInvite`, `team.declineInvite`, `team.deleteInvite`, `team.deleteMember`, `team.updateMember`, `team.leave`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `oauthApplications.revokeAccess`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apiKeys.delete`, `reports.create`, `shortLinks.createForUrl`, `accounting.disconnect`, `bankAccounts.create`, `bankAccounts.update`, `bankAccounts.delete`, `institutions.updateUsage`, `transactionAttachments.createMany`, `transactionAttachments.delete`, `bankConnections.reconnect`, `bankConnections.delete`, `invoiceRecurring.pause`, `invoiceRecurring.resume`, `invoiceRecurring.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **95 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~37.1%). **93** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `transactions.create`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.confirmMatch`, `inbox.declineMatch`, `inbox.unmatchTransaction`, `customers.cancelEnrichment`, `customers.clearEnrichment`, `transactions.moveToReview`, `customers.togglePortal`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `invoice.create`, `invoice.createFromTracker`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `user.switchTeam`, `team.update`, `team.acceptInvite`, `team.declineInvite`, `team.deleteInvite`, `team.deleteMember`, `team.updateMember`, `team.leave`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `oauthApplications.revokeAccess`, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apiKeys.delete`, `reports.create`, `shortLinks.createForUrl`, `shortLinks.createForDocument`, `accounting.disconnect`, `bankAccounts.create`, `bankAccounts.update`, `bankAccounts.delete`, `institutions.updateUsage`, `transactionAttachments.createMany`, `transactionAttachments.delete`, `bankConnections.reconnect`, `bankConnections.delete`, `invoiceRecurring.pause`, `invoiceRecurring.resume`, `invoiceRecurring.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -145,7 +145,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.duplicate` | yes | **write** · copy as draft; number gen stays Node (AP-33) |
 | `invoice.updateSchedule` | yes | **write** · DB after Trigger job create in Node (AP-33) |
 | `invoice.cancelSchedule` | yes | **write** · DB after Trigger cancel in Node (AP-33) |
-| `invoice.*` (other) | no | create/send, remind, etc. |
+| `invoice.create` | yes | **write** · status/schedule DB after Trigger in Node (AP-55) |
+| `invoice.createFromTracker` | yes | **write** · tracker compose Node + draft insert (AP-55) |
+| `invoice.*` (other) | no | defaultSettings (geo/compose), remind/send |
 | `trackerProjects.get` | yes | read · list (Phase 6 slice 1) |
 | `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
 | `trackerProjects.upsert` | yes | **write** · insert/update + tags + activity (AP-38) |
@@ -185,7 +187,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.delete` | yes | **write** · delete tag (AP-22) |
 | `shortLinks.get` | yes | public read · by shortId (AP-42) |
 | `shortLinks.createForUrl` | yes | **write** · insert redirect; shortUrl in Node (AP-42) |
-| `shortLinks.*` (other) | no | createForDocument (signed URL) |
+| `shortLinks.createForDocument` | yes | **write** · signed URL Node + Postgres insert (AP-55) |
+| `shortLinks.*` (other) | no | — |
 | All other routers | no | oauth flow, banking adapters, etc. |
 
 | `invoiceTemplate.list` | yes | read · team templates (AP-35) |
@@ -446,9 +449,10 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-52 | DONE | `user.switchTeam` + `notificationSettings.getAll` + `bankConnections.delete` (Trigger stays Node) | write+read |
 | AP-53 | DONE | `transactions.searchTransactionMatch` | read |
 | AP-54 | DONE | `transactions.create` (enrich/match jobs stay Node) | write |
+| AP-55 | DONE | `invoice.create`/`createFromTracker` + `shortLinks.createForDocument` (Trigger/signed URL stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** no more straightforward pure-Postgres leftovers at batch size. Remaining are blocked/deferred (see below). Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** hybrid deferred — `invoiceRecurring.create`/`update` (DB fields; notifications/validation Node). Then leftovers below. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
 **Blocked / deferred leftovers (one-line each):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — needs safe decrypt path
@@ -458,13 +462,12 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 - `accounting.getAccounts` — external provider API
 - Email/Resend sends (`team.invite`, oauth approve, invoice send/remind)
 - `bankConnections.create` / `addAccounts` — encrypt at rest
-- `invoiceRecurring.create` / `update` — notifications + heavy cross-field validation
+- `invoiceRecurring.create` / `update` — notifications + heavy cross-field validation (next hybrid)
 - `transactions.export` / `import` / `generateCsvMapping` — jobs + AI
-- `invoice.create` / `createFromTracker` / `defaultSettings` — send path / geo / number gen hybrid
-- `shortLinks.createForDocument` — signed URL
+- `invoice.defaultSettings` — geo + number-gen compose (not a single Postgres write)
 - `jobs.getStatus` — BullMQ not Postgres
 - `billing.*` / `invoicePayments.*` — Stripe
 - `connectors.*` — OAuth adapters
 - Stage 4 delete `apps/api` — user must say decommission
 
-**Autopilot AP-12–54 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Safe Postgres batch capacity exhausted. Stage 4 gated on explicit decommission.
+**Autopilot AP-12–55 + AP-STAGE3 sketch** (AP-15 remains BLOCKED). Hybrid deferred batch AP-55 done; recurring create/update next. Stage 4 gated on explicit decommission.

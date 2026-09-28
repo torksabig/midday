@@ -228,7 +228,7 @@ export const invoiceRouter = createTRPCRouter({
         dateTo: z.string(),
       }),
     )
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
       const { projectId, dateFrom, dateTo } = input;
 
       // Get project data and tracker entries
@@ -369,6 +369,18 @@ export const invoiceRouter = createTRPCRouter({
         discount: null,
         subtotal: null,
       };
+
+      // Tracker aggregation + number gen stay in Node; draft insert can delegate
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceDraft(
+          invoiceData,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return draftInvoice(db, invoiceData);
     }),
@@ -578,7 +590,7 @@ export const invoiceRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
       // Handle different delivery types
       if (input.deliveryType === "scheduled") {
         if (!input.scheduledAt) {
@@ -664,14 +676,35 @@ export const invoiceRouter = createTRPCRouter({
           });
         }
 
-        // Update the invoice with scheduling information
-        const data = await updateInvoice(db, {
-          id: input.id,
-          status: "scheduled",
-          scheduledAt: input.scheduledAt,
-          scheduledJobId,
-          teamId: teamId!,
-        });
+        // Trigger stays in Node; Postgres status update can delegate
+        let data: Awaited<ReturnType<typeof updateInvoice>> | null = null;
+
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInvoiceUpdate(
+            {
+              id: input.id,
+              status: "scheduled",
+              scheduledAt: input.scheduledAt,
+              scheduledJobId,
+            },
+            accessToken,
+          );
+          if (delegated.delegated) {
+            data = delegated.invoice as typeof data;
+          } else {
+            assertLegacyIdentityFallbackAllowed();
+          }
+        }
+
+        if (!data) {
+          data = await updateInvoice(db, {
+            id: input.id,
+            status: "scheduled",
+            scheduledAt: input.scheduledAt,
+            scheduledJobId,
+            teamId: teamId!,
+          });
+        }
 
         if (!data) {
           // Clean up the orphaned job before throwing
@@ -713,12 +746,32 @@ export const invoiceRouter = createTRPCRouter({
         return data;
       }
 
-      const data = await updateInvoice(db, {
-        id: input.id,
-        status: "unpaid",
-        teamId: teamId!,
-        userId: session.user.id,
-      });
+      // Mark unpaid in Postgres (delegable); generate-invoice job stays in Node
+      let data: Awaited<ReturnType<typeof updateInvoice>> | null = null;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceUpdate(
+          {
+            id: input.id,
+            status: "unpaid",
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.invoice as typeof data;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!data) {
+        data = await updateInvoice(db, {
+          id: input.id,
+          status: "unpaid",
+          teamId: teamId!,
+          userId: session.user.id,
+        });
+      }
 
       if (!data) {
         throw new TRPCError({
