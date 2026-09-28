@@ -15,6 +15,9 @@ import {
   tryDelegateCustomersGetById,
   tryDelegateCustomerDelete,
   tryDelegateCustomerUpsert,
+  tryDelegateCustomerInvoiceSummary,
+  tryDelegateCustomerCancelEnrichment,
+  tryDelegateCustomerClearEnrichment,
 } from "@api/services/replacement-delegation";
 import {
   createTRPCRouter,
@@ -200,7 +203,18 @@ export const customersRouter = createTRPCRouter({
 
   getInvoiceSummary: protectedProcedure
     .input(getCustomerInvoiceSummarySchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerInvoiceSummary(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.summary;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getCustomerInvoiceSummary(db, {
         customerId: input.id,
         teamId: teamId!,
@@ -251,7 +265,18 @@ export const customersRouter = createTRPCRouter({
 
   cancelEnrichment: protectedProcedure
     .input(enrichCustomerSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerCancelEnrichment(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return { cancelled: true };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const customer = await getCustomerById(db, {
         id: input.id,
         teamId: teamId!,
@@ -276,7 +301,18 @@ export const customersRouter = createTRPCRouter({
 
   clearEnrichment: protectedProcedure
     .input(enrichCustomerSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomerClearEnrichment(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return { cleared: true };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const customer = await getCustomerById(db, {
         id: input.id,
         teamId: teamId!,

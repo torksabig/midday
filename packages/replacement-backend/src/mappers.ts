@@ -1445,6 +1445,25 @@ export function mapReplacementToInboxUnmatch(
   return [deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload))];
 }
 
+export function mapReplacementToCustomerInvoiceSummary(
+  payload: unknown,
+): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToCustomerEnrichmentAction(
+  payload: unknown,
+): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToMoveToReview(payload: unknown): {
+  success: true;
+} {
+  z.record(z.string(), z.unknown()).parse(payload);
+  return { success: true };
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

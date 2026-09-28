@@ -51,6 +51,9 @@ import {
   mapReplacementToInboxConfirmMatch,
   mapReplacementToInboxDeclineMatch,
   mapReplacementToInboxUnmatch,
+  mapReplacementToCustomerInvoiceSummary,
+  mapReplacementToCustomerEnrichmentAction,
+  mapReplacementToMoveToReview,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -172,6 +175,9 @@ export {
   mapReplacementToInboxConfirmMatch,
   mapReplacementToInboxDeclineMatch,
   mapReplacementToInboxUnmatch,
+  mapReplacementToCustomerInvoiceSummary,
+  mapReplacementToCustomerEnrichmentAction,
+  mapReplacementToMoveToReview,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -3237,6 +3243,61 @@ export async function fetchReplacementInboxUnmatch(
     {},
   );
   return mapReplacementToInboxUnmatch(payload);
+}
+
+export async function fetchReplacementCustomerInvoiceSummary(
+  baseUrl: string,
+  token: string,
+  customerId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/customers/${encodeURIComponent(customerId)}/invoice-summary`,
+    token,
+  );
+  return mapReplacementToCustomerInvoiceSummary(payload);
+}
+
+export async function fetchReplacementCustomerCancelEnrichment(
+  baseUrl: string,
+  token: string,
+  customerId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/customers/${encodeURIComponent(customerId)}/cancel-enrichment`,
+    token,
+    {},
+  );
+  return mapReplacementToCustomerEnrichmentAction(payload ?? { cancelled: true });
+}
+
+export async function fetchReplacementCustomerClearEnrichment(
+  baseUrl: string,
+  token: string,
+  customerId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/customers/${encodeURIComponent(customerId)}/clear-enrichment`,
+    token,
+    {},
+  );
+  return mapReplacementToCustomerEnrichmentAction(payload ?? { cleared: true });
+}
+
+export async function fetchReplacementMoveToReview(
+  baseUrl: string,
+  token: string,
+  transactionId: string,
+): Promise<{ success: true }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transactions/${encodeURIComponent(transactionId)}/move-to-review`,
+    token,
+    {},
+  );
+  return mapReplacementToMoveToReview(payload ?? { success: true });
 }
 
 export async function fetchReplacementInboxDelete(

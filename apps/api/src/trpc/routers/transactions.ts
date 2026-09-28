@@ -22,6 +22,7 @@ import {
   tryDelegateTransactionUpdate,
   tryDelegateTransactionsUpdateMany,
   tryDelegateTransactionsDeleteMany,
+  tryDelegateMoveToReview,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -331,9 +332,20 @@ export const transactionsRouter = createTRPCRouter({
 
   moveToReview: protectedProcedure
     .input(moveToReviewSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new Error("Team not found");
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateMoveToReview(
+          input.transactionId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       await moveTransactionToReview(db, {
