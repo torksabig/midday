@@ -29,6 +29,8 @@ import {
   mapReplacementToTrackerTimerStatus,
   mapReplacementToTrackerEntriesUpsert,
   mapReplacementToIdOnly,
+  mapReplacementToInvoiceProducts,
+  mapReplacementToInvoiceProduct,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -124,6 +126,8 @@ export {
   mapReplacementToTrackerTimerStatus,
   mapReplacementToTrackerEntriesUpsert,
   mapReplacementToIdOnly,
+  mapReplacementToInvoiceProducts,
+  mapReplacementToInvoiceProduct,
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
@@ -2014,6 +2018,82 @@ export async function fetchReplacementInvoiceDuplicate(
     input,
   );
   return mapReplacementToInvoiceById(payload);
+}
+
+export type ReplacementInvoiceProductsQuery = {
+  sortBy?: string;
+  limit?: number;
+  includeInactive?: boolean;
+  currency?: string;
+};
+
+export async function fetchReplacementInvoiceProducts(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInvoiceProductsQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams();
+  if (params.sortBy) search.set("sortBy", params.sortBy);
+  if (params.limit != null) search.set("limit", String(params.limit));
+  if (params.includeInactive != null) {
+    search.set("includeInactive", String(params.includeInactive));
+  }
+  if (params.currency) search.set("currency", params.currency);
+  const qs = search.toString();
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoice-products${qs ? `?${qs}` : ""}`,
+    token,
+  );
+  return mapReplacementToInvoiceProducts(payload);
+}
+
+export async function fetchReplacementInvoiceProductById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/invoice-products/${encodeURIComponent(id)}`;
+  try {
+    const payload = await replacementFetch<unknown>(url, token);
+    return mapReplacementToInvoiceProduct(payload);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("HTTP 404")
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function fetchReplacementInvoiceProductDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<boolean> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/invoice-products/${encodeURIComponent(id)}`,
+    token,
+  );
+  return payload === true;
+}
+
+export async function fetchReplacementInvoiceProductIncrementUsage(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ success: true }> {
+  const root = trimBase(baseUrl);
+  await replacementPost<unknown>(
+    `${root}/api/v1/invoice-products/${encodeURIComponent(id)}/increment-usage`,
+    token,
+    {},
+  );
+  return { success: true };
 }
 
 export type ReplacementCategoryCreateInput = {

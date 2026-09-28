@@ -1316,6 +1316,14 @@ export function mapReplacementToIdOnly(
   return { id: String(row.id) };
 }
 
+export function mapReplacementToInvoiceProducts(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
+export function mapReplacementToInvoiceProduct(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToTrackerTimerStatus(payload: unknown): unknown {
   return deepCamelCaseKeys(payload);
 }

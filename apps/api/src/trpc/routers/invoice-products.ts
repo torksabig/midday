@@ -7,6 +7,13 @@ import {
   updateInvoiceProductSchema,
   upsertInvoiceProductSchema,
 } from "@api/schemas/invoice";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInvoiceProductsGet,
+  tryDelegateInvoiceProductGetById,
+  tryDelegateInvoiceProductDelete,
+  tryDelegateInvoiceProductIncrementUsage,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
   createInvoiceProduct,
@@ -18,18 +25,30 @@ import {
   updateInvoiceProduct,
   upsertInvoiceProduct,
 } from "@midday/db/queries";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
 
 export const invoiceProductsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInvoiceProductsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       const {
         sortBy = "popular",
         limit = 50,
         includeInactive = false,
         currency,
       } = input || {};
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductsGet(
+          { sortBy, limit, includeInactive, currency },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return getInvoiceProducts(db, teamId!, {
         sortBy,
@@ -41,7 +60,18 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getInvoiceProductSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.product;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInvoiceProductById(db, input.id, teamId!);
     }),
 
@@ -88,13 +118,35 @@ export const invoiceProductsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteInvoiceProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.deleted;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteInvoiceProduct(db, input.id, teamId!);
     }),
 
   incrementUsage: protectedProcedure
     .input(getInvoiceProductSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceProductIncrementUsage(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       await incrementProductUsage(db, input.id, teamId!);
       return { success: true };
     }),
