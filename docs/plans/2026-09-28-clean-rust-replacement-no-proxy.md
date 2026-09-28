@@ -168,7 +168,7 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Path A (Vite clone UI)** | Documented as deferred in `path-a-decision.md` | Still deferred — clone is **API/backend**, not product shell |
 | **Documents / customers / invoices (Phase 4 read)** | **Done (read path):** `documents.get` / `getById`, `customers.get` / `getById`, `invoice.get` / `getById` → Rust Postgres routes; dual fallback, replacement fail-closed. | Delete Drizzle read paths when stable |
 
-**Delegation inventory:** live procedure table and counts in [`2026-09-28-delegation-inventory.md`](./2026-09-28-delegation-inventory.md) (20 delegated of ~256 exported procedures as of Phase 4). Strategic correction unchanged: **frozen `apps/dashboard` UI**, **`apps/api` = temporary tRPC façade only** (not a permanent Hono→Axum proxy), **`@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` = strangler glue deleted with `apps/api`**, all durable logic in **`fintech/clone` Rust**, **no Vite clone UI (Path A)**.
+**Delegation inventory:** live procedure table and counts in [`2026-09-28-delegation-inventory.md`](./2026-09-28-delegation-inventory.md). **Autopilot (no repeated “continue”):** [`2026-09-28-autopilot-migration-continuation.md`](./2026-09-28-autopilot-migration-continuation.md). Strategic correction unchanged: **frozen `apps/dashboard` UI**, **`apps/api` = temporary tRPC façade only** (not a permanent Hono→Axum proxy), **`@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` = strangler glue deleted with `apps/api`**, all durable logic in **`fintech/clone` Rust**, **no Vite clone UI (Path A)**.
 
 Existing smoke assets (`scripts/smoke-replacement-delegation.sh`, `scripts/smoke-phase1-session.sh`, `GET /api/replacement/status`) remain useful until Stage 4; then remove with `replacement-backend`.
 
@@ -236,6 +236,7 @@ Parallel (product hygiene): rsync Downloads → workspace for `apps/dashboard` +
 
 ## Related docs
 
+- [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md) — standing authorization + slice loop
 - [UI frozen / Downloads baseline](./2026-09-28-backend-replace-ui-frozen-downloads.md)
 - [Enterprise strangler (archived)](./2026-09-28-enterprise-strangler-rust-migration.md) — superseded by this plan
 - [Path A decision](./path-a-decision.md) — Vite clone as product UI remains deferred

@@ -4,7 +4,7 @@
 
 **End state:** delete this package together with `apps/api` when either (a) all tRPC routers are served from Rust-native handlers with no Node business logic, or (b) the dashboard calls Rust directly and no longer needs a tRPC boundary.
 
-Do **not** treat `MIDDAY_BACKEND_MODE` or this SDK as permanent architecture. See the canonical plan: [`docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md`](../../docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md).
+Do **not** treat `MIDDAY_BACKEND_MODE` or this SDK as permanent architecture. See the canonical plan: [`docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md`](../../docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md). To advance slices without repeated “continue”, use [`docs/plans/2026-09-28-autopilot-migration-continuation.md`](../../docs/plans/2026-09-28-autopilot-migration-continuation.md).
 
 **Phase 1 (identity):** Supabase JWKS validation on the clone API and session JWT passthrough (replacing demo delegation). Until JWKS lands, demo env vars below support smoke tests only.
 

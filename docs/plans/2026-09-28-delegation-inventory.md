@@ -2,6 +2,8 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
+**Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
+
 **Counts:** **59 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~23.0%). **1** write procedure delegates (`transactions.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
@@ -155,4 +157,24 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Activity feed (`transactions_categorized` / `_assigned`) | **No** | Yes · `createActivity` |
 | Return shape | Yes · full tx + suggestion via GET SQL | `getTransactionById` |
 
-**Next slice (Phase 12):** `notifications.*` list reads; `transactions.updateMany` or `inbox` match/ignore writes; `bankAccounts.getDetails` only if decrypt path is scoped safely.
+## Autopilot queue
+
+Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
+
+| ID | Status | Scope | Type |
+|----|--------|--------|------|
+| AP-12 | PENDING | `notifications.*` list/read procedures | read |
+| AP-12b | PENDING | `transactions.updateMany` | write |
+| AP-12c | PENDING | One inbox write (`update` or ignore — smallest) | write |
+| AP-13 | PENDING | `team.*` / `user.*` settings reads not in table as `yes` | read |
+| AP-14 | PENDING | One invoice write (draft create or update) | write |
+| AP-15 | BLOCKED | `bankAccounts.getDetails` — needs safe decrypt path | read |
+| AP-16 | PENDING | OAuth / connection reads from inventory gaps | read |
+| AP-17 | PENDING | `transactions.create` or `transactions.delete` (one) | write |
+| AP-18 | PENDING | Inbox mutations batch | write |
+| AP-19 | PENDING | Parity: FTS `q`, tx update activity feed | parity |
+| AP-20 | PENDING | Delete Drizzle for routers at 100% delegation | delete |
+| AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
+| AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
+
+**Legacy note (Phase 12):** same as AP-12…AP-12c rows above.
