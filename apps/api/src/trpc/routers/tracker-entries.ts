@@ -11,7 +11,10 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTrackerBillableHours,
+  tryDelegateTrackerCurrentTimer,
+  tryDelegateTrackerEntriesByDate,
   tryDelegateTrackerEntriesByRange,
+  tryDelegateTrackerTimerStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -56,7 +59,18 @@ export const trackerEntriesRouter = createTRPCRouter({
 
   byDate: protectedProcedure
     .input(getTrackerRecordsByDateSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerEntriesByDate(
+          { date: input.date },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTrackerRecordsByDate(db, {
         date: input.date,
         teamId: teamId!,
@@ -129,19 +143,43 @@ export const trackerEntriesRouter = createTRPCRouter({
 
   getCurrentTimer: protectedProcedure
     .input(getCurrentTimerSchema.optional())
-    .query(async ({ ctx: { db, teamId, session }, input }) => {
+    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      const assignedId = input?.assignedId ?? session.user.id;
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerCurrentTimer(
+          { assignedId },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.timer;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getCurrentTimer(db, {
         teamId: teamId!,
-        assignedId: input?.assignedId ?? session.user.id,
+        assignedId,
       });
     }),
 
   getTimerStatus: protectedProcedure
     .input(getCurrentTimerSchema.optional())
-    .query(async ({ ctx: { db, teamId, session }, input }) => {
+    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      const assignedId = input?.assignedId ?? session.user.id;
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerTimerStatus(
+          { assignedId },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTimerStatus(db, {
         teamId: teamId!,
-        assignedId: input?.assignedId ?? session.user.id,
+        assignedId,
       });
     }),
 });

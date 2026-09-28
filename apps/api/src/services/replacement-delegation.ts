@@ -26,6 +26,12 @@ import {
   fetchReplacementTrackerProjects,
   fetchReplacementTrackerEntriesByRange,
   fetchReplacementTrackerBillableHours,
+  fetchReplacementTrackerEntriesByDate,
+  fetchReplacementTrackerProjectById,
+  fetchReplacementTrackerCurrentTimer,
+  fetchReplacementTrackerTimerStatus,
+  fetchReplacementAccountingSyncStatus,
+  fetchReplacementAccountingConnections,
   fetchReplacementBankConnections,
   fetchReplacementInvoicePublicById,
   ReplacementPublicFetchError,
@@ -65,6 +71,9 @@ import {
   type ReplacementTrackerProjectsListQuery,
   type ReplacementTrackerEntriesByRangeQuery,
   type ReplacementTrackerBillableHoursQuery,
+  type ReplacementTrackerEntriesByDateQuery,
+  type ReplacementTrackerTimerQuery,
+  type ReplacementAccountingSyncStatusQuery,
   type ReplacementBankConnectionsListQuery,
 } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
@@ -1158,6 +1167,131 @@ export async function tryDelegateTrackerBillableHours(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementTrackerBillableHours(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTrackerEntriesByDate(
+  input: ReplacementTrackerEntriesByDateQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerEntriesByDate(baseUrl, token, input),
+  );
+}
+
+export type DelegateTrackerProjectGetByIdResult =
+  | { delegated: false }
+  | { delegated: true; project: unknown | null };
+
+export async function tryDelegateTrackerProjectGetById(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTrackerProjectGetByIdResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const project = await fetchReplacementTrackerProjectById(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, project };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateTrackerCurrentTimerResult =
+  | { delegated: false }
+  | { delegated: true; timer: unknown | null };
+
+export async function tryDelegateTrackerCurrentTimer(
+  input: ReplacementTrackerTimerQuery,
+  sessionAccessToken?: string | null,
+): Promise<DelegateTrackerCurrentTimerResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const timer = await fetchReplacementTrackerCurrentTimer(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, timer };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateTrackerTimerStatus(
+  input: ReplacementTrackerTimerQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerTimerStatus(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateAccountingSyncStatus(
+  input: ReplacementAccountingSyncStatusQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementAccountingSyncStatus(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateAccountingConnections(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementAccountingConnections(baseUrl, token),
   );
 }
 

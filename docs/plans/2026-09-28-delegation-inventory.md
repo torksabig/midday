@@ -2,7 +2,7 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Counts:** **41 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~16.0%). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **47 / ~256** procedures delegate reads to Rust when mode is `dual` or `replacement` (~18.4%). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -44,10 +44,18 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
 | `invoice.*` (other) | no | mutations |
 | `trackerProjects.get` | yes | read · list (Phase 6 slice 1) |
-| `trackerProjects.*` (other) | no | getById, CRUD |
+| `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
+| `trackerProjects.*` (other) | no | CRUD |
 | `trackerEntries.byRange` | yes | read · calendar week/month (Phase 6 slice 1) |
 | `trackerEntries.getBillableHours` | yes | read · earnings rollup (Phase 6 slice 1) |
-| `trackerEntries.*` (other) | no | byDate, timer, mutations |
+| `trackerEntries.byDate` | yes | read · day sheet (Phase 9) |
+| `trackerEntries.getCurrentTimer` | yes | read · running entry (Phase 9) |
+| `trackerEntries.getTimerStatus` | yes | read · elapsed + summary (Phase 9) |
+| `trackerEntries.*` (other) | no | upsert, delete, start/stop timer mutations |
+| `accounting.getSyncStatus` | yes | read · `accounting_sync_records` (Phase 9) |
+| `accounting.getConnections` | yes | read · connected apps (Phase 9) |
+| `accounting.getAccounts` | no | external provider API |
+| `accounting.*` (other) | no | export, disconnect writes |
 | `search.global` | yes | read · `global_search()` RPC (Phase 5 slice 2) |
 | `search.attachments` | yes | read · inbox ILIKE + invoice list (Phase 5 slice 4) |
 | `reports.revenue` | yes | read · chart YoY (Phase 5 slice 3) |
@@ -62,9 +70,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
 | `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | no | write |
-| All other routers | no | accounting, banking, billing, vault tags, notifications, oauth, etc. |
+| All other routers | no | banking balances, vault tags, notifications, oauth, metrics, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/bank-connections`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/tracker/projects`, `/tracker/entries/by-range`, `/tracker/billable-hours`, `/search/global`, `/search/attachments`, `/reports/revenue`, `/reports/profit`, `/reports/burn-rate`, `/reports/runway`, `/reports/expense`, `/reports/spending`, `/reports/tax-summary`, `/reports/account-balances`, `/reports/revenue-forecast`, `/reports/public/:link_id`, `/reports/public/:link_id/chart`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/bank-accounts`, `/bank-connections`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id`, `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -97,16 +105,18 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Recurring tx FX batch | Partial · skips unmatched currency | Full batch rates |
 | Public share links | Yes · public router, linkId only | Drizzle |
 
-### Tracker reads parity (Phase 6 slice 1)
+### Tracker reads parity (Phase 6 + 9)
 
 | Concern | Rust | Legacy Drizzle |
 | --- | --- | --- |
 | Project list pagination / filters | Yes · core filters + sort columns | Full FTS `q` via `to_tsquery` |
-| Assigned users on projects | Yes · distinct entry assignees | `get_assigned_users_for_project()` |
+| Assigned users on projects | Yes · distinct entry assignees / `get_assigned_users_for_project()` on getById | Same |
 | `byRange` grouped by date | Yes | Same shape |
 | `getBillableHours` week/month window | Yes · UTC date math | `@date-fns` week start |
-| `byDate` / timer procedures | No | Legacy only |
+| `byDate` day entries | Yes | Same |
+| Timer current / status | Yes · local day bounds for running entry | Same |
+| Timer `project` alias on current entry | Yes · duplicated from `tracker_project` | Legacy shape |
 
-**Phase 5 slice 4:** Revenue forecast, public report reads, attachment search; mapper tests in `@midday/replacement-backend`.
+**Phase 9:** Tracker byDate, getById, timer reads; accounting sync status + connections list.
 
-**Phase 6 slice 1:** Tracker project list, entries by range, billable hours; public invoice by token; bank connections list.
+**Next slice (Phase 10):** `user.invites`, `bankAccounts` balance/currency reads, vault tag list, `metrics.*` — reads before first write family (e.g. `transactions.update`).

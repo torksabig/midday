@@ -23,12 +23,19 @@ import {
   mapReplacementToTrackerProjectsGet,
   mapReplacementToTrackerEntriesByRange,
   mapReplacementToTrackerBillableHours,
+  mapReplacementToTrackerEntriesByDate,
+  mapReplacementToTrackerProjectById,
+  mapReplacementToTrackerCurrentTimer,
+  mapReplacementToTrackerTimerStatus,
+  mapReplacementToAccountingConnections,
+  mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
   mapReplacementToPaymentStatus,
   mapReplacementToInvoiceSummary,
   mapReplacementToGlobalSearch,
   mapReplacementToRelatedDocuments,
   mapReplacementToReportJson,
+  type MiddayAccountingConnectionShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -69,6 +76,12 @@ export {
   mapReplacementToTrackerProjectsGet,
   mapReplacementToTrackerEntriesByRange,
   mapReplacementToTrackerBillableHours,
+  mapReplacementToTrackerEntriesByDate,
+  mapReplacementToTrackerProjectById,
+  mapReplacementToTrackerCurrentTimer,
+  mapReplacementToTrackerTimerStatus,
+  mapReplacementToAccountingConnections,
+  mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
   mapReplacementToOverviewSummary,
   mapReplacementToPaymentStatus,
@@ -1196,6 +1209,131 @@ export async function fetchReplacementTrackerBillableHours(
     token,
   );
   return mapReplacementToTrackerBillableHours(payload);
+}
+
+export type ReplacementTrackerEntriesByDateQuery = {
+  date: string;
+};
+
+export function buildTrackerEntriesByDateQuery(
+  params: ReplacementTrackerEntriesByDateQuery,
+): string {
+  const search = new URLSearchParams();
+  search.set("date", params.date);
+  return `?${search.toString()}`;
+}
+
+export async function fetchReplacementTrackerEntriesByDate(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerEntriesByDateQuery,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tracker/entries/by-date${buildTrackerEntriesByDateQuery(params)}`,
+    token,
+  );
+  return mapReplacementToTrackerEntriesByDate(payload);
+}
+
+export async function fetchReplacementTrackerProjectById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/tracker/projects/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  return mapReplacementToTrackerProjectById(await res.json());
+}
+
+export type ReplacementTrackerTimerQuery = {
+  assignedId?: string | null;
+};
+
+export function buildTrackerTimerQuery(
+  params: ReplacementTrackerTimerQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.assignedId) search.set("assignedId", params.assignedId);
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementTrackerCurrentTimer(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerTimerQuery,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/tracker/timer/current${buildTrackerTimerQuery(params)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  const body: unknown = await res.json();
+  return mapReplacementToTrackerCurrentTimer(body);
+}
+
+export async function fetchReplacementTrackerTimerStatus(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerTimerQuery,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tracker/timer/status${buildTrackerTimerQuery(params)}`,
+    token,
+  );
+  return mapReplacementToTrackerTimerStatus(payload);
+}
+
+export type ReplacementAccountingSyncStatusQuery = {
+  transactionIds?: string[] | null;
+  providerId?: string | null;
+};
+
+export function buildAccountingSyncStatusQuery(
+  params: ReplacementAccountingSyncStatusQuery,
+): string {
+  const search = new URLSearchParams();
+  for (const id of params.transactionIds ?? []) {
+    search.append("transactionIds", id);
+  }
+  if (params.providerId) search.set("providerId", params.providerId);
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementAccountingSyncStatus(
+  baseUrl: string,
+  token: string,
+  params: ReplacementAccountingSyncStatusQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/accounting/sync-status${buildAccountingSyncStatusQuery(params)}`,
+    token,
+  );
+  return mapReplacementToAccountingSyncStatus(payload);
+}
+
+export async function fetchReplacementAccountingConnections(
+  baseUrl: string,
+  token: string,
+): Promise<MiddayAccountingConnectionShape[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/accounting/connections`,
+    token,
+  );
+  return mapReplacementToAccountingConnections(payload);
 }
 
 export type ReplacementBankConnectionsListQuery = {

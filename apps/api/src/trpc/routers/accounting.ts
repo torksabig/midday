@@ -4,7 +4,13 @@ import {
   getAccountsSchema,
   getSyncStatusSchema,
 } from "@api/schemas/accounting";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateAccountingConnections,
+  tryDelegateAccountingSyncStatus,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   type AccountingProviderConfig,
   getAccountingProvider,
@@ -65,7 +71,7 @@ export const accountingRouter = createTRPCRouter({
    */
   getSyncStatus: protectedProcedure
     .input(getSyncStatusSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       const { transactionIds, providerId } = input;
 
       if (!teamId) {
@@ -73,6 +79,17 @@ export const accountingRouter = createTRPCRouter({
           code: "UNAUTHORIZED",
           message: "Team not found",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAccountingSyncStatus(
+          { transactionIds, providerId },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const records = await getAccountingSyncStatus(db, {
@@ -87,12 +104,21 @@ export const accountingRouter = createTRPCRouter({
   /**
    * Get connected accounting providers for the team
    */
-  getConnections: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  getConnections: protectedProcedure.query(
+    async ({ ctx: { db, teamId, accessToken } }) => {
     if (!teamId) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Team not found",
       });
+    }
+
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateAccountingConnections(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
     }
 
     const apps = await getApps(db, teamId);
@@ -113,7 +139,8 @@ export const accountingRouter = createTRPCRouter({
       });
 
     return connectedProviders;
-  }),
+  },
+  ),
 
   /**
    * Get available accounts from accounting provider

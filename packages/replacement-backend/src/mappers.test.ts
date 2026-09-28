@@ -21,6 +21,8 @@ import {
   mapReplacementToUserMe,
   mapReplacementToTrackerProjectsGet,
   mapReplacementToTrackerEntriesByRange,
+  mapReplacementToTrackerTimerStatus,
+  mapReplacementToAccountingConnections,
   mapReplacementToBankConnectionsGet,
 } from "./mappers";
 
@@ -527,6 +529,32 @@ describe("replacement mappers", () => {
     }) as { meta: { totalDuration: number }; result: Record<string, unknown[]> };
     expect(mapped.meta.totalDuration).toBe(3600);
     expect(mapped.result["2024-04-15"][0]).toMatchObject({ id: "e1" });
+  });
+
+  test("mapReplacementToAccountingConnections maps provider rows", () => {
+    const mapped = mapReplacementToAccountingConnections([
+      {
+        app_id: "xero",
+        settings: { sync: true },
+        config: { provider: "xero", tenantName: "Acme Ltd" },
+      },
+    ]);
+    expect(mapped[0]).toEqual({
+      providerId: "xero",
+      tenantName: "Acme Ltd",
+      settings: { sync: true },
+      connectedAt: null,
+    });
+  });
+
+  test("mapReplacementToTrackerTimerStatus camelCases status payload", () => {
+    const mapped = mapReplacementToTrackerTimerStatus({
+      is_running: true,
+      elapsed_time: 42,
+      current_entry: { project_id: "p1" },
+    }) as { isRunning: boolean; elapsedTime: number };
+    expect(mapped.isRunning).toBe(true);
+    expect(mapped.elapsedTime).toBe(42);
   });
 
   test("mapReplacementToBankConnectionsGet camelCases nested accounts", () => {

@@ -1289,6 +1289,66 @@ export function mapReplacementToTrackerBillableHours(payload: unknown): unknown 
   return deepCamelCaseKeys(payload);
 }
 
+export function mapReplacementToTrackerEntriesByDate(payload: unknown): unknown {
+  return deepCamelCaseKeys(payload);
+}
+
+export function mapReplacementToTrackerProjectById(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToTrackerCurrentTimer(payload: unknown): unknown | null {
+  if (payload === null) return null;
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToTrackerTimerStatus(payload: unknown): unknown {
+  return deepCamelCaseKeys(payload);
+}
+
+function accountingTenantNameFromConfig(config: unknown): string {
+  if (!config || typeof config !== "object") return "Connected";
+  const c = config as Record<string, unknown>;
+  const provider = c.provider;
+  if (provider === "xero" && typeof c.tenantName === "string") {
+    return c.tenantName;
+  }
+  if (
+    (provider === "quickbooks" || provider === "fortnox") &&
+    typeof c.companyName === "string"
+  ) {
+    return c.companyName;
+  }
+  return "Connected";
+}
+
+export type MiddayAccountingConnectionShape = {
+  providerId: string;
+  tenantName: string;
+  settings: unknown;
+  connectedAt: null;
+};
+
+export function mapReplacementToAccountingConnections(
+  payload: unknown,
+): MiddayAccountingConnectionShape[] {
+  const rows = z.array(z.record(z.string(), z.unknown())).parse(payload);
+  return rows.map((row) => {
+    const appId = String(row.app_id ?? row.appId ?? "");
+    const config = row.config;
+    return {
+      providerId: appId,
+      tenantName: accountingTenantNameFromConfig(config),
+      settings: row.settings ?? null,
+      connectedAt: null,
+    };
+  });
+}
+
+export function mapReplacementToAccountingSyncStatus(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
 export function mapReplacementToBankConnectionsGet(payload: unknown): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }

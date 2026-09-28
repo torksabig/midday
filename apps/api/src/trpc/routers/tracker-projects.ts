@@ -6,6 +6,7 @@ import {
 } from "@api/schemas/tracker-projects";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateTrackerProjectGetById,
   tryDelegateTrackerProjectsGet,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
@@ -69,7 +70,18 @@ export const trackerProjectsRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getTrackerProjectByIdSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerProjectGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.project ?? null;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTrackerProjectById(db, {
         ...input,
         teamId: teamId!,

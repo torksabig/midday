@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  buildAccountingSyncStatusQuery,
   buildBankConnectionsListQuery,
   buildInboxByStatusQuery,
   buildInboxListQuery,
   buildInboxSearchQuery,
   buildSearchAttachmentsQuery,
   buildTrackerBillableHoursQuery,
+  buildTrackerEntriesByDateQuery,
   buildTrackerEntriesByRangeQuery,
   buildTrackerProjectsListQuery,
+  buildTrackerTimerQuery,
   buildTransactionsListQuery,
   resolveReplacementBearerToken,
 } from "./delegate";
@@ -182,6 +185,33 @@ describe("buildBankConnectionsListQuery", () => {
     const qs = buildBankConnectionsListQuery({ enabled: true });
     const params = new URLSearchParams(qs.replace(/^\?/, ""));
     expect(params.get("enabled")).toBe("true");
+  });
+});
+
+describe("buildTrackerEntriesByDateQuery", () => {
+  test("encodes date", () => {
+    const qs = buildTrackerEntriesByDateQuery({ date: "2024-04-15" });
+    expect(qs).toBe("?date=2024-04-15");
+  });
+});
+
+describe("buildTrackerTimerQuery", () => {
+  test("encodes assignedId when present", () => {
+    const qs = buildTrackerTimerQuery({ assignedId: "u1" });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("assignedId")).toBe("u1");
+  });
+});
+
+describe("buildAccountingSyncStatusQuery", () => {
+  test("encodes transaction ids and provider", () => {
+    const qs = buildAccountingSyncStatusQuery({
+      transactionIds: ["t1", "t2"],
+      providerId: "xero",
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.getAll("transactionIds")).toEqual(["t1", "t2"]);
+    expect(params.get("providerId")).toBe("xero");
   });
 });
 
