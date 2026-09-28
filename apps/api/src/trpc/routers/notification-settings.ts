@@ -3,7 +3,12 @@ import {
   getNotificationSettingsSchema,
   updateNotificationSettingSchema,
 } from "@api/schemas/notification-settings";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateNotificationSettingsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   bulkUpdateNotificationSettings,
   getNotificationSettings,
@@ -14,7 +19,21 @@ import {
 export const notificationSettingsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getNotificationSettingsSchema.optional())
-    .query(async ({ ctx: { db, session, teamId }, input = {} }) => {
+    .query(async ({ ctx: { db, session, teamId, accessToken }, input = {} }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNotificationSettingsGet(
+          {
+            notificationType: input.notificationType,
+            channel: input.channel,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getNotificationSettings(db, {
         userId: session.user.id,
         teamId: teamId!,

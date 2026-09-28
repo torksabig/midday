@@ -13,6 +13,7 @@ import {
   tryDelegateDocumentsGet,
   tryDelegateDocumentsGetById,
   tryDelegateDocumentsGetRelated,
+  tryDelegateDocumentsCheckAttachments,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -106,7 +107,18 @@ export const documentsRouter = createTRPCRouter({
 
   checkAttachments: protectedProcedure
     .input(deleteDocumentSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsCheckAttachments(
+          input.id,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return checkDocumentAttachments(db, {
         id: input.id,
         teamId: teamId!,

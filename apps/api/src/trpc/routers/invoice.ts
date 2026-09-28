@@ -32,6 +32,7 @@ import {
   tryDelegateAverageInvoiceSize,
   tryDelegateTopRevenueClient,
   tryDelegateNewCustomersCount,
+  tryDelegateSearchInvoiceNumber,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -178,7 +179,18 @@ export const invoiceRouter = createTRPCRouter({
 
   searchInvoiceNumber: protectedProcedure
     .input(searchInvoiceNumberSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateSearchInvoiceNumber(
+          input.query,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.value;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return searchInvoiceNumber(db, {
         teamId: teamId!,
         query: input.query,

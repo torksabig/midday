@@ -2236,6 +2236,61 @@ export async function fetchReplacementCategoryById(
   return mapReplacementToCategoryById(await res.json());
 }
 
+
+export async function fetchReplacementSearchInvoiceNumber(
+  baseUrl: string,
+  token: string,
+  query: string,
+): Promise<{ invoiceNumber: string } | null> {
+  const root = trimBase(baseUrl);
+  const url = new URL(`${root}/api/v1/invoices/search-number`);
+  url.searchParams.set("q", query);
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+  const payload = (await res.json()) as { invoiceNumber?: string } | null;
+  if (payload == null || typeof payload.invoiceNumber !== "string") {
+    return null;
+  }
+  return { invoiceNumber: payload.invoiceNumber };
+}
+
+export async function fetchReplacementNotificationSettings(
+  baseUrl: string,
+  token: string,
+  input: { notificationType?: string; channel?: string } = {},
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const url = new URL(`${root}/api/v1/notification-settings`);
+  if (input.notificationType) {
+    url.searchParams.set("notificationType", input.notificationType);
+  }
+  if (input.channel) {
+    url.searchParams.set("channel", input.channel);
+  }
+  const payload = await replacementFetch<unknown>(url.toString(), token);
+  if (!Array.isArray(payload)) {
+    throw new Error("notification-settings payload must be an array");
+  }
+  return payload;
+}
+
+export async function fetchReplacementDocumentCheckAttachments(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  return replacementFetch<unknown>(
+    `${root}/api/v1/documents/${encodeURIComponent(id)}/check-attachments`,
+    token,
+  );
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

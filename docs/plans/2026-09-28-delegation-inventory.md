@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **67 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~26.2%). **22** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **70 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~27.3%). **22** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `team.update`, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -23,6 +23,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notifications.updateStatus` | yes | **write** · single activity status (AP-20 follow-on) |
 | `notifications.updateAllStatus` | yes | **write** · bulk status for current user (AP-21) |
 | `notifications.*` (other) | no | — |
+| `notificationSettings.get` | yes | read · user/team channel settings (AP-25) |
+| `notificationSettings.*` (other) | no | getAll (JS type catalog), writes |
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
@@ -62,7 +64,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.get` | yes | read · list (Phase 4) |
 | `documents.getById` | yes | read (Phase 4) |
 | `documents.getRelatedDocuments` | yes | read · `match_similar_documents_by_title()` (Phase 5 slice 3) |
-| `documents.*` (other) | no | attachments, vault mutations |
+| `documents.checkAttachments` | yes | read · path token attachment check (AP-25) |
+| `documents.*` (other) | no | vault mutations, signed URLs |
 | `documentTags.get` | yes | read · vault tag list (Phase 10) |
 | `documentTags.create` | yes | **write** · insert tag (AP-23); embedding stays in Node |
 | `documentTags.delete` | yes | **write** · delete tag (AP-23) |
@@ -76,6 +79,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.getById` | yes | read (Phase 4) |
 | `invoice.getInvoiceByToken` | yes | public · token verified in API, read by id (Phase 6 slice 1) |
 | `invoice.paymentStatus` | yes | read · weighted score (Phase 5 slice 1) |
+| `invoice.searchInvoiceNumber` | yes | read · ILIKE existence check (AP-25) |
 | `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
 | `invoice.mostActiveClient` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.inactiveClientsCount` | yes | read · 30d dashboard metric (Phase 10) |
@@ -317,8 +321,11 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |
+| AP-25 | DONE | `invoice.searchInvoiceNumber` + `notificationSettings.get` + `documents.checkAttachments` | read |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** Tracker timer start/stop, customers.upsert (no enrichment), invoice.draft fields, notificationSettings reads, documents.delete. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** Tracker timer start/stop, customers.upsert (no enrichment), invoice.draft, documents.delete, notificationSettings updates, oauthApplications.get. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
-**Autopilot AP-12–24 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Blocked:** AP-15 `bankAccounts.getDetails` (decrypt); `user.delete` (Supabase admin + Resend); live bank OAuth token exchange; accounting.getAccounts / external provider APIs; email/Resend sends.
+
+**Autopilot AP-12–25 + AP-STAGE3 sketch complete** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.

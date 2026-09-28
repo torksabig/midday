@@ -57,6 +57,9 @@ import {
   fetchReplacementTransactionTagDelete,
   fetchReplacementCustomerDelete,
   fetchReplacementCategoryById,
+  fetchReplacementSearchInvoiceNumber,
+  fetchReplacementNotificationSettings,
+  fetchReplacementDocumentCheckAttachments,
   fetchReplacementInboxUpdate,
   fetchReplacementInvoiceUpdate,
   fetchReplacementAppsGet,
@@ -2241,6 +2244,33 @@ export async function tryDelegateTransactionCategoriesGetById(
     }
     return { delegated: false };
   }
+}
+
+export async function tryDelegateSearchInvoiceNumber(
+  query: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateNullableReadResult<{ invoiceNumber: string }>> {
+  return tryDelegateNullableReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementSearchInvoiceNumber(baseUrl, token, query),
+  );
+}
+
+export async function tryDelegateNotificationSettingsGet(
+  input: { notificationType?: string; channel?: string },
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementNotificationSettings(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateDocumentsCheckAttachments(
+  id: string,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementDocumentCheckAttachments(baseUrl, token, id),
+  );
 }
 
 export async function tryDelegateTransactionsUpdateMany(
