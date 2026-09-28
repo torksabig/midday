@@ -12,6 +12,9 @@ import {
   tryDelegateBankAccountsCurrencies,
   tryDelegateBankAccountsGet,
   tryDelegateBankAccountsGetTransactionCount,
+  tryDelegateBankAccountCreate,
+  tryDelegateBankAccountUpdate,
+  tryDelegateBankAccountDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -130,7 +133,18 @@ export const bankAccountsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteBankAccountSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.account;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await deleteBankAccount(db, {
         id: input.id,
         teamId: teamId!,
@@ -141,7 +155,20 @@ export const bankAccountsRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateBankAccountSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const { id, ...rest } = input;
+        const delegated = await tryDelegateBankAccountUpdate(
+          id!,
+          rest,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.account;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateBankAccount(db, {
         ...input,
         id: input.id!,
@@ -151,7 +178,22 @@ export const bankAccountsRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createBankAccountSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankAccountCreate(
+          {
+            name: input.name,
+            currency: input.currency,
+            manual: input.manual,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.account;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await createBankAccount(db, {
         ...input,
         teamId: teamId!,

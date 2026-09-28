@@ -40,6 +40,7 @@ import {
   mapReplacementToShortLink,
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
+  mapReplacementToBankAccountMutation,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -150,6 +151,7 @@ export {
   mapReplacementToShortLink,
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
+  mapReplacementToBankAccountMutation,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2532,6 +2534,78 @@ export async function fetchReplacementTeamLeave(
     { teamId },
   );
   return mapReplacementToTeamInviteMutation(payload);
+}
+
+export type ReplacementBankAccountCreateInput = {
+  name: string;
+  currency?: string;
+  manual?: boolean;
+};
+
+export async function fetchReplacementBankAccountCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementBankAccountCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/bank-accounts`,
+    token,
+    input,
+  );
+  return mapReplacementToBankAccountMutation(payload);
+}
+
+export type ReplacementBankAccountUpdateInput = {
+  name?: string;
+  type?: string;
+  balance?: number;
+  enabled?: boolean;
+  currency?: string;
+  baseBalance?: number;
+  baseCurrency?: string;
+};
+
+export async function fetchReplacementBankAccountUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  input: ReplacementBankAccountUpdateInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementPut<unknown>(
+      `${root}/api/v1/bank-accounts/${encodeURIComponent(id)}`,
+      token,
+      input,
+    );
+    return mapReplacementToBankAccountMutation(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function fetchReplacementBankAccountDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementDelete<unknown>(
+      `${root}/api/v1/bank-accounts/${encodeURIComponent(id)}`,
+      token,
+    );
+    return mapReplacementToBankAccountMutation(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function fetchReplacementInvoiceTemplates(

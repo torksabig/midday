@@ -129,6 +129,11 @@ import {
   type ReplacementInvoiceRecurringListQuery,
   fetchReplacementAccountingDisconnect,
   fetchReplacementTeamLeave,
+  fetchReplacementBankAccountCreate,
+  fetchReplacementBankAccountUpdate,
+  fetchReplacementBankAccountDelete,
+  type ReplacementBankAccountCreateInput,
+  type ReplacementBankAccountUpdateInput,
   fetchReplacementOAuthApplicationsList,
   fetchReplacementOAuthApplicationGet,
   fetchReplacementOAuthApplicationCreate,
@@ -4760,6 +4765,135 @@ export async function tryDelegateTeamLeave(
       teamId,
     );
     return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateBankAccountMutationResult =
+  | { delegated: false }
+  | { delegated: true; account: unknown | null };
+
+export async function tryDelegateBankAccountCreate(
+  input: ReplacementBankAccountCreateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateBankAccountMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const account = await fetchReplacementBankAccountCreate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, account };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateBankAccountUpdate(
+  id: string,
+  input: ReplacementBankAccountUpdateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateBankAccountMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const account = await fetchReplacementBankAccountUpdate(
+      getReplacementApiUrl(),
+      token,
+      id,
+      input,
+    );
+    return { delegated: true, account };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateBankAccountDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateBankAccountMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const account = await fetchReplacementBankAccountDelete(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, account };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({
