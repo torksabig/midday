@@ -3482,6 +3482,47 @@ export async function fetchReplacementAvailablePlans(
   return mapReplacementToAvailablePlans(payload);
 }
 
+export async function fetchReplacementSwitchTeam(
+  baseUrl: string,
+  token: string,
+  teamId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/user/switch-team`,
+    token,
+    { teamId },
+  );
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export async function fetchReplacementNotificationPreferences(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/notification-settings/preferences`,
+    token,
+  );
+  return deepCamelCaseKeys(
+    (payload as unknown[]) ?? [],
+  ) as unknown[];
+}
+
+export async function fetchReplacementBankConnectionDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/bank-connections/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToBankConnectionReconnect(payload);
+}
+
 export async function fetchReplacementInboxDelete(
   baseUrl: string,
   token: string,

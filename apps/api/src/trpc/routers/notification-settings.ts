@@ -8,6 +8,7 @@ import {
   tryDelegateNotificationSettingsGet,
   tryDelegateNotificationSettingsUpdate,
   tryDelegateNotificationSettingsBulkUpdate,
+  tryDelegateNotificationPreferences,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -44,7 +45,15 @@ export const notificationSettingsRouter = createTRPCRouter({
     }),
 
   // Get all notification types with their current settings for the user
-  getAll: protectedProcedure.query(async ({ ctx: { db, session, teamId } }) => {
+  getAll: protectedProcedure.query(async ({ ctx: { db, session, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateNotificationPreferences(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getUserNotificationPreferences(db, session.user.id, teamId!);
   }),
 

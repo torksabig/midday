@@ -4,6 +4,7 @@ import {
   tryDelegateUserInvites,
   tryDelegateUserMe,
   tryDelegateUserUpdate,
+  tryDelegateSwitchTeam,
 } from "@api/services/replacement-delegation";
 import { resend } from "@api/services/resend";
 import { createAdminClient } from "@api/services/supabase";
@@ -74,8 +75,32 @@ export const userRouter = createTRPCRouter({
 
   switchTeam: protectedProcedure
     .input(z.object({ teamId: z.string().uuid() }))
-    .mutation(async ({ ctx: { db, session }, input }) => {
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
       let result: Awaited<ReturnType<typeof switchUserTeam>>;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateSwitchTeam(
+          input.teamId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          result = delegated.result as typeof result;
+          try {
+            await Promise.all([
+              teamCache.invalidateForUser(
+                session.user.id,
+                (result as { previousTeamId?: string | null }).previousTeamId ??
+                  null,
+              ),
+              teamCache.invalidateForUser(session.user.id, input.teamId),
+            ]);
+          } catch {
+            // Non-fatal — cache will expire naturally
+          }
+          return result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       try {
         result = await switchUserTeam(db, {

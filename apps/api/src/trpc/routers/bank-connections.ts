@@ -9,6 +9,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateBankConnectionsGet,
   tryDelegateBankConnectionReconnect,
+  tryDelegateBankConnectionDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -74,11 +75,27 @@ export const bankConnectionsRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteBankConnectionSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
-      const data = await deleteBankConnection(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      let data: Awaited<ReturnType<typeof deleteBankConnection>> | null = null;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankConnectionDelete(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          data = delegated.result as typeof data;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!data) {
+        data = await deleteBankConnection(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
 
       if (!data) {
         throw new Error("Bank connection not found");
