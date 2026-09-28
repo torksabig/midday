@@ -105,8 +105,14 @@ import {
   fetchReplacementAppsDisconnect,
   fetchReplacementAppsUpdate,
   fetchReplacementAppsUpdateSettings,
+  fetchReplacementAppsRemoveWhatsApp,
+  fetchReplacementAppsCreatePlatformLinkToken,
+  fetchReplacementInboxCreate,
   type ReplacementAppsUpdateInput,
   type ReplacementAppsUpdateSettingsInput,
+  type ReplacementRemoveWhatsAppInput,
+  type ReplacementPlatformLinkTokenInput,
+  type ReplacementInboxCreateInput,
   fetchReplacementInboxBlocklist,
   fetchReplacementInboxBlocklistCreate,
   fetchReplacementInboxBlocklistDelete,
@@ -6166,6 +6172,137 @@ export async function tryDelegateBankConnectionReconnect(
       input,
     );
     return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInboxCreateResult =
+  | { delegated: false }
+  | { delegated: true; inbox: unknown };
+
+export async function tryDelegateInboxCreate(
+  input: ReplacementInboxCreateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInboxCreateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const inbox = await fetchReplacementInboxCreate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, inbox };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateAppsRemoveWhatsApp(
+  input: ReplacementRemoveWhatsAppInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateAppMutationResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const app = await fetchReplacementAppsRemoveWhatsApp(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, app };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegatePlatformLinkTokenResult =
+  | { delegated: false }
+  | { delegated: true; token: unknown };
+
+export async function tryDelegateAppsCreatePlatformLinkToken(
+  input: ReplacementPlatformLinkTokenInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegatePlatformLinkTokenResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementAppsCreatePlatformLinkToken(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, token: result };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

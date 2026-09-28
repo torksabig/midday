@@ -10,6 +10,8 @@ import {
   tryDelegateAppsDisconnect,
   tryDelegateAppsUpdate,
   tryDelegateAppsUpdateSettings,
+  tryDelegateAppsRemoveWhatsApp,
+  tryDelegateAppsCreatePlatformLinkToken,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -116,8 +118,19 @@ export const appsRouter = createTRPCRouter({
 
   removeWhatsAppConnection: protectedProcedure
     .input(removeWhatsAppConnectionSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
       const { phoneNumber } = input;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppsRemoveWhatsApp(
+          { phoneNumber },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.app;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       return removeWhatsAppConnection(db, {
         teamId: teamId!,
@@ -127,7 +140,18 @@ export const appsRouter = createTRPCRouter({
 
   createPlatformLinkToken: protectedProcedure
     .input(createPlatformLinkTokenSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateAppsCreatePlatformLinkToken(
+          { provider: input.provider },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.token;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return createPlatformLinkToken(db, {
         provider: input.provider,
         teamId: teamId!,

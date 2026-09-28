@@ -4111,6 +4111,70 @@ export async function fetchReplacementTeamConnectionStatus(
   return replacementFetch<unknown>(`${root}/api/v1/team/connection-status`, token);
 }
 
+export type ReplacementInboxCreateInput = {
+  displayName: string;
+  filePath: string[];
+  fileName: string;
+  contentType: string;
+  size: number;
+  status?: string;
+  referenceId?: string;
+  website?: string;
+  senderEmail?: string;
+  inboxAccountId?: string;
+};
+
+export async function fetchReplacementInboxCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInboxCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox`,
+    token,
+    input,
+  );
+  return deepCamelCaseKeys(payload);
+}
+
+export type ReplacementRemoveWhatsAppInput = {
+  phoneNumber: string;
+};
+
+export async function fetchReplacementAppsRemoveWhatsApp(
+  baseUrl: string,
+  token: string,
+  input: ReplacementRemoveWhatsAppInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/apps/whatsapp/remove-connection`,
+    token,
+    input,
+  );
+  if (payload == null) return null;
+  return mapReplacementToAppMutation(payload);
+}
+
+export type ReplacementPlatformLinkTokenInput = {
+  provider: string;
+};
+
+export async function fetchReplacementAppsCreatePlatformLinkToken(
+  baseUrl: string,
+  token: string,
+  input: ReplacementPlatformLinkTokenInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/apps/platform-link-tokens`,
+    token,
+    input,
+  );
+  return mapReplacementToAppMutation(payload);
+}
+
 export { shouldDelegateToReplacementBackend };
 
 /** When false (dual), callers may fall back to legacy on delegation errors. */

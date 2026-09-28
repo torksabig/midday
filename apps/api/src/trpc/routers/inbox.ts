@@ -34,6 +34,7 @@ import {
   tryDelegateInboxBlocklistGet,
   tryDelegateInboxBlocklistCreate,
   tryDelegateInboxBlocklistDelete,
+  tryDelegateInboxCreate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -208,7 +209,25 @@ export const inboxRouter = createTRPCRouter({
 
   create: protectedProcedure
     .input(createInboxItemSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxCreate(
+          {
+            displayName: input.filename,
+            filePath: input.filePath,
+            fileName: input.filename,
+            contentType: input.mimetype,
+            size: input.size,
+            status: "processing",
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.inbox;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return createInbox(db, {
         displayName: input.filename,
         teamId: teamId!,

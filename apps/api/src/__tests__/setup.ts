@@ -805,6 +805,7 @@ export const mocks = {
       userId: "test-user-id",
     }),
   ) as MockFn,
+  removeWhatsAppConnection: mock(() => Promise.resolve(null)) as MockFn,
   getAppBySlackTeamId: mock(() => Promise.resolve(null)) as MockFn,
   getPlatformIdentity: mock(() => Promise.resolve(null)) as MockFn,
   updatePlatformIdentityMetadata: mock(() => Promise.resolve(null)) as MockFn,
@@ -1152,7 +1153,7 @@ const dbQueriesMock = new Proxy(
     disconnectApp: mocks.disconnectApp,
     updateAppSettings: mocks.updateAppSettings,
     updateAppSettingsBulk: mocks.updateAppSettingsBulk,
-    removeWhatsAppConnection: createDefaultMock(),
+    removeWhatsAppConnection: mocks.removeWhatsAppConnection,
 
     // Bank connections (mutations on router)
     addProviderAccounts: createDefaultMock(),
