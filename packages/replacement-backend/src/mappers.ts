@@ -1189,3 +1189,86 @@ export function mapReplacementToOverviewSummary(
     runway: parsed.runway,
   };
 }
+
+function snakeToCamelKey(key: string): string {
+  return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+export function deepCamelCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => deepCamelCaseKeys(item));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+        snakeToCamelKey(k),
+        deepCamelCaseKeys(v),
+      ]),
+    );
+  }
+  return value;
+}
+
+const replacementPaginatedListSchema = z.object({
+  meta: z.object({
+    cursor: z.string().nullable().optional(),
+    has_previous_page: z.boolean(),
+    has_next_page: z.boolean(),
+  }),
+  data: z.array(z.record(z.string(), z.unknown())),
+});
+
+export type MiddayPaginatedListShape = {
+  meta: {
+    cursor?: string | null;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  data: unknown[];
+};
+
+function mapReplacementPaginatedList(payload: unknown): MiddayPaginatedListShape {
+  const parsed = replacementPaginatedListSchema.parse(payload);
+  return {
+    meta: {
+      cursor: parsed.meta.cursor ?? undefined,
+      hasPreviousPage: parsed.meta.has_previous_page,
+      hasNextPage: parsed.meta.has_next_page,
+    },
+    data: parsed.data.map((row) => deepCamelCaseKeys(row)),
+  };
+}
+
+export type MiddayDocumentsGetShape = MiddayPaginatedListShape;
+export type MiddayCustomersGetShape = MiddayPaginatedListShape;
+export type MiddayInvoicesGetShape = MiddayPaginatedListShape;
+
+export function mapReplacementToDocumentsGet(
+  payload: unknown,
+): MiddayDocumentsGetShape {
+  return mapReplacementPaginatedList(payload);
+}
+
+export function mapReplacementToCustomersGet(
+  payload: unknown,
+): MiddayCustomersGetShape {
+  return mapReplacementPaginatedList(payload);
+}
+
+export function mapReplacementToInvoicesGet(
+  payload: unknown,
+): MiddayInvoicesGetShape {
+  return mapReplacementPaginatedList(payload);
+}
+
+export function mapReplacementToDocumentById(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToCustomerById(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToInvoiceById(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}

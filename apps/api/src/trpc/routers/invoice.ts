@@ -18,7 +18,13 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@api/trpc/init";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInvoicesGet,
+  tryDelegateInvoicesGetById,
+} from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { UTCDate } from "@date-fns/utc";
 import {
   deleteInvoice,
@@ -62,7 +68,30 @@ const defaultTemplate = DEFAULT_TEMPLATE;
 export const invoiceRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInvoicesSchema.optional())
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoicesGet(
+          {
+            cursor: input?.cursor,
+            pageSize: input?.pageSize,
+            q: input?.q,
+            statuses: input?.statuses,
+            customers: input?.customers,
+            start: input?.start,
+            end: input?.end,
+            sort: input?.sort,
+            ids: input?.ids,
+            recurringIds: input?.recurringIds,
+            recurring: input?.recurring,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInvoices(db, {
         teamId: teamId!,
         ...input,
@@ -71,7 +100,18 @@ export const invoiceRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getInvoiceByIdSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoicesGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice ?? null;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getInvoiceById(db, {
         id: input.id,
         teamId: teamId!,

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   mapReplacementToBankAccountsGet,
+  mapReplacementToCustomersGet,
+  mapReplacementToDocumentsGet,
   mapReplacementToInboxById,
   mapReplacementToInboxByStatus,
   mapReplacementToInboxCheckAttachments,
@@ -355,6 +357,39 @@ describe("replacement mappers", () => {
       hasAttachments: true,
       fileName: "file.pdf",
       attachments: [{ id: "a1", transactionId: "tx1", name: "file.pdf" }],
+    });
+  });
+
+  test("mapReplacementToDocumentsGet camelCases paginated rows", () => {
+    const mapped = mapReplacementToDocumentsGet({
+      meta: { cursor: "20", has_previous_page: true, has_next_page: false },
+      data: [
+        {
+          id: "d1",
+          path_tokens: ["a", "b"],
+          processing_status: "completed",
+          document_tag_assignments: [
+            { document_tag: { id: "t1", name: "Tax", slug: "tax" } },
+          ],
+        },
+      ],
+    });
+    expect(mapped.meta.hasPreviousPage).toBe(true);
+    expect(mapped.data[0]).toMatchObject({
+      pathTokens: ["a", "b"],
+      processingStatus: "completed",
+    });
+  });
+
+  test("mapReplacementToCustomersGet maps list meta", () => {
+    const mapped = mapReplacementToCustomersGet({
+      meta: { cursor: null, has_previous_page: false, has_next_page: true },
+      data: [{ id: "c1", billing_email: "bill@co.com", invoice_count: 2 }],
+    });
+    expect(mapped.meta.hasNextPage).toBe(true);
+    expect(mapped.data[0]).toMatchObject({
+      billingEmail: "bill@co.com",
+      invoiceCount: 2,
     });
   });
 

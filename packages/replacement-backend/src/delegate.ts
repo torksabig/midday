@@ -14,7 +14,16 @@ import {
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  mapReplacementToCustomersGet,
+  mapReplacementToCustomerById,
+  mapReplacementToDocumentsGet,
+  mapReplacementToDocumentById,
+  mapReplacementToInvoicesGet,
+  mapReplacementToInvoiceById,
   type MiddayBankAccountsGetShape,
+  type MiddayCustomersGetShape,
+  type MiddayDocumentsGetShape,
+  type MiddayInvoicesGetShape,
   type MiddayInboxByIdShape,
   type MiddayInboxByStatusItemShape,
   type MiddayInboxCheckAttachmentsShape,
@@ -508,6 +517,179 @@ export async function fetchReplacementTransactionById(
 
   const payload = (await res.json()) as unknown;
   return mapReplacementToTransactionById(payload);
+}
+
+export type ReplacementDocumentsListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  q?: string | null;
+  tags?: string[] | null;
+  start?: string | null;
+  end?: string | null;
+};
+
+export function buildDocumentsListQuery(
+  params: ReplacementDocumentsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
+  if (params.q) search.set("q", params.q);
+  if (params.start) search.set("start", params.start);
+  if (params.end) search.set("end", params.end);
+  for (const tag of params.tags ?? []) {
+    search.append("tags", tag);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementDocumentsList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementDocumentsListQuery,
+): Promise<MiddayDocumentsGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildDocumentsListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/documents${query}`,
+    token,
+  );
+  return mapReplacementToDocumentsGet(payload);
+}
+
+export async function fetchReplacementDocumentById(
+  baseUrl: string,
+  token: string,
+  id: string,
+  filePath?: string | null,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams();
+  if (filePath) search.set("filePath", filePath);
+  const qs = search.toString();
+  const url = `${root}/api/v1/documents/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  return mapReplacementToDocumentById(await res.json());
+}
+
+export type ReplacementCustomersListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  q?: string | null;
+  sort?: string[] | null;
+};
+
+export function buildCustomersListQuery(
+  params: ReplacementCustomersListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
+  if (params.q) search.set("q", params.q);
+  for (const part of params.sort ?? []) {
+    search.append("sort", part);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementCustomersList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementCustomersListQuery,
+): Promise<MiddayCustomersGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildCustomersListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/customers${query}`,
+    token,
+  );
+  return mapReplacementToCustomersGet(payload);
+}
+
+export async function fetchReplacementCustomerById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/customers/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  return mapReplacementToCustomerById(await res.json());
+}
+
+export type ReplacementInvoicesListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  q?: string | null;
+  statuses?: string[] | null;
+  customers?: string[] | null;
+  start?: string | null;
+  end?: string | null;
+  sort?: string[] | null;
+  ids?: string[] | null;
+  recurringIds?: string[] | null;
+  recurring?: boolean | null;
+};
+
+export function buildInvoicesListQuery(
+  params: ReplacementInvoicesListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
+  if (params.q) search.set("q", params.q);
+  if (params.start) search.set("start", params.start);
+  if (params.end) search.set("end", params.end);
+  if (params.recurring != null) search.set("recurring", String(params.recurring));
+  for (const v of params.statuses ?? []) search.append("statuses", v);
+  for (const v of params.customers ?? []) search.append("customers", v);
+  for (const v of params.sort ?? []) search.append("sort", v);
+  for (const v of params.ids ?? []) search.append("ids", v);
+  for (const v of params.recurringIds ?? []) search.append("recurringIds", v);
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementInvoicesList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementInvoicesListQuery,
+): Promise<MiddayInvoicesGetShape> {
+  const root = trimBase(baseUrl);
+  const query = buildInvoicesListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/invoices${query}`,
+    token,
+  );
+  return mapReplacementToInvoicesGet(payload);
+}
+
+export async function fetchReplacementInvoiceById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/invoices/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  return mapReplacementToInvoiceById(await res.json());
 }
 
 export { shouldDelegateToReplacementBackend };

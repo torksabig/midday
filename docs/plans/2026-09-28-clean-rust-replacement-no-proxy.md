@@ -166,6 +166,9 @@ Everything else (`apps/api`, `apps/worker`, `packages/db`, `packages/replacement
 | **Data path** | Drizzle + Supabase Postgres for most domains | Rust SQLx only |
 | **UI** | Frozen by policy; workspace may diverge from Downloads baseline | Same — sync UI from Downloads; no backend-driven UI redesign |
 | **Path A (Vite clone UI)** | Documented as deferred in `path-a-decision.md` | Still deferred — clone is **API/backend**, not product shell |
+| **Documents / customers / invoices (Phase 4 read)** | **Done (read path):** `documents.get` / `getById`, `customers.get` / `getById`, `invoice.get` / `getById` → Rust Postgres routes; dual fallback, replacement fail-closed. | Delete Drizzle read paths when stable |
+
+**Delegation inventory:** live procedure table and counts in [`2026-09-28-delegation-inventory.md`](./2026-09-28-delegation-inventory.md) (20 delegated of ~256 exported procedures as of Phase 4). Strategic correction unchanged: **frozen `apps/dashboard` UI**, **`apps/api` = temporary tRPC façade only** (not a permanent Hono→Axum proxy), **`@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` = strangler glue deleted with `apps/api`**, all durable logic in **`fintech/clone` Rust**, **no Vite clone UI (Path A)**.
 
 Existing smoke assets (`scripts/smoke-replacement-delegation.sh`, `scripts/smoke-phase1-session.sh`, `GET /api/replacement/status`) remain useful until Stage 4; then remove with `replacement-backend`.
 
@@ -190,7 +193,8 @@ Inventory source: `apps/api/src/trpc/routers/_app.ts`.
 2. **Done (read path):** `transactions.getById` → `GET /api/v1/transactions/{id}`. **Phase 2d:** categories/accounts/tags/exported/fulfilled. **Phase 2e:** assignees, attachments filter, recurring, type/manual, amount/amountRange, row attachments/tags JSON, `getReviewCount` delegation.
 3. **Phase 3 inbox read:** `inbox.get` / `getById` / `search` / `getByStatus` / `checkAttachments` delegated; clone `inbox_list.rs` on Midday Postgres; smoke covers inbox routes + optional `INBOX_ITEM_ID` for detail/check-attachments.
 4. **Phase 3b overview:** `overview.summary` delegated via `overview_summary.rs`; smoke adds `GET /api/v1/overview/summary`.
-5. **Next:** documents/invoices reads; delete Drizzle inbox/overview reads when stable; parity for inbox search AI path + overview runway/FX.
+5. **Phase 4 (done):** documents + customers + invoices list/getById reads delegated; see delegation inventory doc.
+6. **Next:** `invoice.paymentStatus` / `invoiceSummary`, `documents.getRelatedDocuments`, `search.global`, `reports.*` reads; then write paths per domain.
 
 ### Inbox read matrix (`inbox.get` / `inbox.getById` → Rust)
 

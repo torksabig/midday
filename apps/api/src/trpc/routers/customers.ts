@@ -10,10 +10,16 @@ import {
   upsertCustomerSchema,
 } from "@api/schemas/customers";
 import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateCustomersGet,
+  tryDelegateCustomersGetById,
+} from "@api/services/replacement-delegation";
+import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   clearCustomerEnrichment,
   deleteCustomer,
@@ -35,7 +41,23 @@ const logger = createLoggerWithContext("trpc:customers");
 export const customersRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getCustomersSchema.optional())
-    .query(async ({ ctx: { teamId, db }, input }) => {
+    .query(async ({ ctx: { teamId, db, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomersGet(
+          {
+            cursor: input?.cursor,
+            pageSize: input?.pageSize,
+            q: input?.q,
+            sort: input?.sort,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getCustomers(db, {
         teamId: teamId!,
         ...input,
@@ -44,7 +66,18 @@ export const customersRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getCustomerByIdSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateCustomersGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.customer ?? null;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getCustomerById(db, {
         id: input.id,
         teamId: teamId!,

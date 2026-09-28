@@ -8,7 +8,13 @@ import {
   signedUrlSchema,
   signedUrlsSchema,
 } from "@api/schemas/documents";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateDocumentsGet,
+  tryDelegateDocumentsGetById,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   checkDocumentAttachments,
   deleteDocument,
@@ -26,7 +32,25 @@ import { TRPCError } from "@trpc/server";
 export const documentsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getDocumentsSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsGet(
+          {
+            cursor: input.cursor,
+            pageSize: input.pageSize,
+            q: input.q,
+            tags: input.tags,
+            start: input.start,
+            end: input.end,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getDocuments(db, {
         teamId: teamId!,
         ...input,
@@ -35,7 +59,19 @@ export const documentsRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getDocumentSchema)
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsGetById(
+          input.id,
+          input.filePath,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.document ?? null;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await getDocumentById(db, {
         id: input.id,
         filePath: input.filePath,
