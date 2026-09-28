@@ -45,6 +45,9 @@ import {
   mapReplacementToInstitution,
   mapReplacementToInstitutionUpdateUsage,
   mapReplacementToOAuthAuthorized,
+  mapReplacementToAttachments,
+  mapReplacementToAttachment,
+  mapReplacementToBankConnectionReconnect,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -160,6 +163,9 @@ export {
   mapReplacementToInstitution,
   mapReplacementToInstitutionUpdateUsage,
   mapReplacementToOAuthAuthorized,
+  mapReplacementToAttachments,
+  mapReplacementToAttachment,
+  mapReplacementToBankConnectionReconnect,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2693,6 +2699,68 @@ export async function fetchReplacementOAuthRevokeAccess(
     token,
   );
   return { success: true };
+}
+
+export type ReplacementAttachmentInput = {
+  type: string;
+  name: string;
+  size: number;
+  path: string[];
+  transactionId?: string;
+};
+
+export async function fetchReplacementAttachmentsCreateMany(
+  baseUrl: string,
+  token: string,
+  attachments: ReplacementAttachmentInput[],
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transaction-attachments`,
+    token,
+    { attachments },
+  );
+  return mapReplacementToAttachments(payload);
+}
+
+export async function fetchReplacementAttachmentDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/transaction-attachments/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToAttachment(payload);
+}
+
+export type ReplacementBankConnectionReconnectInput = {
+  referenceId: string;
+  newReferenceId: string;
+  expiresAt?: string;
+};
+
+export async function fetchReplacementBankConnectionReconnect(
+  baseUrl: string,
+  token: string,
+  input: ReplacementBankConnectionReconnectInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  try {
+    const payload = await replacementPost<unknown>(
+      `${root}/api/v1/bank-connections/reconnect`,
+      token,
+      input,
+    );
+    return mapReplacementToBankConnectionReconnect(payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("HTTP 404")) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function fetchReplacementInvoiceTemplates(

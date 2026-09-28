@@ -8,6 +8,7 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateBankConnectionsGet,
+  tryDelegateBankConnectionReconnect,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -107,7 +108,28 @@ export const bankConnectionsRouter = createTRPCRouter({
 
   reconnect: protectedProcedure
     .input(reconnectBankConnectionSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankConnectionReconnect(
+          {
+            referenceId: input.referenceId,
+            newReferenceId: input.newReferenceId,
+            expiresAt: input.expiresAt,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.result) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Bank connection not found",
+            });
+          }
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await reconnectBankConnection(db, {
         referenceId: input.referenceId,
         newReferenceId: input.newReferenceId,
