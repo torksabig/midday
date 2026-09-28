@@ -36,6 +36,8 @@ import {
   mapReplacementToInboxBlocklist,
   mapReplacementToInboxBlocklistItem,
   mapReplacementToReportCreate,
+  mapReplacementToTeamInviteMutation,
+  mapReplacementToShortLink,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -142,6 +144,8 @@ export {
   mapReplacementToInboxBlocklist,
   mapReplacementToInboxBlocklistItem,
   mapReplacementToReportCreate,
+  mapReplacementToTeamInviteMutation,
+  mapReplacementToShortLink,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2346,6 +2350,121 @@ export async function fetchReplacementReportCreate(
     input,
   );
   return mapReplacementToReportCreate(payload);
+}
+
+export async function fetchReplacementTeamAcceptInvite(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/invites/accept`,
+    token,
+    { id },
+  );
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export async function fetchReplacementTeamDeclineInvite(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/team/invites/decline`,
+    token,
+    { id },
+  );
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export async function fetchReplacementTeamDeleteInvite(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/team/invites/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) return null;
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export type ReplacementTeamMemberInput = {
+  userId: string;
+  teamId: string;
+};
+
+export async function fetchReplacementTeamDeleteMember(
+  baseUrl: string,
+  token: string,
+  input: ReplacementTeamMemberInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDeleteWithBody<unknown>(
+    `${root}/api/v1/team/members`,
+    token,
+    input,
+  );
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export type ReplacementTeamUpdateMemberInput = {
+  userId: string;
+  teamId: string;
+  role: "owner" | "member";
+};
+
+export async function fetchReplacementTeamUpdateMember(
+  baseUrl: string,
+  token: string,
+  input: ReplacementTeamUpdateMemberInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/team/members`,
+    token,
+    input,
+  );
+  return mapReplacementToTeamInviteMutation(payload);
+}
+
+export async function fetchReplacementShortLinkGet(
+  baseUrl: string,
+  shortId: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetchPublic<unknown>(
+    `${root}/api/v1/short-links/${encodeURIComponent(shortId)}`,
+  );
+  return mapReplacementToShortLink(payload);
+}
+
+export type ReplacementShortLinkCreateInput = {
+  url: string;
+  type?: string;
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  expiresAt?: string;
+};
+
+export async function fetchReplacementShortLinkCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementShortLinkCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/short-links`,
+    token,
+    input,
+  );
+  return mapReplacementToShortLink(payload);
 }
 
 export async function fetchReplacementInvoiceTemplates(

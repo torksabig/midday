@@ -1364,6 +1364,15 @@ export function mapReplacementToReportCreate(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export function mapReplacementToTeamInviteMutation(payload: unknown): unknown {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
+export function mapReplacementToShortLink(payload: unknown): unknown {
+  return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
+}
+
 export function mapReplacementToInvoiceTemplates(
   payload: unknown,
 ): unknown[] {

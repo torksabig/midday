@@ -19,6 +19,12 @@ import {
   tryDelegateTeamMembers,
   tryDelegateTeamUpdate,
   tryDelegateTeamConnectionStatus,
+  tryDelegateTeamAcceptInvite,
+  tryDelegateTeamDeclineInvite,
+  tryDelegateTeamDeleteInvite,
+  tryDelegateTeamDeleteMember,
+  tryDelegateTeamUpdateMember,
+  tryDelegateUserInvites,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -163,12 +169,23 @@ export const teamRouter = createTRPCRouter({
 
   acceptInvite: protectedProcedure
     .input(acceptTeamInviteSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
       if (!session.user.email) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Email is required to accept an invite",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamAcceptInvite(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       return acceptTeamInvite(db, {
@@ -180,7 +197,18 @@ export const teamRouter = createTRPCRouter({
 
   declineInvite: protectedProcedure
     .input(declineTeamInviteSchema)
-    .mutation(async ({ ctx: { db, session }, input }) => {
+    .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamDeclineInvite(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return declineTeamInvite(db, {
         id: input.id,
         email: session.user.email!,
@@ -257,12 +285,28 @@ export const teamRouter = createTRPCRouter({
 
   deleteMember: protectedProcedure
     .input(deleteTeamMemberSchema)
-    .mutation(async ({ ctx: { db, session, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
       if (input.teamId !== teamId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You don't have access to this team",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamDeleteMember(
+          { userId: input.userId, teamId: input.teamId },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          try {
+            await teamCache.invalidateForUser(input.userId, input.teamId);
+          } catch {
+            // Non-fatal
+          }
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const callerRole = await getTeamMemberRole(db, teamId!, session.user.id);
@@ -307,12 +351,27 @@ export const teamRouter = createTRPCRouter({
 
   updateMember: protectedProcedure
     .input(updateTeamMemberSchema)
-    .mutation(async ({ ctx: { db, session, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
       if (input.teamId !== teamId) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You don't have access to this team",
         });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamUpdateMember(
+          {
+            userId: input.userId,
+            teamId: input.teamId,
+            role: input.role,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const callerRole = await getTeamMemberRole(db, teamId!, session.user.id);
@@ -358,7 +417,15 @@ export const teamRouter = createTRPCRouter({
     return getTeamInvites(db, teamId!);
   }),
 
-  invitesByEmail: protectedProcedure.query(async ({ ctx: { db, session } }) => {
+  invitesByEmail: protectedProcedure.query(async ({ ctx: { db, session, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateUserInvites(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getInvitesByEmail(db, session.user.email!);
   }),
 
@@ -423,7 +490,18 @@ export const teamRouter = createTRPCRouter({
 
   deleteInvite: protectedProcedure
     .input(deleteTeamInviteSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTeamDeleteInvite(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return deleteTeamInvite(db, {
         teamId: teamId!,
         id: input.id,

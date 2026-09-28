@@ -4,6 +4,11 @@ import {
   getShortLinkSchema,
 } from "@api/schemas/short-links";
 import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateShortLinkGet,
+  tryDelegateShortLinkCreate,
+} from "@api/services/replacement-delegation";
+import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
@@ -13,12 +18,28 @@ import {
   getDocumentById,
   getShortLinkByShortId,
 } from "@midday/db/queries";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { signedUrl } from "@midday/supabase/storage";
 
 export const shortLinksRouter = createTRPCRouter({
   createForUrl: protectedProcedure
     .input(createShortLinkSchema)
-    .mutation(async ({ ctx: { db, teamId, session }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateShortLinkCreate(
+          { url: input.url, type: "redirect" },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const result = delegated.link as { shortId?: string };
+          return {
+            ...result,
+            shortUrl: `${process.env.MIDDAY_DASHBOARD_URL}/s/${result?.shortId}`,
+          };
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await createShortLink(db, {
         url: input.url,
         teamId: teamId!,
@@ -93,6 +114,14 @@ export const shortLinksRouter = createTRPCRouter({
   get: publicProcedure
     .input(getShortLinkSchema)
     .query(async ({ ctx: { db }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateShortLinkGet(input.shortId);
+        if (delegated !== null) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getShortLinkByShortId(db, input.shortId);
     }),
 });
