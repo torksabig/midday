@@ -25,6 +25,7 @@ import {
   tryDelegateInvoicePaymentStatus,
   tryDelegateInvoiceSummary,
   tryDelegateInvoiceGetByToken,
+  tryDelegateInvoiceUpdate,
   tryDelegateMostActiveClient,
   tryDelegateInactiveClientsCount,
   tryDelegateAverageDaysToPayment,
@@ -490,7 +491,15 @@ export const invoiceRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceUpdate(input, accessToken);
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateInvoice(db, {
         ...input,
         teamId: teamId!,

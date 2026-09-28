@@ -75,6 +75,7 @@ export {
   fetchReplacementTransactionsUpdateMany,
   fetchReplacementNotificationsList,
   fetchReplacementInboxUpdate,
+  fetchReplacementInvoiceUpdate,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,
@@ -186,6 +187,7 @@ export {
   type ReplacementTeamCurrentPayload,
   type ReplacementTransactionsListQuery,
   type ReplacementTransactionUpdateInput,
+  type ReplacementInvoiceUpdateInput,
   type ReplacementNotificationsListQuery,
 } from "./delegate";
 export {

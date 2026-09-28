@@ -1703,6 +1703,29 @@ export async function fetchReplacementInboxUpdate(
   return mapReplacementToInboxById(payload);
 }
 
+export type ReplacementInvoiceUpdateInput = Record<string, unknown> & {
+  id: string;
+};
+
+export async function fetchReplacementInvoiceUpdate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInvoiceUpdateInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const { id } = input;
+  const body = buildReplacementTransactionUpdateBody(input);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/invoices/${encodeURIComponent(id)}`,
+    token,
+    body,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToInvoiceById(payload);
+}
+
 export async function fetchReplacementTeamMembers(
   baseUrl: string,
   token: string,

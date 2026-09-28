@@ -43,6 +43,7 @@ import {
   fetchReplacementTransactionsUpdateMany,
   fetchReplacementNotificationsList,
   fetchReplacementInboxUpdate,
+  fetchReplacementInvoiceUpdate,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,
@@ -89,6 +90,7 @@ import {
   type ReplacementTaxSummaryQuery,
   type ReplacementTransactionsListQuery,
   type ReplacementTransactionUpdateInput,
+  type ReplacementInvoiceUpdateInput,
   type ReplacementTrackerProjectsListQuery,
   type ReplacementTrackerEntriesByRangeQuery,
   type ReplacementTrackerBillableHoursQuery,
@@ -1565,6 +1567,51 @@ export async function tryDelegateInboxUpdate(
       body,
     );
     return { delegated: true, item };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export type DelegateInvoiceUpdateResult =
+  | { delegated: false }
+  | { delegated: true; invoice: unknown | null };
+
+export async function tryDelegateInvoiceUpdate(
+  input: ReplacementInvoiceUpdateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceUpdateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const invoice = await fetchReplacementInvoiceUpdate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, invoice };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

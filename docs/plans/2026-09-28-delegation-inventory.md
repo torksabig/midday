@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **63 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~24.6%). **3** write procedures delegate (`transactions.update`, `transactions.updateMany`, `inbox.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **63 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~24.6%). **4** write procedures delegate (`transactions.update`, `transactions.updateMany`, `inbox.update`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -63,7 +63,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.averageInvoiceSize` | yes | read · 30d by currency (Phase 10) |
 | `invoice.topRevenueClient` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.newCustomersCount` | yes | read · 30d dashboard metric (Phase 10) |
-| `invoice.*` (other) | no | mutations |
+| `invoice.update` | yes | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); no activity feed for paid/canceled |
+| `invoice.*` (other) | no | draft create, delete, schedule, etc. |
 | `trackerProjects.get` | yes | read · list (Phase 6 slice 1) |
 | `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
 | `trackerProjects.*` (other) | no | CRUD |
@@ -95,7 +96,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.*` (other) | no | CRUD |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -154,7 +155,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Phase 11:** `tags.get`, `bankAccounts.getTransactionCount`; **first write** `transactions.update`.
 
-**Autopilot AP-12–13:** `notifications.list`; writes `transactions.updateMany`, `inbox.update`; team reads `members`, `list`, `teamInvites`.
+**Autopilot AP-12–14:** `notifications.list`; writes `transactions.updateMany`, `inbox.update`, `invoice.update`; team reads `members`, `list`, `teamInvites`.
 
 ### `transactions.update` write parity (Phase 11 — first delegated mutation)
 
@@ -181,6 +182,14 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | status / displayName / amount / currency | Yes | Same |
 | `status: deleted` attachment cleanup | **No** | Yes |
 
+### `invoice.update` write parity (AP-14)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| status / paidAt / internalNote / scheduledAt | Yes · partial PUT | Same |
+| Activity feed (`invoice_paid` / `invoice_cancelled`) | **No** | Yes · `logActivity` when status paid/canceled |
+| Full draft field update | **No** · out of scope | Yes via draft mutation |
+
 ## Autopilot queue
 
 Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
@@ -191,7 +200,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-12b | DONE | `transactions.updateMany` | write |
 | AP-12c | DONE | `inbox.update` (partial PUT) | write |
 | AP-13 | DONE | `team.members`, `team.list`, `team.teamInvites` | read |
-| AP-14 | PENDING | One invoice write (draft create or update) | write |
+| AP-14 | DONE | `invoice.update` (status/paidAt/internalNote/scheduledAt) | write |
 | AP-15 | BLOCKED | `bankAccounts.getDetails` — needs safe decrypt path | read |
 | AP-16 | PENDING | OAuth / connection reads from inventory gaps | read |
 | AP-17 | PENDING | `transactions.create` or `transactions.delete` (one) | write |
@@ -201,4 +210,4 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** AP-14 (one invoice write).
+**Next slice:** AP-16 (OAuth / connection reads; AP-15 blocked).
