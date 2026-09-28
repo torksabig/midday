@@ -14,6 +14,9 @@ import {
 import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTeamCurrent,
+  tryDelegateTeamInvites,
+  tryDelegateTeamList,
+  tryDelegateTeamMembers,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -72,11 +75,27 @@ export const teamRouter = createTRPCRouter({
       });
     }),
 
-  members: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  members: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateTeamMembers(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getTeamMembersByTeamId(db, teamId!);
   }),
 
-  list: protectedProcedure.query(async ({ ctx: { db, session } }) => {
+  list: protectedProcedure.query(async ({ ctx: { db, session, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateTeamList(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getTeamsByUserId(db, session.user.id);
   }),
 
@@ -317,7 +336,15 @@ export const teamRouter = createTRPCRouter({
       return updateTeamMember(db, input);
     }),
 
-  teamInvites: protectedProcedure.query(async ({ ctx: { db, teamId } }) => {
+  teamInvites: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateTeamInvites(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
+
     return getTeamInvites(db, teamId!);
   }),
 

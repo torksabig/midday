@@ -3,7 +3,12 @@ import {
   updateAllNotificationsStatusSchema,
   updateNotificationStatusSchema,
 } from "@api/schemas/notifications";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateNotificationsList,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   getActivities,
   updateActivityStatus,
@@ -13,7 +18,25 @@ import {
 export const notificationsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(getNotificationsSchema.optional())
-    .query(async ({ ctx: { teamId, db, session }, input }) => {
+    .query(async ({ ctx: { teamId, db, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateNotificationsList(
+          {
+            cursor: input?.cursor,
+            pageSize: input?.pageSize,
+            status: input?.status,
+            userId: session.user.id,
+            priority: input?.priority,
+            maxPriority: input?.maxPriority,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getActivities(db, {
         teamId: teamId!,
         userId: session.user.id,

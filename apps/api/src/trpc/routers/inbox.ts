@@ -24,6 +24,7 @@ import {
   tryDelegateInboxGetById,
   tryDelegateInboxGetByStatus,
   tryDelegateInboxSearch,
+  tryDelegateInboxUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -261,7 +262,16 @@ export const inboxRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateInboxSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      const { id, ...fields } = input;
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxUpdate(id, fields, accessToken);
+        if (delegated.delegated) {
+          return delegated.item;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return updateInbox(db, { ...input, teamId: teamId! });
     }),
 

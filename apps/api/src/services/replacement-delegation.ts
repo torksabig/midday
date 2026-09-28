@@ -40,6 +40,13 @@ import {
   fetchReplacementTags,
   fetchReplacementBankAccountTransactionCount,
   fetchReplacementTransactionUpdate,
+  fetchReplacementTransactionsUpdateMany,
+  fetchReplacementNotificationsList,
+  fetchReplacementInboxUpdate,
+  fetchReplacementTeamMembers,
+  fetchReplacementTeamList,
+  fetchReplacementTeamInvites,
+  type ReplacementNotificationsListQuery,
   fetchReplacementMostActiveClient,
   fetchReplacementInactiveClientsCount,
   fetchReplacementAverageDaysToPayment,
@@ -1502,5 +1509,94 @@ export async function tryDelegateNewCustomersCount(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementNewCustomersCount(baseUrl, token),
+  );
+}
+
+export async function tryDelegateNotificationsList(
+  input: ReplacementNotificationsListQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementNotificationsList(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTransactionsUpdateMany(
+  input: Record<string, unknown>,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTransactionsUpdateMany(baseUrl, token, input),
+  );
+}
+
+export type DelegateInboxUpdateResult =
+  | { delegated: false }
+  | { delegated: true; item: MiddayInboxByIdShape | null };
+
+export async function tryDelegateInboxUpdate(
+  id: string,
+  body: Record<string, unknown>,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInboxUpdateResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const item = await fetchReplacementInboxUpdate(
+      getReplacementApiUrl(),
+      token,
+      id,
+      body,
+    );
+    return { delegated: true, item };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateTeamMembers(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTeamMembers(baseUrl, token),
+  );
+}
+
+export async function tryDelegateTeamList(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTeamList(baseUrl, token),
+  );
+}
+
+export async function tryDelegateTeamInvites(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTeamInvites(baseUrl, token),
   );
 }

@@ -30,6 +30,7 @@ export {
   buildGlobalSearchQuery,
   buildInboxSearchQuery,
   buildTransactionsListQuery,
+  buildNotificationsListQuery,
   fetchReplacementRelatedDocuments,
   fetchReplacementReportsAccountBalances,
   fetchReplacementReportsBurnRate,
@@ -71,6 +72,12 @@ export {
   fetchReplacementTags,
   fetchReplacementBankAccountTransactionCount,
   fetchReplacementTransactionUpdate,
+  fetchReplacementTransactionsUpdateMany,
+  fetchReplacementNotificationsList,
+  fetchReplacementInboxUpdate,
+  fetchReplacementTeamMembers,
+  fetchReplacementTeamList,
+  fetchReplacementTeamInvites,
   fetchReplacementMostActiveClient,
   fetchReplacementInactiveClientsCount,
   fetchReplacementAverageDaysToPayment,
@@ -179,7 +186,13 @@ export {
   type ReplacementTeamCurrentPayload,
   type ReplacementTransactionsListQuery,
   type ReplacementTransactionUpdateInput,
+  type ReplacementNotificationsListQuery,
 } from "./delegate";
+export {
+  type MiddayNotificationsListShape,
+  mapReplacementToNotificationsList,
+  mapReplacementToTransactionsUpdateMany,
+} from "./mappers";
 export {
   replacementInboxDetailSchema,
   replacementInboxListSchema,

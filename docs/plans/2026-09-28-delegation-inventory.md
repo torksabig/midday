@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **59 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~23.0%). **1** write procedure delegates (`transactions.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **63 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~24.6%). **3** write procedures delegate (`transactions.update`, `transactions.updateMany`, `inbox.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -14,7 +14,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `user.delete` | no | write |
 | `user.invites` | yes | read · pending team invites by email (Phase 10) |
 | `team.current` | yes | read · identity |
-| `team.*` (other) | no | writes / team admin reads |
+| `team.members` | yes | read · AP-13 |
+| `team.list` | yes | read · AP-13 |
+| `team.teamInvites` | yes | read · AP-13 |
+| `team.*` (other) | no | writes / admin reads |
+| `notifications.list` | yes | read · activities feed (AP-12) |
+| `notifications.*` (other) | no | updateStatus, updateAllStatus writes |
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
@@ -28,13 +33,15 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.getById` | yes | read |
 | `transactions.getReviewCount` | yes | read |
 | `transactions.update` | yes | **write** · partial PATCH-style PUT on Midday Postgres; clears tax on category change; drops `accounting_sync_records` when un-exporting (Phase 11 **first write**) |
-| `transactions.*` (other) | no | updateMany, export, import, AI CSV |
+| `transactions.updateMany` | yes | **write** · bulk PATCH + tag insert + sync record delete (AP-12b); no bulk activity feed |
+| `transactions.*` (other) | no | export, import, AI CSV |
 | `inbox.get` | yes | read · list |
 | `inbox.getById` | yes | read |
 | `inbox.checkAttachments` | yes | read |
 | `inbox.search` | yes | read |
 | `inbox.getByStatus` | yes | read |
-| `inbox.*` (other) | no | mutations, blocklist sub-router |
+| `inbox.update` | yes | **write** · partial PUT (AP-12c); `status: deleted` not on Rust path |
+| `inbox.*` (other) | no | match/unmatch, blocklist, delete |
 | `overview.summary` | yes | read · dashboard home |
 | `documents.get` | yes | read · list (Phase 4) |
 | `documents.getById` | yes | read (Phase 4) |
@@ -86,9 +93,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.create` | no | write |
 | `tags.get` | yes | read · transaction tag list (Phase 11) |
 | `tags.*` (other) | no | CRUD |
-| All other routers | no | notifications, oauth, banking adapters, etc. |
+| All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id`, `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -143,9 +150,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Phase 9:** Tracker byDate, getById, timer reads; accounting sync status + connections list.
 
-**Phase 10:** `user.invites`, `bankAccounts.balances`/`currencies`, `documentTags.get`, invoice dashboard metric reads (`mostActiveClient`, `inactiveClientsCount`, `averageDaysToPayment`, `averageInvoiceSize`, `topRevenueClient`, `newCustomersCount`).
+**Phase 10:** `user.invites`, `bankAccounts.balances`/`currencies`, `documentTags.get`, invoice dashboard metric reads.
 
-**Phase 11:** `tags.get`, `bankAccounts.getTransactionCount`; **first write** `transactions.update` (Rust partial UPDATE + tRPC delegation with dual Drizzle fallback).
+**Phase 11:** `tags.get`, `bankAccounts.getTransactionCount`; **first write** `transactions.update`.
+
+**Autopilot AP-12–13:** `notifications.list`; writes `transactions.updateMany`, `inbox.update`; team reads `members`, `list`, `teamInvites`.
 
 ### `transactions.update` write parity (Phase 11 — first delegated mutation)
 
@@ -157,16 +166,31 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Activity feed (`transactions_categorized` / `_assigned`) | **No** | Yes · `createActivity` |
 | Return shape | Yes · full tx + suggestion via GET SQL | `getTransactionById` |
 
+### `transactions.updateMany` write parity (AP-12b)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| Bulk field update + tag insert | Yes · core fields | Same |
+| Sync record delete on un-export | Yes | Same |
+| Bulk activity feed | **No** | Yes |
+
+### `inbox.update` write parity (AP-12c)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| status / displayName / amount / currency | Yes | Same |
+| `status: deleted` attachment cleanup | **No** | Yes |
+
 ## Autopilot queue
 
 Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
 
 | ID | Status | Scope | Type |
 |----|--------|--------|------|
-| AP-12 | PENDING | `notifications.*` list/read procedures | read |
-| AP-12b | PENDING | `transactions.updateMany` | write |
-| AP-12c | PENDING | One inbox write (`update` or ignore — smallest) | write |
-| AP-13 | PENDING | `team.*` / `user.*` settings reads not in table as `yes` | read |
+| AP-12 | DONE | `notifications.list` | read |
+| AP-12b | DONE | `transactions.updateMany` | write |
+| AP-12c | DONE | `inbox.update` (partial PUT) | write |
+| AP-13 | DONE | `team.members`, `team.list`, `team.teamInvites` | read |
 | AP-14 | PENDING | One invoice write (draft create or update) | write |
 | AP-15 | BLOCKED | `bankAccounts.getDetails` — needs safe decrypt path | read |
 | AP-16 | PENDING | OAuth / connection reads from inventory gaps | read |
@@ -177,4 +201,4 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Legacy note (Phase 12):** same as AP-12…AP-12c rows above.
+**Next slice:** AP-14 (one invoice write).

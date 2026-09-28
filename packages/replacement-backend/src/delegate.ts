@@ -46,7 +46,10 @@ import {
   mapReplacementToCountMetric,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
+  mapReplacementToNotificationsList,
+  mapReplacementToTransactionsUpdateMany,
   type MiddayAccountingConnectionShape,
+  type MiddayNotificationsListShape,
   type MiddayBankAccountsGetShape,
   type MiddayRelatedDocumentShape,
   type MiddayCustomersGetShape,
@@ -112,7 +115,10 @@ export {
   mapReplacementToCountMetric,
   mapReplacementToAverageInvoiceSize,
   mapReplacementToTopRevenueClient,
+  mapReplacementToNotificationsList,
+  mapReplacementToTransactionsUpdateMany,
   type MiddayBankAccountsGetShape,
+  type MiddayNotificationsListShape,
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayGlobalSearchRowShape,
@@ -151,6 +157,29 @@ async function replacementFetch<T>(
 ): Promise<T> {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!res.ok) {
+    throw new Error(`replacement API ${url} HTTP ${res.status}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function replacementPost<T>(
+  url: string,
+  token: string,
+  body: unknown,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -1577,6 +1606,125 @@ export async function fetchReplacementNewCustomersCount(
     token,
   );
   return mapReplacementToCountMetric(payload);
+}
+
+export type ReplacementNotificationsListQuery = {
+  cursor?: string | null;
+  pageSize?: number;
+  status?:
+    | "unread"
+    | "read"
+    | "archived"
+    | Array<"unread" | "read" | "archived">
+    | null;
+  userId?: string | null;
+  priority?: number | null;
+  maxPriority?: number | null;
+  createdAfter?: string | null;
+};
+
+export function buildNotificationsListQuery(
+  params: ReplacementNotificationsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) {
+    search.set("cursor", params.cursor);
+  }
+  if (params.pageSize != null) {
+    search.set("pageSize", String(params.pageSize));
+  }
+  if (params.status) {
+    const statuses = Array.isArray(params.status)
+      ? params.status
+      : [params.status];
+    for (const s of statuses) {
+      search.append("status", s);
+    }
+  }
+  if (params.userId) {
+    search.set("userId", params.userId);
+  }
+  if (params.priority != null) {
+    search.set("priority", String(params.priority));
+  }
+  if (params.maxPriority != null) {
+    search.set("maxPriority", String(params.maxPriority));
+  }
+  if (params.createdAfter) {
+    search.set("createdAfter", params.createdAfter);
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementNotificationsList(
+  baseUrl: string,
+  token: string,
+  params: ReplacementNotificationsListQuery,
+): Promise<MiddayNotificationsListShape> {
+  const root = trimBase(baseUrl);
+  const query = buildNotificationsListQuery(params);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/notifications${query}`,
+    token,
+  );
+  return mapReplacementToNotificationsList(payload);
+}
+
+export async function fetchReplacementTransactionsUpdateMany(
+  baseUrl: string,
+  token: string,
+  input: Record<string, unknown>,
+): Promise<MiddayTransactionByIdShape[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transactions/update-many`,
+    token,
+    input,
+  );
+  return mapReplacementToTransactionsUpdateMany(payload);
+}
+
+export async function fetchReplacementInboxUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  body: Record<string, unknown>,
+): Promise<MiddayInboxByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/inbox/${encodeURIComponent(id)}`,
+    token,
+    body,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToInboxById(payload);
+}
+
+export async function fetchReplacementTeamMembers(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  return replacementFetch<unknown[]>(`${root}/api/v1/team/members`, token);
+}
+
+export async function fetchReplacementTeamList(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  return replacementFetch<unknown[]>(`${root}/api/v1/team/list`, token);
+}
+
+export async function fetchReplacementTeamInvites(
+  baseUrl: string,
+  token: string,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  return replacementFetch<unknown[]>(`${root}/api/v1/team/invites`, token);
 }
 
 export async function fetchReplacementInvoicePublicById(

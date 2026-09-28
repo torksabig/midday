@@ -1573,6 +1573,85 @@ export function mapReplacementToTagsGet(payload: unknown): unknown[] {
   return z.array(replacementTransactionTagSchema).parse(payload);
 }
 
+const replacementNotificationRowSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  team_id: z.string(),
+  user_id: z.string().nullable().optional(),
+  type: z.string(),
+  priority: z.number(),
+  group_id: z.string().nullable().optional(),
+  source: z.enum(["system", "user"]),
+  metadata: z.record(z.string(), z.any()),
+  status: z.enum(["unread", "read", "archived"]),
+  last_used_at: z.string().nullable().optional(),
+});
+
+const replacementNotificationsListSchema = z.object({
+  meta: z.object({
+    cursor: z.string().nullable(),
+    has_previous_page: z.boolean(),
+    has_next_page: z.boolean(),
+  }),
+  data: z.array(replacementNotificationRowSchema),
+});
+
+export type MiddayNotificationsListShape = {
+  meta: {
+    cursor?: string | null;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+  data: Array<{
+    id: string;
+    createdAt: string;
+    teamId: string;
+    userId: string | null;
+    type: string;
+    priority: number;
+    groupId: string | null;
+    source: "system" | "user";
+    metadata: Record<string, unknown>;
+    status: "unread" | "read" | "archived";
+    lastUsedAt: string | null;
+  }>;
+};
+
+export function mapReplacementToNotificationsList(
+  payload: unknown,
+): MiddayNotificationsListShape {
+  const parsed = replacementNotificationsListSchema.parse(payload);
+  return {
+    meta: {
+      cursor: parsed.meta.cursor,
+      hasPreviousPage: parsed.meta.has_previous_page,
+      hasNextPage: parsed.meta.has_next_page,
+    },
+    data: parsed.data.map((row) => ({
+      id: row.id,
+      createdAt: row.created_at,
+      teamId: row.team_id,
+      userId: row.user_id ?? null,
+      type: row.type,
+      priority: row.priority,
+      groupId: row.group_id ?? null,
+      source: row.source,
+      metadata: row.metadata,
+      status: row.status,
+      lastUsedAt: row.last_used_at ?? null,
+    })),
+  };
+}
+
+export function mapReplacementToTransactionsUpdateMany(
+  payload: unknown,
+): MiddayTransactionByIdShape[] {
+  return z
+    .array(replacementTransactionDetailSchema)
+    .parse(payload)
+    .map((row) => mapReplacementToTransactionById(row));
+}
+
 const replacementBankAccountTransactionCountSchema = z.object({
   count: z.number(),
 });
