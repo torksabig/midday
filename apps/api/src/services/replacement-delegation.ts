@@ -48,6 +48,9 @@ import {
   fetchReplacementOAuthApplicationsList,
   fetchReplacementInboxAccountsGet,
   fetchReplacementTransactionsDeleteMany,
+  fetchReplacementInboxMatch,
+  fetchReplacementInboxDelete,
+  fetchReplacementInboxDeleteMany,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,
@@ -1682,5 +1685,70 @@ export async function tryDelegateTransactionsDeleteMany(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementTransactionsDeleteMany(baseUrl, token, ids),
+  );
+}
+
+export type DelegateInboxMatchResult =
+  | { delegated: false }
+  | { delegated: true; item: MiddayInboxByIdShape | null };
+
+export async function tryDelegateInboxMatch(
+  id: string,
+  transactionId: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInboxMatchResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const item = await fetchReplacementInboxMatch(
+      getReplacementApiUrl(),
+      token,
+      id,
+      transactionId,
+    );
+    return { delegated: true, item };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInboxDelete(
+  id: string,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInboxDelete(baseUrl, token, id),
+  );
+}
+
+export async function tryDelegateInboxDeleteMany(
+  ids: string[],
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInboxDeleteMany(baseUrl, token, ids),
   );
 }

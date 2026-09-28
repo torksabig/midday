@@ -4,7 +4,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **5** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
+**Counts:** **66 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~25.8%). **8** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `invoice.update`). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
@@ -48,7 +48,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inbox.search` | yes | read |
 | `inbox.getByStatus` | yes | read |
 | `inbox.update` | yes | **write** · partial PUT (AP-12c); `status: deleted` not on Rust path |
-| `inbox.*` (other) | no | match/unmatch, blocklist, delete |
+| `inbox.matchTransaction` | yes | **write** · single-item match + attachment (AP-18); no grouped-inbox siblings |
+| `inbox.delete` | yes | **write** · soft-delete + attachment/suggestion cleanup (AP-18); storage remove stays in API |
+| `inbox.deleteMany` | yes | **write** · batch soft-delete (AP-18) |
+| `inbox.*` (other) | no | unmatch, confirm/decline, blocklist, create |
 | `overview.summary` | yes | read · dashboard home |
 | `documents.get` | yes | read · list (Phase 4) |
 | `documents.getById` | yes | read (Phase 4) |
@@ -103,7 +106,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.*` (other) | no | CRUD |
 | All other routers | no | oauth, banking adapters, notification writes, etc. |
 
-**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
+**Rust routes used:** `/api/v1/auth/me`, `/team/current`, `/team/members`, `/team/list`, `/team/invites`, `/notifications`, `/user/invites`, `/bank-accounts`, `/bank-accounts/balances`, `/bank-accounts/currencies`, `/bank-accounts/:id/transaction-count`, `/bank-connections`, `/apps`, `/oauth-applications`, `/inbox-accounts`, `/document-tags`, `/tags`, `/categories`, `/transactions`, `/transactions/update-many`, `/transactions/delete-many`, `/transactions/review-count`, `/transactions/:id` (GET + **PUT**), `/inbox*`, `/inbox/:id` (**PUT**), `/inbox/:id/match`, `/inbox/:id/ignore`, `/inbox/:id/delete`, `/inbox/delete-many`, `/overview/summary`, `/documents`, `/documents/:id`, `/documents/:id/related`, `/customers`, `/customers/:id`, `/invoices`, `/invoices/:id` (GET + **PUT**), `/invoices/public/:id`, `/invoices/payment-status`, `/invoices/summary`, `/invoices/metrics/*`, `/tracker/projects`, `/tracker/projects/:id`, `/tracker/entries/by-date`, `/tracker/entries/by-range`, `/tracker/timer/current`, `/tracker/timer/status`, `/tracker/billable-hours`, `/accounting/sync-status`, `/accounting/connections`, `/search/global`, `/search/attachments`, `/reports/*`.
 
 ### `search.global` parity (Rust vs Drizzle façade)
 
@@ -204,6 +207,16 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | Delete manual txs by id list | Yes · `manual = true` filter | Same |
 | Non-manual / bank-synced rows | Skipped (0 rows) | Same |
 
+### Inbox mutations parity (AP-18)
+
+| Concern | Rust | Legacy Drizzle |
+| --- | --- | --- |
+| `matchTransaction` single item + attachment + tax | Yes | Same + grouped siblings |
+| Grouped inbox sibling match | **No** | Yes |
+| `delete` / `deleteMany` soft-delete + DB cleanup | Yes | Same |
+| Storage vault file remove | API façade after delegate | Same |
+| `ignore` (`POST /inbox/:id/ignore`) | Yes · sets `done` + clears suggestions | No tRPC; SQLite stub had `ignored` |
+
 ## Autopilot queue
 
 Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + reason), update counts above, commit, push `torksabig`.
@@ -218,12 +231,12 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-15 | BLOCKED | `bankAccounts.getDetails` — needs safe decrypt path | read |
 | AP-16 | DONE | `apps.get`, `oauthApplications.list`, `inboxAccounts.get` | read |
 | AP-17 | DONE | `transactions.deleteMany` (manual only) | write |
-| AP-18 | PENDING | Inbox mutations batch | write |
+| AP-18 | DONE | Inbox match + delete(+many); ignore→done (Rust) | write |
 | AP-19 | PENDING | Parity: FTS `q`, tx update activity feed | parity |
 | AP-20 | PENDING | Delete Drizzle for routers at 100% delegation | delete |
 | AP-STAGE3 | PENDING | Rust job consumers (replace Node producers) | infra |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** AP-18 (inbox mutations batch: match, ignore, delete).
+**Next slice:** AP-19 (parity: FTS `q` and/or tx update activity feed).
 
-**Autopilot AP-12–17:** reads through AP-16; writes include `transactions.deleteMany` (AP-17).
+**Autopilot AP-12–18:** through inbox match/delete batch.

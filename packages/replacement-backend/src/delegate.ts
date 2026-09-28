@@ -1790,6 +1790,71 @@ export async function fetchReplacementTransactionsDeleteMany(
   });
 }
 
+export async function fetchReplacementInboxMatch(
+  baseUrl: string,
+  token: string,
+  id: string,
+  transactionId: string,
+): Promise<MiddayInboxByIdShape | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/${encodeURIComponent(id)}/match`,
+    token,
+    { transactionId },
+  );
+  if (payload == null) return null;
+  return mapReplacementToInboxById(payload);
+}
+
+export async function fetchReplacementInboxDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{ id: string; filePath: string[] | null } | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/${encodeURIComponent(id)}/delete`,
+    token,
+    {},
+  );
+  if (payload == null) return null;
+  const row = payload as { id?: string; filePath?: string[] | null; file_path?: string[] | null };
+  if (typeof row.id !== "string") {
+    throw new Error("replacement inbox delete: invalid payload");
+  }
+  return {
+    id: row.id,
+    filePath: row.filePath ?? row.file_path ?? null,
+  };
+}
+
+export async function fetchReplacementInboxDeleteMany(
+  baseUrl: string,
+  token: string,
+  ids: string[],
+): Promise<Array<{ id: string; filePath: string[] | null }>> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/inbox/delete-many`,
+    token,
+    ids,
+  );
+  if (!Array.isArray(payload)) {
+    throw new Error("replacement inbox delete-many: expected array");
+  }
+  return payload.map((item) => {
+    const row = item as {
+      id?: string;
+      filePath?: string[] | null;
+      file_path?: string[] | null;
+    };
+    if (typeof row.id !== "string") {
+      throw new Error("replacement inbox delete-many: invalid row");
+    }
+    return { id: row.id, filePath: row.filePath ?? row.file_path ?? null };
+  });
+}
+
 export async function fetchReplacementTeamMembers(
   baseUrl: string,
   token: string,

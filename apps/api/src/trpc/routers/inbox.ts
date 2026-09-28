@@ -25,6 +25,9 @@ import {
   tryDelegateInboxGetByStatus,
   tryDelegateInboxSearch,
   tryDelegateInboxUpdate,
+  tryDelegateInboxMatch,
+  tryDelegateInboxDelete,
+  tryDelegateInboxDeleteMany,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -118,14 +121,28 @@ export const inboxRouter = createTRPCRouter({
 
   delete: protectedProcedure
     .input(deleteInboxSchema)
-    .mutation(async ({ ctx: { db, supabase, teamId }, input }) => {
-      // Delete inbox item and get filePath for storage cleanup
-      const result = await deleteInbox(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+    .mutation(async ({ ctx: { db, supabase, teamId, accessToken }, input }) => {
+      let result: Awaited<ReturnType<typeof deleteInbox>> | {
+        id: string;
+        filePath: string[] | null;
+      } | null = null;
 
-      // Delete file from storage if filePath exists
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxDelete(input.id, accessToken);
+        if (delegated) {
+          result = delegated;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!result) {
+        result = await deleteInbox(db, {
+          id: input.id,
+          teamId: teamId!,
+        });
+      }
+
       if (result?.filePath && result.filePath.length > 0) {
         try {
           await remove(supabase, {
@@ -133,7 +150,6 @@ export const inboxRouter = createTRPCRouter({
             path: result.filePath,
           });
         } catch (error) {
-          // Log error but don't fail the deletion if file doesn't exist in storage
           logger.error("Failed to delete file from storage", {
             error: error instanceof Error ? error.message : String(error),
           });
@@ -143,14 +159,26 @@ export const inboxRouter = createTRPCRouter({
 
   deleteMany: protectedProcedure
     .input(deleteInboxManySchema)
-    .mutation(async ({ ctx: { db, supabase, teamId }, input }) => {
-      // Delete inbox items and get filePaths for storage cleanup
-      const results = await deleteInboxMany(db, {
-        ids: input,
-        teamId: teamId!,
-      });
+    .mutation(async ({ ctx: { db, supabase, teamId, accessToken }, input }) => {
+      let results: Array<{ id: string; filePath: string[] | null }> | null =
+        null;
 
-      // Delete files from storage and embeddings
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxDeleteMany(input, accessToken);
+        if (delegated) {
+          results = delegated;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+        }
+      }
+
+      if (!results) {
+        results = await deleteInboxMany(db, {
+          ids: input,
+          teamId: teamId!,
+        });
+      }
+
       await Promise.all(
         results
           .filter((result) => result?.filePath && result.filePath.length > 0)
@@ -277,7 +305,19 @@ export const inboxRouter = createTRPCRouter({
 
   matchTransaction: protectedProcedure
     .input(matchTransactionSchema)
-    .mutation(async ({ ctx: { db, teamId }, input }) => {
+    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInboxMatch(
+          input.id,
+          input.transactionId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.item;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return matchTransaction(db, { ...input, teamId: teamId! });
     }),
 
