@@ -67,6 +67,10 @@ export const transactionsRouter = createTRPCRouter({
             cursor: input.cursor,
             pageSize: input.pageSize,
             q: input.q,
+            sort: input.sort,
+            statuses: input.statuses,
+            start: input.start,
+            end: input.end,
           },
           accessToken,
         );

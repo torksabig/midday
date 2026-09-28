@@ -13,6 +13,7 @@ export {
   type ReplacementHealthResult,
 } from "./client";
 export {
+  buildTransactionsListQuery,
   fetchReplacementAuthMePayload,
   fetchReplacementTeamCurrent,
   fetchReplacementTransactionById,

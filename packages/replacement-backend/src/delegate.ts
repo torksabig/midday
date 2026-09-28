@@ -119,9 +119,14 @@ export type ReplacementTransactionsListQuery = {
   cursor?: string | null;
   pageSize?: number;
   q?: string | null;
+  sort?: string[] | null;
+  statuses?: string[] | null;
+  start?: string | null;
+  end?: string | null;
 };
 
-function buildTransactionsListQuery(
+/** Encodes list query params for GET /api/v1/transactions (exported for tests). */
+export function buildTransactionsListQuery(
   params: ReplacementTransactionsListQuery,
 ): string {
   const search = new URLSearchParams();
@@ -133,6 +138,22 @@ function buildTransactionsListQuery(
   }
   if (params.q) {
     search.set("q", params.q);
+  }
+  if (params.start) {
+    search.set("start", params.start);
+  }
+  if (params.end) {
+    search.set("end", params.end);
+  }
+  for (const part of params.sort ?? []) {
+    if (part) {
+      search.append("sort", part);
+    }
+  }
+  for (const status of params.statuses ?? []) {
+    if (status) {
+      search.append("statuses", status);
+    }
   }
   const qs = search.toString();
   return qs ? `?${qs}` : "";

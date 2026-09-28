@@ -1,10 +1,32 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { resolveReplacementBearerToken } from "./delegate";
+import {
+  buildTransactionsListQuery,
+  resolveReplacementBearerToken,
+} from "./delegate";
 
 const env = process.env;
 
 afterEach(() => {
   process.env = { ...env };
+});
+
+describe("buildTransactionsListQuery", () => {
+  test("encodes sort and statuses as repeated query keys", () => {
+    const qs = buildTransactionsListQuery({
+      pageSize: 40,
+      sort: ["date", "desc"],
+      statuses: ["blank", "in_review"],
+      start: "2024-04-01T00:00:00.000Z",
+      end: "2024-04-30T23:59:59.999Z",
+    });
+
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("pageSize")).toBe("40");
+    expect(params.getAll("sort")).toEqual(["date", "desc"]);
+    expect(params.getAll("statuses")).toEqual(["blank", "in_review"]);
+    expect(params.get("start")).toBe("2024-04-01T00:00:00.000Z");
+    expect(params.get("end")).toBe("2024-04-30T23:59:59.999Z");
+  });
 });
 
 describe("resolveReplacementBearerToken", () => {

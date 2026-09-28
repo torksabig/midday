@@ -25,7 +25,7 @@ Set `MIDDAY_BACKEND_MODE` on **`apps/api`** (and dashboard for `/api/replacement
 |----------------|------------------|-------|
 | `user.me` | `GET /api/v1/auth/me` + `GET /api/v1/settings` | Mapped to legacy shape; `fileKey` from encryption |
 | `team.current` | `GET /api/v1/team/current` | Currency from settings; other fields defaulted |
-| `transactions.get` | `GET /api/v1/transactions` | Paginated `{ meta, data }`; Postgres when Supabase JWT + `MIDDAY_DATABASE_URL` |
+| `transactions.get` | `GET /api/v1/transactions` | Paginated `{ meta, data }`; Postgres when Supabase JWT + `MIDDAY_DATABASE_URL`. **Replacement path filters:** `q`, cursor, `pageSize`, `sort`, `statuses`, `start`, `end`. Still Drizzle-only in dual fallback: `categories`, `tags`, `accounts`, `assignees`, `attachments`, `recurring`, `amount`/`amountRange`, `type`, `manual`, `exported`, `fulfilled`. |
 | `transactions.getById` | `GET /api/v1/transactions/{id}` | Detail shape + pending match suggestion; team-scoped |
 
 When `MIDDAY_BACKEND_MODE` is `dual` or `replacement`, `apps/api` tries delegation first (if a bearer is available), then falls back to legacy Postgres on failure or missing token. **Target:** no fallback—delete legacy once Rust passes contract tests.
