@@ -33,6 +33,7 @@ import {
   tryDelegateTopRevenueClient,
   tryDelegateNewCustomersCount,
   tryDelegateSearchInvoiceNumber,
+  tryDelegateInvoiceDraft,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -530,20 +531,35 @@ export const invoiceRouter = createTRPCRouter({
 
   draft: protectedProcedure
     .input(draftInvoiceSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
-      // Generate invoice number if not provided
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
+      // Generate invoice number if not provided (stays on Drizzle / Node)
       const invoiceNumber =
         input.invoiceNumber || (await getNextInvoiceNumber(db, teamId!));
 
-      return draftInvoice(db, {
+      const draftPayload = {
         ...input,
         invoiceNumber,
-        teamId: teamId!,
-        userId: session.user.id,
         paymentDetails: parseInputValue(input.paymentDetails),
         fromDetails: parseInputValue(input.fromDetails),
         customerDetails: parseInputValue(input.customerDetails),
         noteDetails: parseInputValue(input.noteDetails),
+      };
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceDraft(
+          draftPayload,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.invoice;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
+      return draftInvoice(db, {
+        ...draftPayload,
+        teamId: teamId!,
+        userId: session.user.id,
       });
     }),
 

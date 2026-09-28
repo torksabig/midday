@@ -1920,6 +1920,100 @@ export async function fetchReplacementInvoiceUpdate(
   return mapReplacementToInvoiceById(payload);
 }
 
+export async function fetchReplacementInvoiceDraft(
+  baseUrl: string,
+  token: string,
+  input: unknown,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoices/draft`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceById(payload);
+}
+
+export type ReplacementCategoryCreateInput = {
+  name: string;
+  color?: string;
+  description?: string;
+  taxRate?: number;
+  taxType?: string;
+  taxReportingCode?: string;
+  parentId?: string;
+};
+
+export type ReplacementCategoryUpdateInput = {
+  name?: string;
+  color?: string | null;
+  description?: string | null;
+  taxRate?: number | null;
+  taxType?: string | null;
+  taxReportingCode?: string | null;
+  parentId?: string | null;
+  clearParent?: boolean;
+  excluded?: boolean | null;
+};
+
+export async function fetchReplacementCategoryCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCategoryCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/categories`,
+    token,
+    input,
+  );
+  return mapReplacementToCategoryById(payload);
+}
+
+export async function fetchReplacementCategoryUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  input: ReplacementCategoryUpdateInput,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/categories/${encodeURIComponent(id)}`,
+    token,
+    {
+      name: input.name,
+      color: input.color,
+      description: input.description,
+      taxRate: input.taxRate,
+      taxType: input.taxType,
+      taxReportingCode: input.taxReportingCode,
+      parentId: input.parentId ?? undefined,
+      clearParent: input.parentId === null || input.clearParent === true,
+      excluded: input.excluded,
+    },
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToCategoryById(payload);
+}
+
+export async function fetchReplacementCategoryDelete(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementDelete<unknown>(
+    `${root}/api/v1/categories/${encodeURIComponent(id)}`,
+    token,
+  );
+  if (payload == null) {
+    return null;
+  }
+  return mapReplacementToCategoryById(payload);
+}
+
 export async function fetchReplacementAppsGet(
   baseUrl: string,
   token: string,
