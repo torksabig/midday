@@ -1273,6 +1273,26 @@ export function mapReplacementToInvoiceById(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
+export type MiddayTrackerProjectsGetShape = MiddayPaginatedListShape;
+
+export function mapReplacementToTrackerProjectsGet(
+  payload: unknown,
+): MiddayTrackerProjectsGetShape {
+  return mapReplacementPaginatedList(payload);
+}
+
+export function mapReplacementToTrackerEntriesByRange(payload: unknown): unknown {
+  return deepCamelCaseKeys(payload);
+}
+
+export function mapReplacementToTrackerBillableHours(payload: unknown): unknown {
+  return deepCamelCaseKeys(payload);
+}
+
+export function mapReplacementToBankConnectionsGet(payload: unknown): unknown[] {
+  return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
+}
+
 const replacementPaymentStatusSchema = z.object({
   score: z.number(),
   payment_status: z.string(),

@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  buildBankConnectionsListQuery,
   buildInboxByStatusQuery,
   buildInboxListQuery,
   buildInboxSearchQuery,
   buildSearchAttachmentsQuery,
+  buildTrackerBillableHoursQuery,
+  buildTrackerEntriesByRangeQuery,
+  buildTrackerProjectsListQuery,
   buildTransactionsListQuery,
   resolveReplacementBearerToken,
 } from "./delegate";
@@ -124,6 +128,60 @@ describe("buildSearchAttachmentsQuery", () => {
     expect(params.get("q")).toBe("receipt");
     expect(params.get("transactionId")).toBe("tx-1");
     expect(params.get("limit")).toBe("20");
+  });
+});
+
+describe("buildTrackerProjectsListQuery", () => {
+  test("encodes tracker project list filters", () => {
+    const qs = buildTrackerProjectsListQuery({
+      pageSize: 20,
+      cursor: "40",
+      status: "in_progress",
+      sort: ["name", "asc"],
+      customers: ["c1"],
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("pageSize")).toBe("20");
+    expect(params.get("cursor")).toBe("40");
+    expect(params.get("status")).toBe("in_progress");
+    expect(params.getAll("sort")).toEqual(["name", "asc"]);
+    expect(params.getAll("customers")).toEqual(["c1"]);
+  });
+});
+
+describe("buildTrackerEntriesByRangeQuery", () => {
+  test("encodes range and projectId", () => {
+    const qs = buildTrackerEntriesByRangeQuery({
+      from: "2024-04-01",
+      to: "2024-04-30",
+      projectId: "p1",
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("from")).toBe("2024-04-01");
+    expect(params.get("to")).toBe("2024-04-30");
+    expect(params.get("projectId")).toBe("p1");
+  });
+});
+
+describe("buildTrackerBillableHoursQuery", () => {
+  test("encodes billable hours view params", () => {
+    const qs = buildTrackerBillableHoursQuery({
+      date: "2024-04-15",
+      view: "week",
+      weekStartsOnMonday: true,
+    });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("date")).toBe("2024-04-15");
+    expect(params.get("view")).toBe("week");
+    expect(params.get("weekStartsOnMonday")).toBe("true");
+  });
+});
+
+describe("buildBankConnectionsListQuery", () => {
+  test("encodes enabled filter", () => {
+    const qs = buildBankConnectionsListQuery({ enabled: true });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("enabled")).toBe("true");
   });
 });
 

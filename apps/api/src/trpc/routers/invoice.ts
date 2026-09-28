@@ -24,6 +24,7 @@ import {
   tryDelegateInvoicesGetById,
   tryDelegateInvoicePaymentStatus,
   tryDelegateInvoiceSummary,
+  tryDelegateInvoiceGetByToken,
 } from "@api/services/replacement-delegation";
 import { parseInputValue } from "@api/utils/parse";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -136,6 +137,17 @@ export const invoiceRouter = createTRPCRouter({
 
       if (!id) {
         throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInvoiceGetByToken(id);
+        if (delegated !== null) {
+          if (!delegated) {
+            throw new TRPCError({ code: "NOT_FOUND" });
+          }
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       return getInvoiceById(db, {

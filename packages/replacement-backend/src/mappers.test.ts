@@ -19,6 +19,9 @@ import {
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
   mapReplacementToUserMe,
+  mapReplacementToTrackerProjectsGet,
+  mapReplacementToTrackerEntriesByRange,
+  mapReplacementToBankConnectionsGet,
 } from "./mappers";
 
 describe("replacement mappers", () => {
@@ -498,6 +501,46 @@ describe("replacement mappers", () => {
       inboxPending: { count: 3 },
       cashBalance: { totalBalance: 5000, accountCount: 2 },
       runway: 12,
+    });
+  });
+
+  test("mapReplacementToTrackerProjectsGet camelCases paginated projects", () => {
+    const mapped = mapReplacementToTrackerProjectsGet({
+      meta: {
+        cursor: "25",
+        has_previous_page: false,
+        has_next_page: true,
+      },
+      data: [{ id: "p1", total_duration: 100, customer: { name: "Acme" } }],
+    });
+    expect(mapped.meta.hasNextPage).toBe(true);
+    expect(mapped.data[0]).toMatchObject({
+      id: "p1",
+      totalDuration: 100,
+    });
+  });
+
+  test("mapReplacementToTrackerEntriesByRange camelCases nested result", () => {
+    const mapped = mapReplacementToTrackerEntriesByRange({
+      meta: { total_duration: 3600, total_amount: 50, from: "2024-04-01", to: "2024-04-30" },
+      result: { "2024-04-15": [{ id: "e1", tracker_project: { billable: true } }] },
+    }) as { meta: { totalDuration: number }; result: Record<string, unknown[]> };
+    expect(mapped.meta.totalDuration).toBe(3600);
+    expect(mapped.result["2024-04-15"][0]).toMatchObject({ id: "e1" });
+  });
+
+  test("mapReplacementToBankConnectionsGet camelCases nested accounts", () => {
+    const mapped = mapReplacementToBankConnectionsGet([
+      {
+        id: "bc1",
+        logo_url: "https://x",
+        bank_accounts: [{ account_id: "a1", error_retries: 0 }],
+      },
+    ]);
+    expect(mapped[0]).toMatchObject({
+      id: "bc1",
+      logoUrl: "https://x",
+      bankAccounts: [{ accountId: "a1", errorRetries: 0 }],
     });
   });
 });

@@ -4,7 +4,12 @@ import {
   getTrackerProjectsSchema,
   upsertTrackerProjectSchema,
 } from "@api/schemas/tracker-projects";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateTrackerProjectsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   deleteTrackerProject,
   getTrackerProjectById,
@@ -15,7 +20,28 @@ import {
 export const trackerProjectsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getTrackerProjectsSchema.optional())
-    .query(async ({ input, ctx: { db, teamId } }) => {
+    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerProjectsGet(
+          {
+            cursor: input?.cursor,
+            pageSize: input?.pageSize,
+            q: input?.q,
+            start: input?.start,
+            end: input?.end,
+            status: input?.status,
+            customers: input?.customers,
+            tags: input?.tags,
+            sort: input?.sort,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTrackerProjects(db, {
         ...input,
         teamId: teamId!,

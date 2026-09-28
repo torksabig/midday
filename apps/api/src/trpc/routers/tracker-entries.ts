@@ -8,7 +8,13 @@ import {
   stopTimerSchema,
   upsertTrackerEntriesSchema,
 } from "@api/schemas/tracker-entries";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateTrackerBillableHours,
+  tryDelegateTrackerEntriesByRange,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import {
   deleteTrackerEntry,
   getBillableHours,
@@ -24,7 +30,22 @@ import {
 export const trackerEntriesRouter = createTRPCRouter({
   getBillableHours: protectedProcedure
     .input(getBillableHoursSchema)
-    .query(async ({ ctx: { db, teamId, session }, input }) => {
+    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerBillableHours(
+          {
+            date: input.date,
+            view: input.view,
+            weekStartsOnMonday: input.weekStartsOnMonday,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getBillableHours(db, {
         teamId: teamId!,
         date: input.date,
@@ -44,7 +65,22 @@ export const trackerEntriesRouter = createTRPCRouter({
 
   byRange: protectedProcedure
     .input(getTrackerRecordsByRangeSchema)
-    .query(async ({ input, ctx: { db, session, teamId } }) => {
+    .query(async ({ input, ctx: { db, session, teamId, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateTrackerEntriesByRange(
+          {
+            from: input.from,
+            to: input.to,
+            projectId: input.projectId,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getTrackerRecordsByRange(db, {
         teamId: teamId!,
         userId: session.user.id,

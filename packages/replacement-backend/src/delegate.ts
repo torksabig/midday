@@ -20,6 +20,10 @@ import {
   mapReplacementToDocumentById,
   mapReplacementToInvoicesGet,
   mapReplacementToInvoiceById,
+  mapReplacementToTrackerProjectsGet,
+  mapReplacementToTrackerEntriesByRange,
+  mapReplacementToTrackerBillableHours,
+  mapReplacementToBankConnectionsGet,
   mapReplacementToPaymentStatus,
   mapReplacementToInvoiceSummary,
   mapReplacementToGlobalSearch,
@@ -30,6 +34,7 @@ import {
   type MiddayCustomersGetShape,
   type MiddayDocumentsGetShape,
   type MiddayInvoicesGetShape,
+  type MiddayTrackerProjectsGetShape,
   type MiddayInboxByIdShape,
   type MiddayInboxByStatusItemShape,
   type MiddayInboxCheckAttachmentsShape,
@@ -61,6 +66,10 @@ export {
   mapReplacementToInvoiceById,
   mapReplacementToInvoiceSummary,
   mapReplacementToInvoicesGet,
+  mapReplacementToTrackerProjectsGet,
+  mapReplacementToTrackerEntriesByRange,
+  mapReplacementToTrackerBillableHours,
+  mapReplacementToBankConnectionsGet,
   mapReplacementToOverviewSummary,
   mapReplacementToPaymentStatus,
   mapReplacementToTeamCurrent,
@@ -75,6 +84,7 @@ export {
   type MiddayRelatedDocumentShape,
   type MiddayInvoiceSummaryShape,
   type MiddayInvoicesGetShape,
+  type MiddayTrackerProjectsGetShape,
   type MiddayInboxByIdShape,
   type MiddayInboxByStatusItemShape,
   type MiddayInboxCheckAttachmentsShape,
@@ -87,6 +97,10 @@ export {
   type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
+  type ReplacementTrackerProjectsListQuery,
+  type ReplacementTrackerEntriesByRangeQuery,
+  type ReplacementTrackerBillableHoursQuery,
+  type ReplacementBankConnectionsListQuery,
 };
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -1080,6 +1094,154 @@ export async function fetchReplacementSearchAttachments(
     token,
   );
   return mapReplacementToReportJson(payload) as unknown[];
+}
+
+export type ReplacementTrackerProjectsListQuery = {
+  cursor?: string | null;
+  pageSize?: number | null;
+  q?: string | null;
+  start?: string | null;
+  end?: string | null;
+  status?: "in_progress" | "completed" | null;
+  customers?: string[] | null;
+  tags?: string[] | null;
+  sort?: string[] | null;
+};
+
+export function buildTrackerProjectsListQuery(
+  params: ReplacementTrackerProjectsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
+  if (params.q) search.set("q", params.q);
+  if (params.start) search.set("start", params.start);
+  if (params.end) search.set("end", params.end);
+  if (params.status) search.set("status", params.status);
+  for (const v of params.customers ?? []) search.append("customers", v);
+  for (const v of params.tags ?? []) search.append("tags", v);
+  for (const v of params.sort ?? []) search.append("sort", v);
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementTrackerProjects(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerProjectsListQuery,
+): Promise<MiddayTrackerProjectsGetShape> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tracker/projects${buildTrackerProjectsListQuery(params)}`,
+    token,
+  );
+  return mapReplacementToTrackerProjectsGet(payload);
+}
+
+export type ReplacementTrackerEntriesByRangeQuery = {
+  from: string;
+  to: string;
+  projectId?: string | null;
+};
+
+export function buildTrackerEntriesByRangeQuery(
+  params: ReplacementTrackerEntriesByRangeQuery,
+): string {
+  const search = new URLSearchParams();
+  search.set("from", params.from);
+  search.set("to", params.to);
+  if (params.projectId) search.set("projectId", params.projectId);
+  return `?${search.toString()}`;
+}
+
+export async function fetchReplacementTrackerEntriesByRange(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerEntriesByRangeQuery,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tracker/entries/by-range${buildTrackerEntriesByRangeQuery(params)}`,
+    token,
+  );
+  return mapReplacementToTrackerEntriesByRange(payload);
+}
+
+export type ReplacementTrackerBillableHoursQuery = {
+  date: string;
+  view: "week" | "month";
+  weekStartsOnMonday?: boolean;
+};
+
+export function buildTrackerBillableHoursQuery(
+  params: ReplacementTrackerBillableHoursQuery,
+): string {
+  const search = new URLSearchParams();
+  search.set("date", params.date);
+  search.set("view", params.view);
+  if (params.weekStartsOnMonday != null) {
+    search.set("weekStartsOnMonday", String(params.weekStartsOnMonday));
+  }
+  return `?${search.toString()}`;
+}
+
+export async function fetchReplacementTrackerBillableHours(
+  baseUrl: string,
+  token: string,
+  params: ReplacementTrackerBillableHoursQuery,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/tracker/billable-hours${buildTrackerBillableHoursQuery(params)}`,
+    token,
+  );
+  return mapReplacementToTrackerBillableHours(payload);
+}
+
+export type ReplacementBankConnectionsListQuery = {
+  enabled?: boolean | null;
+};
+
+export function buildBankConnectionsListQuery(
+  params: ReplacementBankConnectionsListQuery,
+): string {
+  const search = new URLSearchParams();
+  if (params.enabled != null) search.set("enabled", String(params.enabled));
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export async function fetchReplacementBankConnections(
+  baseUrl: string,
+  token: string,
+  params: ReplacementBankConnectionsListQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown[]>(
+    `${root}/api/v1/bank-connections${buildBankConnectionsListQuery(params)}`,
+    token,
+  );
+  return mapReplacementToBankConnectionsGet(payload);
+}
+
+export async function fetchReplacementInvoicePublicById(
+  baseUrl: string,
+  id: string,
+): Promise<unknown | null> {
+  const root = trimBase(baseUrl);
+  const url = `${root}/api/v1/invoices/public/${encodeURIComponent(id)}`;
+  try {
+    const payload = await replacementFetchPublic<unknown>(url);
+    return mapReplacementToInvoiceById(payload);
+  } catch (error) {
+    if (
+      error instanceof ReplacementPublicFetchError &&
+      error.status === 404
+    ) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export { shouldDelegateToReplacementBackend };

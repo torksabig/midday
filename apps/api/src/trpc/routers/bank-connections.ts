@@ -5,7 +5,12 @@ import {
   getBankConnectionsSchema,
   reconnectBankConnectionSchema,
 } from "@api/schemas/bank-connections";
+import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateBankConnectionsGet,
+} from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 
 import {
   addProviderAccounts,
@@ -24,7 +29,18 @@ import { TRPCError } from "@trpc/server";
 export const bankConnectionsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getBankConnectionsSchema)
-    .query(async ({ ctx: { db, teamId }, input }) => {
+    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateBankConnectionsGet(
+          { enabled: input?.enabled },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       return getBankConnections(db, {
         teamId: teamId!,
         enabled: input?.enabled,

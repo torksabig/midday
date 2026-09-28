@@ -23,6 +23,11 @@ import {
   fetchReplacementReportByLinkId,
   fetchReplacementReportChartByLinkId,
   fetchReplacementSearchAttachments,
+  fetchReplacementTrackerProjects,
+  fetchReplacementTrackerEntriesByRange,
+  fetchReplacementTrackerBillableHours,
+  fetchReplacementBankConnections,
+  fetchReplacementInvoicePublicById,
   ReplacementPublicFetchError,
   fetchReplacementInboxById,
   fetchReplacementInboxByStatus,
@@ -57,6 +62,10 @@ import {
   type ReplacementSearchAttachmentsQuery,
   type ReplacementTaxSummaryQuery,
   type ReplacementTransactionsListQuery,
+  type ReplacementTrackerProjectsListQuery,
+  type ReplacementTrackerEntriesByRangeQuery,
+  type ReplacementTrackerBillableHoursQuery,
+  type ReplacementBankConnectionsListQuery,
 } from "@midday/replacement-backend";
 import { TRPCError } from "@trpc/server";
 
@@ -1122,5 +1131,47 @@ export async function tryDelegateSearchAttachments(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementSearchAttachments(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTrackerProjectsGet(
+  input: ReplacementTrackerProjectsListQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerProjects(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTrackerEntriesByRange(
+  input: ReplacementTrackerEntriesByRangeQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerEntriesByRange(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTrackerBillableHours(
+  input: ReplacementTrackerBillableHoursQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerBillableHours(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateBankConnectionsGet(
+  input: ReplacementBankConnectionsListQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementBankConnections(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateInvoiceGetByToken(id: string) {
+  return tryDelegateReplacementPublicRead((baseUrl) =>
+    fetchReplacementInvoicePublicById(baseUrl, id),
   );
 }
