@@ -130,6 +130,9 @@ import {
   fetchReplacementInvoiceRecurringResume,
   fetchReplacementInvoiceRecurringDelete,
   fetchReplacementInvoiceRecurringUpcoming,
+  fetchReplacementInvoiceRecurringCreate,
+  fetchReplacementInvoiceRecurringUpdate,
+  type ReplacementInvoiceRecurringCreateInput,
   type ReplacementInvoiceRecurringListQuery,
   fetchReplacementAccountingDisconnect,
   fetchReplacementTeamLeave,
@@ -5615,6 +5618,94 @@ export async function tryDelegateInvoiceRecurringUpcoming(
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementInvoiceRecurringUpcoming(baseUrl, token, id, limit),
   );
+}
+
+export type DelegateInvoiceRecurringWriteResult =
+  | { delegated: false }
+  | { delegated: true; recurring: unknown };
+
+export async function tryDelegateInvoiceRecurringCreate(
+  input: ReplacementInvoiceRecurringCreateInput,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceRecurringWriteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const recurring = await fetchReplacementInvoiceRecurringCreate(
+      getReplacementApiUrl(),
+      token,
+      input,
+    );
+    return { delegated: true, recurring };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInvoiceRecurringUpdate(
+  id: string,
+  input: Record<string, unknown>,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInvoiceRecurringWriteResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const recurring = await fetchReplacementInvoiceRecurringUpdate(
+      getReplacementApiUrl(),
+      token,
+      id,
+      input,
+    );
+    return { delegated: true, recurring };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
 }
 
 export type DelegateAccountingDisconnectResult =

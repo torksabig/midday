@@ -15,6 +15,8 @@ import {
   tryDelegateInvoiceRecurringResume,
   tryDelegateInvoiceRecurringDelete,
   tryDelegateInvoiceRecurringUpcoming,
+  tryDelegateInvoiceRecurringCreate,
+  tryDelegateInvoiceRecurringUpdate,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -42,7 +44,7 @@ const logger = createLoggerWithContext("trpc:invoice-recurring");
 export const invoiceRecurringRouter = createTRPCRouter({
   create: protectedProcedure
     .input(createInvoiceRecurringSchema)
-    .mutation(async ({ input, ctx: { db, teamId, session } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
       if (!teamId || !session?.user?.id) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -51,6 +53,97 @@ export const invoiceRecurringRouter = createTRPCRouter({
       }
 
       const { invoiceId, ...recurringData } = input;
+
+      // Validate that the customer exists and has an email address for sending invoices
+      // Recurring invoices auto-send, so we need a valid customer with email
+      const customer = await getCustomerById(db, {
+        id: recurringData.customerId,
+        teamId,
+      });
+
+      if (!customer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Customer not found",
+        });
+      }
+
+      const customerEmail = customer.billingEmail || customer.email;
+      if (!customerEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
+        });
+      }
+
+      // Postgres create/link transaction can delegate; notifications stay Node
+      if (shouldDelegateToReplacementBackend()) {
+        let issueDate: string | null = null;
+        if (invoiceId) {
+          const foundInvoice = await db.query.invoices.findFirst({
+            where: (invoices, { eq, and }) =>
+              and(eq(invoices.id, invoiceId), eq(invoices.teamId, teamId)),
+            columns: {
+              id: true,
+              invoiceRecurringId: true,
+              issueDate: true,
+            },
+          });
+          if (foundInvoice?.invoiceRecurringId) {
+            const existingSeries = await tryDelegateInvoiceRecurringGet(
+              foundInvoice.invoiceRecurringId,
+              accessToken,
+            );
+            if (existingSeries) {
+              return existingSeries;
+            }
+            assertLegacyIdentityFallbackAllowed();
+            const legacy = await getInvoiceRecurringById(db, {
+              id: foundInvoice.invoiceRecurringId,
+              teamId,
+            });
+            if (legacy) return legacy;
+          }
+          issueDate = foundInvoice?.issueDate ?? null;
+        }
+
+        const delegated = await tryDelegateInvoiceRecurringCreate(
+          {
+            invoiceId,
+            ...recurringData,
+            issueDate,
+          },
+          accessToken,
+        );
+        if (delegated.delegated) {
+          const result = delegated.recurring as { id?: string } | null;
+          if (result?.id) {
+            const notifications = new Notifications(db);
+            notifications
+              .create("recurring_series_started", teamId, {
+                recurringId: result.id,
+                invoiceId: invoiceId,
+                customerName: recurringData.customerName ?? undefined,
+                frequency: recurringData.frequency,
+                endType: recurringData.endType,
+                endDate: recurringData.endDate ?? undefined,
+                endCount: recurringData.endCount ?? undefined,
+              })
+              .catch((error) => {
+                logger.error(
+                  "Failed to send recurring_series_started notification",
+                  {
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  },
+                );
+              });
+          }
+          return result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       // If an invoice ID is provided, check if it's already linked to a recurring series
       // This prevents creating duplicate series if the user retries after a partial failure
@@ -84,29 +177,6 @@ export const invoiceRecurringRouter = createTRPCRouter({
             return existingSeries;
           }
         }
-      }
-
-      // Validate that the customer exists and has an email address for sending invoices
-      // Recurring invoices auto-send, so we need a valid customer with email
-      const customer = await getCustomerById(db, {
-        id: recurringData.customerId,
-        teamId,
-      });
-
-      if (!customer) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
-      }
-
-      const customerEmail = customer.billingEmail || customer.email;
-      if (!customerEmail) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
-        });
       }
 
       // Use a transaction to ensure atomicity of all operations
@@ -222,7 +292,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(updateInvoiceRecurringSchema)
-    .mutation(async ({ input, ctx: { db, teamId } }) => {
+    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (!teamId) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -293,10 +363,25 @@ export const invoiceRecurringRouter = createTRPCRouter({
         (input.endCount === null && input.endType === undefined);
 
       if (needsCrossFieldValidation) {
-        const existing = await getInvoiceRecurringById(db, {
-          id: input.id,
-          teamId,
-        });
+        let existing: Awaited<ReturnType<typeof getInvoiceRecurringById>> =
+          null;
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInvoiceRecurringGet(
+            input.id,
+            accessToken,
+          );
+          if (delegated) {
+            existing = delegated as typeof existing;
+          } else {
+            assertLegacyIdentityFallbackAllowed();
+          }
+        }
+        if (!existing) {
+          existing = await getInvoiceRecurringById(db, {
+            id: input.id,
+            teamId,
+          });
+        }
 
         if (!existing) {
           throw new TRPCError({
@@ -444,6 +529,26 @@ export const invoiceRecurringRouter = createTRPCRouter({
               "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
           });
         }
+      }
+
+      // Cross-field validation stays Node; Postgres update can delegate
+      if (shouldDelegateToReplacementBackend()) {
+        const { id: recurringId, ...updateFields } = input;
+        const delegated = await tryDelegateInvoiceRecurringUpdate(
+          recurringId,
+          updateFields as Record<string, unknown>,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          if (!delegated.recurring) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Recurring invoice series not found",
+            });
+          }
+          return delegated.recurring;
+        }
+        assertLegacyIdentityFallbackAllowed();
       }
 
       const result = await updateInvoiceRecurring(db, {

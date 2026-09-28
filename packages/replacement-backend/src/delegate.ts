@@ -2612,6 +2612,65 @@ export async function fetchReplacementInvoiceRecurringUpcoming(
   return mapReplacementToInvoiceRecurringUpcoming(payload);
 }
 
+export type ReplacementInvoiceRecurringCreateInput = {
+  invoiceId?: string;
+  customerId?: string | null;
+  customerName?: string | null;
+  frequency: string;
+  frequencyDay?: number | null;
+  frequencyWeek?: number | null;
+  frequencyInterval?: number | null;
+  endType: string;
+  endDate?: string | null;
+  endCount?: number | null;
+  timezone: string;
+  dueDateOffset?: number;
+  amount?: number | null;
+  currency?: string | null;
+  lineItems?: unknown;
+  template?: unknown;
+  paymentDetails?: unknown;
+  fromDetails?: unknown;
+  noteDetails?: unknown;
+  vat?: number | null;
+  tax?: number | null;
+  discount?: number | null;
+  subtotal?: number | null;
+  topBlock?: unknown;
+  bottomBlock?: unknown;
+  templateId?: string | null;
+  issueDate?: string | null;
+};
+
+export async function fetchReplacementInvoiceRecurringCreate(
+  baseUrl: string,
+  token: string,
+  input: ReplacementInvoiceRecurringCreateInput,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/invoice-recurring`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceRecurring(payload);
+}
+
+export async function fetchReplacementInvoiceRecurringUpdate(
+  baseUrl: string,
+  token: string,
+  id: string,
+  input: Record<string, unknown>,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPut<unknown>(
+    `${root}/api/v1/invoice-recurring/${encodeURIComponent(id)}`,
+    token,
+    input,
+  );
+  return mapReplacementToInvoiceRecurring(payload);
+}
+
 /** accounting.disconnect reuses apps DELETE; returns `{ success: true }`. */
 export async function fetchReplacementAccountingDisconnect(
   baseUrl: string,
