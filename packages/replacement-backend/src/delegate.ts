@@ -41,6 +41,10 @@ import {
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
   mapReplacementToBankAccountMutation,
+  mapReplacementToInstitutions,
+  mapReplacementToInstitution,
+  mapReplacementToInstitutionUpdateUsage,
+  mapReplacementToOAuthAuthorized,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -152,6 +156,10 @@ export {
   mapReplacementToInvoiceRecurringList,
   mapReplacementToInvoiceRecurring,
   mapReplacementToBankAccountMutation,
+  mapReplacementToInstitutions,
+  mapReplacementToInstitution,
+  mapReplacementToInstitutionUpdateUsage,
+  mapReplacementToOAuthAuthorized,
   mapReplacementToInvoiceTemplates,
   mapReplacementToInvoiceTemplate,
   mapReplacementToInvoiceTemplateDelete,
@@ -2606,6 +2614,85 @@ export async function fetchReplacementBankAccountDelete(
     }
     throw error;
   }
+}
+
+export type ReplacementInstitutionsQuery = {
+  countryCode: string;
+  q?: string;
+  limit?: number;
+  excludeProviders?: string[];
+};
+
+export async function fetchReplacementInstitutionsGet(
+  baseUrl: string,
+  token: string,
+  query: ReplacementInstitutionsQuery,
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const search = new URLSearchParams();
+  search.set("countryCode", query.countryCode);
+  if (query.q) search.set("q", query.q);
+  if (query.limit != null) search.set("limit", String(query.limit));
+  if (query.excludeProviders?.length) {
+    search.set("excludeProviders", query.excludeProviders.join(","));
+  }
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/institutions?${search}`,
+    token,
+  );
+  return mapReplacementToInstitutions(payload);
+}
+
+export async function fetchReplacementInstitutionGetById(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/institutions/${encodeURIComponent(id)}`,
+    token,
+  );
+  return mapReplacementToInstitution(payload);
+}
+
+export async function fetchReplacementInstitutionUpdateUsage(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/institutions/${encodeURIComponent(id)}`,
+    token,
+    {},
+  );
+  return mapReplacementToInstitutionUpdateUsage(payload);
+}
+
+export async function fetchReplacementOAuthAuthorized(
+  baseUrl: string,
+  token: string,
+): Promise<unknown> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementFetch<unknown>(
+    `${root}/api/v1/oauth-applications/authorized`,
+    token,
+  );
+  return mapReplacementToOAuthAuthorized(payload);
+}
+
+export async function fetchReplacementOAuthRevokeAccess(
+  baseUrl: string,
+  token: string,
+  applicationId: string,
+): Promise<{ success: true }> {
+  const root = trimBase(baseUrl);
+  await replacementDelete<unknown>(
+    `${root}/api/v1/oauth-applications/authorized/${encodeURIComponent(applicationId)}`,
+    token,
+  );
+  return { success: true };
 }
 
 export async function fetchReplacementInvoiceTemplates(

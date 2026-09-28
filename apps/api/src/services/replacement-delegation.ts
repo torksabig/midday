@@ -134,6 +134,12 @@ import {
   fetchReplacementBankAccountDelete,
   type ReplacementBankAccountCreateInput,
   type ReplacementBankAccountUpdateInput,
+  fetchReplacementInstitutionsGet,
+  fetchReplacementInstitutionGetById,
+  fetchReplacementInstitutionUpdateUsage,
+  type ReplacementInstitutionsQuery,
+  fetchReplacementOAuthAuthorized,
+  fetchReplacementOAuthRevokeAccess,
   fetchReplacementOAuthApplicationsList,
   fetchReplacementOAuthApplicationGet,
   fetchReplacementOAuthApplicationCreate,
@@ -4894,6 +4900,122 @@ export async function tryDelegateBankAccountDelete(
       id,
     );
     return { delegated: true, account };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateInstitutionsGet(
+  query: ReplacementInstitutionsQuery,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInstitutionsGet(baseUrl, token, query),
+  );
+}
+
+export async function tryDelegateInstitutionGetById(
+  id: string,
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementInstitutionGetById(baseUrl, token, id),
+  );
+}
+
+export type DelegateInstitutionUpdateUsageResult =
+  | { delegated: false }
+  | { delegated: true; result: unknown };
+
+export async function tryDelegateInstitutionUpdateUsage(
+  id: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateInstitutionUpdateUsageResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementInstitutionUpdateUsage(
+      getReplacementApiUrl(),
+      token,
+      id,
+    );
+    return { delegated: true, result };
+  } catch (error) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed",
+        cause: error,
+      });
+    }
+    return { delegated: false };
+  }
+}
+
+export async function tryDelegateOAuthAuthorized(
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementOAuthAuthorized(baseUrl, token),
+  );
+}
+
+export type DelegateOAuthRevokeAccessResult =
+  | { delegated: false }
+  | { delegated: true; result: { success: true } };
+
+export async function tryDelegateOAuthRevokeAccess(
+  applicationId: string,
+  sessionAccessToken?: string | null,
+): Promise<DelegateOAuthRevokeAccessResult> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return { delegated: false };
+  }
+
+  const token = await resolveReplacementBearerToken(
+    getReplacementApiUrl(),
+    sessionAccessToken,
+  );
+  if (!token) {
+    if (replacementDelegationRequiresSuccess()) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Replacement backend delegation failed: no bearer token",
+      });
+    }
+    return { delegated: false };
+  }
+
+  try {
+    const result = await fetchReplacementOAuthRevokeAccess(
+      getReplacementApiUrl(),
+      token,
+      applicationId,
+    );
+    return { delegated: true, result };
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

@@ -1,5 +1,12 @@
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
+  assertLegacyIdentityFallbackAllowed,
+  tryDelegateInstitutionsGet,
+  tryDelegateInstitutionGetById,
+  tryDelegateInstitutionUpdateUsage,
+} from "@api/services/replacement-delegation";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
+import {
   getInstitutionById,
   getInstitutions,
   updateInstitutionUsage,
@@ -28,8 +35,24 @@ const updateUsageSchema = z.object({ id: z.string() });
 export const institutionsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInstitutionsSchema)
-    .query(async ({ input, ctx: { db } }) => {
+    .query(async ({ input, ctx: { db, accessToken } }) => {
       try {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInstitutionsGet(
+            {
+              countryCode: input.countryCode,
+              q: input.q,
+              limit: input.limit,
+              excludeProviders: input.excludeProviders,
+            },
+            accessToken,
+          );
+          if (delegated) {
+            return delegated;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
+
         const results = await getInstitutions(db, {
           countryCode: input.countryCode,
           q: input.q,
@@ -49,6 +72,7 @@ export const institutionsRouter = createTRPCRouter({
           country: institution.countries?.[0] ?? null,
         }));
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         logger.error("Failed to get institutions", {
           error: error instanceof Error ? error.message : String(error),
         });
@@ -61,7 +85,18 @@ export const institutionsRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getInstitutionByIdSchema)
-    .query(async ({ input, ctx: { db } }) => {
+    .query(async ({ input, ctx: { db, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateInstitutionGetById(
+          input.id,
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const result = await getInstitutionById(db, { id: input.id });
 
       if (!result) {
@@ -86,8 +121,19 @@ export const institutionsRouter = createTRPCRouter({
 
   updateUsage: protectedProcedure
     .input(updateUsageSchema)
-    .mutation(async ({ input, ctx: { db } }) => {
+    .mutation(async ({ input, ctx: { db, accessToken } }) => {
       try {
+        if (shouldDelegateToReplacementBackend()) {
+          const delegated = await tryDelegateInstitutionUpdateUsage(
+            input.id,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.result;
+          }
+          assertLegacyIdentityFallbackAllowed();
+        }
+
         const result = await updateInstitutionUsage(db, { id: input.id });
 
         if (!result) {

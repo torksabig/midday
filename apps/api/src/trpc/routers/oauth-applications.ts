@@ -18,6 +18,8 @@ import {
   tryDelegateOAuthApplicationUpdate,
   tryDelegateOAuthApplicationDelete,
   tryDelegateOAuthApplicationRegenerateSecret,
+  tryDelegateOAuthAuthorized,
+  tryDelegateOAuthRevokeAccess,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
@@ -385,7 +387,15 @@ export const oauthApplicationsRouter = createTRPCRouter({
     }),
 
   authorized: protectedProcedure.query(async ({ ctx }) => {
-    const { db, teamId, session } = ctx;
+    const { db, teamId, session, accessToken } = ctx;
+
+    if (shouldDelegateToReplacementBackend()) {
+      const delegated = await tryDelegateOAuthAuthorized(accessToken);
+      if (delegated) {
+        return delegated;
+      }
+      assertLegacyIdentityFallbackAllowed();
+    }
 
     const applications = await getUserAuthorizedApplications(
       db,
@@ -401,7 +411,18 @@ export const oauthApplicationsRouter = createTRPCRouter({
   revokeAccess: protectedProcedure
     .input(revokeUserApplicationAccessSchema)
     .mutation(async ({ ctx, input }) => {
-      const { db, session } = ctx;
+      const { db, session, accessToken } = ctx;
+
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateOAuthRevokeAccess(
+          input.applicationId,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
 
       await revokeUserApplicationTokens(
         db,
