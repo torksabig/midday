@@ -47,6 +47,7 @@ import {
   fetchReplacementAppsGet,
   fetchReplacementOAuthApplicationsList,
   fetchReplacementInboxAccountsGet,
+  fetchReplacementTransactionsDeleteMany,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,
@@ -1672,5 +1673,14 @@ export async function tryDelegateInboxAccountsGet(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementInboxAccountsGet(baseUrl, token),
+  );
+}
+
+export async function tryDelegateTransactionsDeleteMany(
+  ids: string[],
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTransactionsDeleteMany(baseUrl, token, ids),
   );
 }

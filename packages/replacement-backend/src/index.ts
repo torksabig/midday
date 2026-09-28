@@ -79,6 +79,7 @@ export {
   fetchReplacementAppsGet,
   fetchReplacementOAuthApplicationsList,
   fetchReplacementInboxAccountsGet,
+  fetchReplacementTransactionsDeleteMany,
   fetchReplacementTeamMembers,
   fetchReplacementTeamList,
   fetchReplacementTeamInvites,

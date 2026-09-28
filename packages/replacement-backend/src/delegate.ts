@@ -1768,6 +1768,28 @@ export async function fetchReplacementInboxAccountsGet(
   return mapReplacementToInboxAccountsGet(payload);
 }
 
+export async function fetchReplacementTransactionsDeleteMany(
+  baseUrl: string,
+  token: string,
+  ids: string[],
+): Promise<Array<{ id: string }>> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transactions/delete-many`,
+    token,
+    ids,
+  );
+  if (!Array.isArray(payload)) {
+    throw new Error("replacement delete-many: expected array");
+  }
+  return payload.map((row) => {
+    if (!row || typeof row !== "object" || typeof (row as { id?: unknown }).id !== "string") {
+      throw new Error("replacement delete-many: invalid row");
+    }
+    return { id: (row as { id: string }).id };
+  });
+}
+
 export async function fetchReplacementTeamMembers(
   baseUrl: string,
   token: string,
