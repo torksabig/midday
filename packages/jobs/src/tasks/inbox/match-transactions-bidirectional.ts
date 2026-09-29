@@ -1,4 +1,8 @@
 import { getDb } from "@jobs/init";
+import {
+  inboxMatchingDelegationTarget,
+  postMatchTransactionsBidirectional,
+} from "@jobs/utils/inbox-matching-delegate";
 import { triggerMatchingNotification } from "@jobs/utils/inbox-matching-notifications";
 import {
   calculateInboxSuggestions,
@@ -29,6 +33,80 @@ export const matchTransactionsBidirectional = schemaTask({
       teamId,
       newTransactionCount: newTransactionIds.length,
     });
+
+    const target = inboxMatchingDelegationTarget(
+      "match-transactions-bidirectional",
+    );
+    if (target) {
+      try {
+        const body = await postMatchTransactionsBidirectional(
+          { teamId, newTransactionIds },
+          target,
+        );
+        for (const n of body.notifications) {
+          if (
+            n.action !== "auto_matched" &&
+            n.action !== "suggestion_created"
+          ) {
+            continue;
+          }
+          await triggerMatchingNotification({
+            db,
+            teamId,
+            inboxId: n.inboxId,
+            result: {
+              action: n.action,
+              suggestion: {
+                transactionId: n.suggestion.transactionId,
+                name: n.suggestion.name,
+                amount: n.suggestion.amount,
+                currency: n.suggestion.currency,
+                date: n.suggestion.date,
+                nameScore: n.suggestion.nameScore,
+                amountScore: n.suggestion.amountScore,
+                currencyScore: n.suggestion.currencyScore,
+                dateScore: n.suggestion.dateScore,
+                confidenceScore: n.suggestion.confidenceScore,
+                matchType: n.suggestion.matchType as
+                  | "auto_matched"
+                  | "high_confidence"
+                  | "suggested",
+                isAlreadyMatched: n.suggestion.isAlreadyMatched,
+              },
+            },
+          });
+        }
+        logger.info("Completed bidirectional matching via rust", {
+          teamId,
+          summary: {
+            totalProcessed: body.processed,
+            forwardMatches: body.forwardMatches,
+            reverseMatches: body.reverseMatches,
+            totalAutoMatches: body.autoMatched,
+            totalSuggestions: body.suggestions,
+            noMatches: body.noMatches,
+          },
+        });
+        return {
+          processed: body.processed,
+          autoMatched: body.autoMatched,
+          suggestions: body.suggestions,
+          noMatches: body.noMatches,
+          forwardMatches: body.forwardMatches,
+          reverseMatches: body.reverseMatches,
+        };
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        logger.warn(
+          "match-transactions-bidirectional rust failed; falling back to drizzle",
+          {
+            error: error instanceof Error ? error.message : "unknown",
+          },
+        );
+      }
+    }
 
     // PHASE 1: Forward matching - Find inbox items for new transactions
     const forwardMatches = new Map<string, string>();

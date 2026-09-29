@@ -9,6 +9,11 @@ import {
   shouldResetInboxToPendingAfterSuggestionFailure,
   updateInbox,
 } from "@midday/db/queries";
+import {
+  inboxMatchingDelegationTarget,
+  postMatchTransactionsBidirectional,
+  type MatchNotification,
+} from "@jobs/utils/inbox-matching-delegate";
 import type { Job } from "bullmq";
 import type { MatchTransactionsBidirectionalPayload } from "../../schemas/inbox";
 import { getDb } from "../../utils/db";
@@ -31,6 +36,48 @@ export class MatchTransactionsBidirectionalProcessor extends BaseProcessor<Match
       teamId,
       newTransactionCount: newTransactionIds.length,
     });
+
+    const target = inboxMatchingDelegationTarget(
+      "match-transactions-bidirectional",
+    );
+    if (target) {
+      try {
+        const body = await postMatchTransactionsBidirectional(
+          { teamId, newTransactionIds },
+          target,
+        );
+        await this.deliverNotifications(teamId, body.notifications);
+        this.logger.info("Completed bidirectional matching via rust", {
+          teamId,
+          summary: {
+            totalProcessed: body.processed,
+            forwardMatches: body.forwardMatches,
+            reverseMatches: body.reverseMatches,
+            totalAutoMatches: body.autoMatched,
+            totalSuggestions: body.suggestions,
+            noMatches: body.noMatches,
+          },
+        });
+        return {
+          processed: body.processed,
+          autoMatched: body.autoMatched,
+          suggestions: body.suggestions,
+          noMatches: body.noMatches,
+          forwardMatches: body.forwardMatches,
+          reverseMatches: body.reverseMatches,
+        };
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        this.logger.warn(
+          "match-transactions-bidirectional rust failed; falling back to drizzle",
+          {
+            error: error instanceof Error ? error.message : "unknown",
+          },
+        );
+      }
+    }
 
     // PHASE 1: Forward matching - Find inbox items for new transactions
     const forwardMatches = new Map<string, string>(); // transactionId -> inboxId
@@ -306,5 +353,42 @@ export class MatchTransactionsBidirectionalProcessor extends BaseProcessor<Match
       forwardMatches: forwardMatchCount,
       reverseMatches: reverseMatchCount,
     };
+  }
+
+  private async deliverNotifications(
+    teamId: string,
+    notifications: MatchNotification[],
+  ) {
+    const db = getDb();
+    for (const n of notifications) {
+      if (n.action !== "auto_matched" && n.action !== "suggestion_created") {
+        continue;
+      }
+      await triggerMatchingNotification({
+        db,
+        teamId,
+        inboxId: n.inboxId,
+        result: {
+          action: n.action,
+          suggestion: {
+            transactionId: n.suggestion.transactionId,
+            name: n.suggestion.name,
+            amount: n.suggestion.amount,
+            currency: n.suggestion.currency,
+            date: n.suggestion.date,
+            nameScore: n.suggestion.nameScore,
+            amountScore: n.suggestion.amountScore,
+            currencyScore: n.suggestion.currencyScore,
+            dateScore: n.suggestion.dateScore,
+            confidenceScore: n.suggestion.confidenceScore,
+            matchType: n.suggestion.matchType as
+              | "auto_matched"
+              | "high_confidence"
+              | "suggested",
+            isAlreadyMatched: n.suggestion.isAlreadyMatched,
+          },
+        },
+      });
+    }
   }
 }

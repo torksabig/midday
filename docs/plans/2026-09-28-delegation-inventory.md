@@ -419,6 +419,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/rates-scheduler` | Yes · AP-WORKER-2. `exchange_rates` upsert. Banking FX fetch stays on BullMQ Node |
 | `POST /api/v1/workers/activity-notification-flush` | Yes · AP-WORKER-3. Claim due batches + mark sent / identity metadata. Slack/Telegram/WhatsApp/Sendblue send stays on BullMQ Node |
 | `POST /api/v1/workers/notification` | Yes · AP-WORKER-4. `activities` insert/combine. Resend stays on Node `@midday/notifications` |
+| `POST /api/v1/workers/batch-process-matching` | Yes · AP-WORKER-5. Inbox suggestion/auto-match SQL. Matching notifications stay on Node |
+| `POST /api/v1/workers/match-transactions-bidirectional` | Yes · AP-WORKER-5. Forward + reverse match SQL. Matching notifications stay on Node |
 
 ## Autopilot queue
 
@@ -443,6 +445,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-WORKER-2 | DONE | `rates-scheduler` exchange_rates upsert in Rust; BullMQ still fetches banking FX | worker |
 | AP-WORKER-3 | DONE | `activity-notification-flush` claim/finalize SQL in Rust; BullMQ still sends Slack/Telegram/WhatsApp/Sendblue | worker |
 | AP-WORKER-4 | DONE | `notification` activities insert/combine in Rust; Resend + sendToProviders stay on Node | worker |
+| AP-WORKER-5 | DONE | Inbox DB matching (`batch-process-matching`, `match-transactions-bidirectional`) in Rust; Resend/Slack/provider notify stay on Node | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |

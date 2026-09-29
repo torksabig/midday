@@ -1,5 +1,9 @@
 import { getDb } from "@jobs/init";
 import { triggerMatchingNotification } from "@jobs/utils/inbox-matching-notifications";
+import {
+  inboxMatchingDelegationTarget,
+  postBatchProcessMatching,
+} from "@jobs/utils/inbox-matching-delegate";
 import { calculateInboxSuggestions, hasSuggestion } from "@midday/db/queries";
 import { logger, schemaTask } from "@trigger.dev/sdk";
 import { z } from "zod";
@@ -20,6 +24,67 @@ export const batchProcessMatching = schemaTask({
       teamId,
       inboxCount: inboxIds.length,
     });
+
+    const target = inboxMatchingDelegationTarget("batch-process-matching");
+    if (target) {
+      try {
+        const body = await postBatchProcessMatching({ teamId, inboxIds }, target);
+        for (const n of body.notifications) {
+          if (n.action !== "auto_matched" && n.action !== "suggestion_created") {
+            continue;
+          }
+          await triggerMatchingNotification({
+            db,
+            teamId,
+            inboxId: n.inboxId,
+            result: {
+              action: n.action,
+              suggestion: {
+                transactionId: n.suggestion.transactionId,
+                name: n.suggestion.name,
+                amount: n.suggestion.amount,
+                currency: n.suggestion.currency,
+                date: n.suggestion.date,
+                nameScore: n.suggestion.nameScore,
+                amountScore: n.suggestion.amountScore,
+                currencyScore: n.suggestion.currencyScore,
+                dateScore: n.suggestion.dateScore,
+                confidenceScore: n.suggestion.confidenceScore,
+                matchType: n.suggestion.matchType as
+                  | "auto_matched"
+                  | "high_confidence"
+                  | "suggested",
+                isAlreadyMatched: n.suggestion.isAlreadyMatched,
+              },
+            },
+          });
+        }
+        logger.info("Completed batch inbox matching via rust", {
+          teamId,
+          summary: {
+            totalProcessed: body.processed,
+            autoMatches: body.autoMatched,
+            suggestions: body.suggestions,
+            noMatches: body.noMatches,
+            errors: body.errors,
+          },
+        });
+        return {
+          processed: body.processed,
+          autoMatched: body.autoMatched,
+          suggestions: body.suggestions,
+          noMatches: body.noMatches,
+          errors: body.errors,
+        };
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        logger.warn("batch-process-matching rust failed; falling back to drizzle", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    }
 
     let autoMatchCount = 0;
     let suggestionCount = 0;
