@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **third handler live** — `POST /api/v1/workers/activity-notification-flush` claims due batches / finalizes `sent_at` (AP-WORKER-3). Slack/Telegram/WhatsApp/Sendblue send stays on BullMQ Node. `rates-scheduler` and `check-invoice-status` remain. `POST /api/v1/workers/noop` remains. Trigger still owns invoice notification (Resend).  
+Status: **fourth handler live** — `POST /api/v1/workers/notification` inserts/combines `activities` (AP-WORKER-4). Resend stays on Node via `@midday/notifications`. `activity-notification-flush`, `rates-scheduler`, and `check-invoice-status` remain. `POST /api/v1/workers/noop` remains. Trigger still owns invoice notification (Resend) for check-invoice-status.  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -79,6 +79,7 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 - Route: `POST /api/v1/workers/check-invoice-status` — invoice match/overdue SQL (AP-WORKER-1)
 - Route: `POST /api/v1/workers/rates-scheduler` — idempotent `exchange_rates` upsert (AP-WORKER-2); FX fetch stays Node
 - Route: `POST /api/v1/workers/activity-notification-flush` — claim due batches + mark sent / identity metadata (AP-WORKER-3); provider send stays Node
+- Route: `POST /api/v1/workers/notification` — activities insert/combine (AP-WORKER-4); Resend stays Node
 - Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`
 
 ---
@@ -122,7 +123,7 @@ Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real
 1. **`check-invoice-status`** (Trigger) — **implemented.** Rust writes the match/overdue rows. Node sends `invoice-notifications` when `notify` is true. Dual falls back to Supabase. Replacement does not. Set `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`, and `MIDDAY_WORKER_TOKEN` (or `REPLACEMENT_DELEGATION_TOKEN`).
 2. **`rates-scheduler`** (BullMQ) — **implemented.** Node still calls `trpc.banking.rates` for FX; Rust upserts `exchange_rates` from the posted rows. Dual falls back to Drizzle. Replacement does not.
 3. **`activity-notification-flush`** (BullMQ) — **implemented.** Verified not DB-only: flush also sends Slack/Telegram/WhatsApp/Sendblue. Rust claims due batches (marks ineligible `sent_at`) and finalizes after Node deliver; provider send stays Node. Dual falls back to `@midday/bot` flush; replacement does not.
-4. **`notification`** (BullMQ + Trigger) — **only** the DB insert / status half; leave Resend send on Node behind a flag.
+4. **`notification`** (BullMQ + Trigger) — **implemented.** Rust inserts/combines `activities` (preference priority). Node/`@midday/notifications` still sends Resend when `sendEmail` is true; BullMQ still calls `sendToProviders`. Dual falls back to Drizzle create; replacement does not.
 5. **Inbox DB matching** — `batch-process-matching`, `match-transactions-bidirectional` (no provider OAuth).
 6. **Document SQL status transitions** already delegated via tRPC — worker `process-document` body next for parity; keep classify/embed on Node until AI clients exist in Rust.
 7. **Transaction import/export file pipelines** — after document/inbox SQL parity; storage signed URLs stay Node.
@@ -136,7 +137,7 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, and the noop
+- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
@@ -145,4 +146,4 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Next concrete slice
 
-`activity-notification-flush` is live (AP-WORKER-3). Next is `notification` (BullMQ + Trigger) — **DB insert / status half only**; Resend stays on Node.
+`notification` is live (AP-WORKER-4). Next is **inbox DB matching** — `batch-process-matching` / `match-transactions-bidirectional` (no provider OAuth).

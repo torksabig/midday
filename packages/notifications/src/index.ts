@@ -37,6 +37,12 @@ import { transactionsAssigned } from "./types/transactions-assigned";
 import { transactionsCategorized } from "./types/transactions-categorized";
 import { transactionsCreated } from "./types/transactions-created";
 import { transactionsExported } from "./types/transactions-exported";
+import {
+  notificationDelegationTarget,
+  postNotificationWorker,
+  type NotificationWorkerTeam,
+  type NotificationWorkerUser,
+} from "./worker-delegate";
 
 const handlers = {
   transactions_created: transactionsCreated,
@@ -215,6 +221,68 @@ export class Notifications {
     payload: Omit<NotificationTypes[T], "users">,
     options?: NotificationOptions,
   ): Promise<NotificationResult> {
+    const sendEmail = options?.sendEmail ?? false;
+    const target = notificationDelegationTarget();
+    if (target) {
+      try {
+        const rust = await postNotificationWorker(
+          {
+            type: type as string,
+            teamId,
+            sendEmail,
+            ...(options?.priority !== undefined
+              ? { priority: options.priority }
+              : {}),
+            ...(payload as Record<string, unknown>),
+          },
+          target,
+        );
+
+        if (!sendEmail) {
+          return {
+            type: type as string,
+            activities: rust.activities,
+            emails: {
+              sent: 0,
+              skipped: rust.users.length,
+              failed: 0,
+            },
+          };
+        }
+
+        const users = rustUsersToUserData(rust.users);
+        if (users.length === 0) {
+          return {
+            type: type as string,
+            activities: rust.activities,
+            emails: { sent: 0, skipped: 0, failed: 0 },
+          };
+        }
+
+        const data = { ...payload, users } as NotificationTypes[T];
+        const emails = await this.#deliverEmails(
+          type,
+          data,
+          options,
+          rustTeamToContext(rust.team),
+        );
+
+        return {
+          type: type as string,
+          activities: rust.activities,
+          emails,
+        };
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        console.warn(
+          "notification rust failed; falling back to drizzle",
+          error instanceof Error ? error.message : "unknown",
+        );
+      }
+    }
+
     const [teamMembers, teamInfo] = await Promise.all([
       getTeamMembers(this.#db, teamId),
       getTeamById(this.#db, teamId),
@@ -239,6 +307,88 @@ export class Notifications {
     const data = { ...payload, users } as NotificationTypes[T];
 
     return this.#createInternal(type, data, options, teamInfo);
+  }
+
+  /**
+   * Resend half only — used after Rust inserted activities (AP-WORKER-4).
+   */
+  async #deliverEmails<T extends keyof NotificationTypes>(
+    type: T,
+    data: NotificationTypes[T],
+    options: NotificationOptions | undefined,
+    teamInfo: { id: string; name: string; inboxId: string },
+  ): Promise<NotificationResult["emails"]> {
+    const handler = handlers[type];
+    if (!handler?.createEmail) {
+      return {
+        sent: 0,
+        skipped: (data as { users: UserData[] }).users.length,
+        failed: 0,
+      };
+    }
+
+    const validatedData = handler.schema.parse(data);
+    const firstUser = validatedData.users[0];
+    if (!firstUser) {
+      return { sent: 0, skipped: 0, failed: 0 };
+    }
+
+    const teamContext = {
+      id: teamInfo.id,
+      name: teamInfo.name || "Team",
+      inboxId: teamInfo.inboxId || "",
+    };
+    const sampleEmail = handler.createEmail(
+      validatedData,
+      firstUser,
+      teamContext,
+    );
+
+    if (sampleEmail.emailType === "customer") {
+      return this.#emailService.sendBulk(
+        [
+          this.#createEmailInput(
+            handler,
+            validatedData,
+            firstUser,
+            teamContext,
+            options,
+          ),
+        ],
+        type as string,
+      );
+    }
+
+    if (sampleEmail.emailType === "owners") {
+      const ownerUsers = validatedData.users.filter(
+        (user: UserData) => user.role === "owner",
+      );
+      return this.#emailService.sendBulk(
+        ownerUsers.map((user: UserData) =>
+          this.#createEmailInput(
+            handler,
+            validatedData,
+            user,
+            teamContext,
+            options,
+          ),
+        ),
+        type as string,
+      );
+    }
+
+    return this.#emailService.sendBulk(
+      validatedData.users.map((user: UserData) =>
+        this.#createEmailInput(
+          handler,
+          validatedData,
+          user,
+          teamContext,
+          options,
+        ),
+      ),
+      type as string,
+    );
   }
 
   /**
@@ -431,3 +581,31 @@ export {
   transactionsCreatedSchema,
   transactionsExportedSchema,
 } from "./schemas";
+export {
+  notificationDelegationTarget,
+  postNotificationWorker,
+} from "./worker-delegate";
+
+function rustUsersToUserData(users: NotificationWorkerUser[]): UserData[] {
+  return users.map((user) => ({
+    id: user.id,
+    full_name: user.full_name ?? undefined,
+    email: user.email ?? "",
+    locale: user.locale ?? "en",
+    avatar_url: user.avatar_url ?? undefined,
+    team_id: user.team_id,
+    role: user.role === "owner" || user.role === "member" ? user.role : "member",
+  }));
+}
+
+function rustTeamToContext(team: NotificationWorkerTeam): {
+  id: string;
+  name: string;
+  inboxId: string;
+} {
+  return {
+    id: team.id,
+    name: team.name || "Team",
+    inboxId: team.inboxId || "",
+  };
+}
