@@ -67,7 +67,7 @@ export function useNotifications() {
     channelName: "user-notifications",
     events: ["INSERT"],
     table: "activities",
-    filter: `user_id=eq.${user?.id}`,
+    filter: user?.id ? `user_id=eq.${user.id}` : undefined,
     onEvent: (payload) => {
       // Only handle new notifications (priority <= 3), not archived updates
       const newRecord = payload?.new as any; // Supabase payload type

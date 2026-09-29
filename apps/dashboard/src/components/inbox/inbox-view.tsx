@@ -115,7 +115,7 @@ export function InboxView() {
   useRealtime({
     channelName: "realtime_inbox",
     table: "inbox",
-    filter: `team_id=eq.${user?.teamId}`,
+    filter: user?.teamId ? `team_id=eq.${user.teamId}` : undefined,
     onEvent: (payload) => {
       if (payload.eventType === "INSERT") {
         const id = payload.new?.id;

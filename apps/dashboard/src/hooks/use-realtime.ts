@@ -102,8 +102,14 @@ export function useRealtime<TN extends TableName>({
     }
 
     channel.subscribe((status, err) => {
+      // Use warn (not error): Next.js dev overlay treats console.error as a
+      // runtime error. CHANNEL_ERROR is often transient (realtime down, table
+      // not published yet, reconnect) and err is frequently undefined.
       if (status === "CHANNEL_ERROR") {
-        console.error(`[Realtime] Channel error for ${channelName}:`, err);
+        console.warn(
+          `[Realtime] Channel error for ${channelName}:`,
+          err ?? "no error detail from realtime",
+        );
       } else if (status === "TIMED_OUT") {
         console.warn(`[Realtime] Subscription timed out for ${channelName}`);
       }
