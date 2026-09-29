@@ -42,6 +42,18 @@ describe("tRPC: search AP-20 no dual Drizzle fallback", () => {
     expect(mocks.globalSearchQuery).not.toHaveBeenCalled();
   });
 
+  test("search.global empty searchTerm still does not fall back to Drizzle FTS", async () => {
+    const caller = createCaller(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+
+    await expect(caller.global({ searchTerm: "" })).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: expect.stringContaining("search.global"),
+    });
+    expect(mocks.globalSearchQuery).not.toHaveBeenCalled();
+  });
+
   test("search.attachments dual mode throws without Drizzle when API is down", async () => {
     const caller = createCaller(
       createTestContext({ accessToken: "fake-session-jwt" }),

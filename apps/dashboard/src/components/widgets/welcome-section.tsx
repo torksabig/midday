@@ -311,7 +311,10 @@ export function WelcomeGreeting() {
   const firstName = user?.fullName?.split(" ")[0];
 
   return (
-    <h1 className="text-[38px] font-serif leading-tight text-center">
+    <h1
+      className="text-[38px] font-serif leading-tight text-center"
+      suppressHydrationWarning
+    >
       {greeting}
       {firstName ? (
         <>
