@@ -498,9 +498,48 @@ async function sendImmediateMatchNotifications(
   }
 }
 
+type DeliverIdentity = {
+  id: string;
+  provider: string;
+  externalUserId: string;
+  externalChannelId?: string | null;
+  teamId: string;
+  userId: string;
+  metadata?: PlatformIdentityMetadata | Record<string, unknown> | null;
+};
+
+/** Deliver one claimed flush batch via Slack/Telegram/WhatsApp/Sendblue (no DB). */
+export async function deliverActivityNotificationBatch(params: {
+  app: {
+    id: string;
+    appId: string;
+    teamId: string;
+    config?: AppConfig["config"];
+    settings?: AppConfig["settings"];
+  };
+  identity: DeliverIdentity;
+  text: string;
+  eventFamily: string;
+  entries: Array<Record<string, unknown>>;
+}): Promise<boolean> {
+  return sendSummaryToIdentity(
+    {
+      id: params.app.id,
+      appId: params.app.appId,
+      teamId: params.app.teamId,
+      config: params.app.config,
+      settings: params.app.settings,
+    },
+    params.identity,
+    params.text,
+    params.eventFamily,
+    params.entries,
+  );
+}
+
 async function sendSummaryToIdentity(
   app: AppConfig,
-  identity: Awaited<ReturnType<typeof getPlatformIdentityById>>,
+  identity: DeliverIdentity | null | undefined,
   text: string,
   eventFamily?: string,
   entries?: Array<Record<string, unknown>>,
