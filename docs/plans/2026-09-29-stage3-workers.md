@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **first handler live** — `POST /api/v1/workers/check-invoice-status` does the Postgres match. `POST /api/v1/workers/noop` remains. Trigger still owns the schedule and the invoice notification (Resend).  
+Status: **second handler live** — `POST /api/v1/workers/rates-scheduler` upserts FX rows Node already fetched. `POST /api/v1/workers/check-invoice-status` does the Postgres match. `POST /api/v1/workers/noop` remains. Trigger still owns invoice notification (Resend). BullMQ still owns banking FX fetch.  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -76,6 +76,8 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 
 - Module: `crates/api/src/job_consumers.rs`
 - Route: `POST /api/v1/workers/noop` — accepts `{ job, payload }`, requires Midday Postgres auth, **executes nothing**
+- Route: `POST /api/v1/workers/check-invoice-status` — invoice match/overdue SQL (AP-WORKER-1)
+- Route: `POST /api/v1/workers/rates-scheduler` — idempotent `exchange_rates` upsert (AP-WORKER-2); FX fetch stays Node
 - Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`
 
 ---
@@ -117,7 +119,7 @@ Gated tRPC procedures that only *enqueue* jobs stay on Node; Rust may later own 
 Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real handler; keep Node processor until metrics match.
 
 1. **`check-invoice-status`** (Trigger) — **implemented.** Rust writes the match/overdue rows. Node sends `invoice-notifications` when `notify` is true. Dual falls back to Supabase. Replacement does not. Set `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`, and `MIDDAY_WORKER_TOKEN` (or `REPLACEMENT_DELEGATION_TOKEN`).
-2. **`rates-scheduler`** (BullMQ) — scheduled FX upsert; bounded side effects.
+2. **`rates-scheduler`** (BullMQ) — **implemented.** Node still calls `trpc.banking.rates` for FX; Rust upserts `exchange_rates` from the posted rows. Dual falls back to Drizzle. Replacement does not.
 3. **`activity-notification-flush`** (BullMQ) — batch DB writes; no mail if flush is DB-only (verify before port).
 4. **`notification`** (BullMQ + Trigger) — **only** the DB insert / status half; leave Resend send on Node behind a flag.
 5. **Inbox DB matching** — `batch-process-matching`, `match-transactions-bidirectional` (no provider OAuth).
@@ -133,7 +135,7 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing further `/workers/...` handlers beyond `check-invoice-status` and the noop
+- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
@@ -142,4 +144,4 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Next concrete slice
 
-`check-invoice-status` is the first handler. Next is `rates-scheduler` (BullMQ FX upsert), still with Node enqueue and no queue deletion.
+`rates-scheduler` is live (AP-WORKER-2). Next is `activity-notification-flush` (BullMQ batch DB writes), still with Node enqueue and no queue deletion.

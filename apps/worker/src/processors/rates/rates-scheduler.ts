@@ -5,6 +5,10 @@ import type { RatesSchedulerPayload } from "../../schemas/rates";
 import { getDb } from "../../utils/db";
 import { isProduction } from "../../utils/env";
 import { BaseProcessor } from "../base";
+import {
+  postRatesScheduler,
+  ratesSchedulerDelegationTarget,
+} from "./rates-scheduler-delegate";
 
 /**
  * Scheduled task that runs twice daily to update exchange rates
@@ -23,11 +27,9 @@ export class RatesSchedulerProcessor extends BaseProcessor<RatesSchedulerPayload
       return { totalProcessed: 0, batchesProcessed: 0 };
     }
 
-    const db = getDb();
-
     this.logger.info("Starting rates scheduler");
 
-    // Fetch rates from banking API
+    // Fetch rates from banking API (stays on Node — external provider)
     const { data: ratesData } = await trpc.banking.rates.query();
 
     // Transform rates data to match database schema
@@ -44,10 +46,40 @@ export class RatesSchedulerProcessor extends BaseProcessor<RatesSchedulerPayload
       totalRates: exchangeRateData.length,
     });
 
-    // Upsert rates using Drizzle ORM (handles batching internally)
+    const batchSize = 500;
+    const target = ratesSchedulerDelegationTarget();
+    if (target) {
+      try {
+        const result = await postRatesScheduler(
+          exchangeRateData,
+          batchSize,
+          target,
+        );
+        this.logger.info("Rates scheduler completed via rust", {
+          totalProcessed: result.totalProcessed,
+          batchesProcessed: result.batchesProcessed,
+        });
+        return {
+          totalProcessed: result.totalProcessed,
+          batchesProcessed: result.batchesProcessed,
+        };
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        this.logger.warn(
+          "rates-scheduler rust failed; falling back to drizzle",
+          {
+            error: error instanceof Error ? error.message : "unknown",
+          },
+        );
+      }
+    }
+
+    const db = getDb();
     const result = await upsertExchangeRates(db, {
       rates: exchangeRateData,
-      batchSize: 500, // Match original batch size
+      batchSize,
     });
 
     this.logger.info("Rates scheduler completed", {

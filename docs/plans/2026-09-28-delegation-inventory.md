@@ -416,6 +416,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/noop` auth-gated noop | Yes · no DB side effects |
 | Rip out `apps/worker` / `packages/jobs` | **No** · Node still owns execution |
 | `POST /api/v1/workers/check-invoice-status` | Yes · AP-WORKER-1. Match/overdue SQL. Notification stays on Trigger |
+| `POST /api/v1/workers/rates-scheduler` | Yes · AP-WORKER-2. `exchange_rates` upsert. Banking FX fetch stays on BullMQ Node |
 
 ## Autopilot queue
 
@@ -437,6 +438,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-21 | DONE | `notifications.updateAllStatus` + `user.update` writes | write |
 | AP-STAGE3 | DONE | Thin `job_consumers` sketch + `POST /workers/noop` (Node workers untouched) | infra |
 | AP-WORKER-1 | DONE | `check-invoice-status` Postgres match in Rust; Trigger still sends invoice notifications | worker |
+| AP-WORKER-2 | DONE | `rates-scheduler` exchange_rates upsert in Rust; BullMQ still fetches banking FX | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |
