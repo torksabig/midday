@@ -9,7 +9,7 @@ import type { Job } from "bullmq";
 import type { ProcessDocumentPayload } from "../../schemas/documents";
 import { getDb } from "../../utils/db";
 import { detectFileTypeFromBlob } from "../../utils/detect-file-type";
-import { updateDocumentWithRetry } from "../../utils/document-update";
+import { updateProcessDocumentStatus } from "../../utils/process-document-status";
 import {
   NonRetryableError,
   UnsupportedFileTypeError,
@@ -115,7 +115,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
             },
           );
 
-          await updateDocumentWithRetry(
+          await updateProcessDocumentStatus(
             db,
             {
               pathTokens: filePath,
@@ -181,7 +181,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
             },
           );
 
-          await updateDocumentWithRetry(
+          await updateProcessDocumentStatus(
             db,
             {
               pathTokens: filePath,
@@ -260,7 +260,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
               },
             );
             // Update document status to indicate it's not processable
-            await updateDocumentWithRetry(
+            await updateProcessDocumentStatus(
               db,
               {
                 pathTokens: filePath,
@@ -394,7 +394,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
             documentLoadFailed,
           },
         );
-        await updateDocumentWithRetry(
+        await updateProcessDocumentStatus(
           db,
           {
             pathTokens: filePath,
@@ -415,7 +415,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
           teamId,
         });
         // Complete with null - user can still access the file
-        await updateDocumentWithRetry(
+        await updateProcessDocumentStatus(
           db,
           {
             pathTokens: filePath,
@@ -442,7 +442,7 @@ export class ProcessDocumentProcessor extends BaseProcessor<ProcessDocumentPaylo
           },
         );
         // Mark as completed - document exists but has no extractable content to classify
-        await updateDocumentWithRetry(
+        await updateProcessDocumentStatus(
           db,
           {
             pathTokens: filePath,

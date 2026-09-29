@@ -5,6 +5,7 @@ import { getRedisConnection } from "../config";
 import type { JobInfo, QueueConfig } from "../types/queue-config";
 import { getDb } from "../utils/db";
 import { UnsupportedFileTypeError } from "../utils/error-classification";
+import { updateProcessDocumentStatus } from "../utils/process-document-status";
 
 const logger = createLoggerWithContext("documents-queue");
 
@@ -73,13 +74,17 @@ async function handleUnsupportedFileType(
     // Use filename as title so it displays normally in UI (no "needs classification")
     const displayName = data.filePath.at(-1) ?? "Document";
 
-    await updateDocumentByPath(db, {
-      pathTokens: data.filePath,
-      teamId: data.teamId,
-      title: displayName,
-      summary: `File type (${error.mimetype}) is not supported for content extraction`,
-      processingStatus: "completed",
-    });
+    await updateProcessDocumentStatus(
+      db,
+      {
+        pathTokens: data.filePath,
+        teamId: data.teamId,
+        title: displayName,
+        summary: `File type (${error.mimetype}) is not supported for content extraction`,
+        processingStatus: "completed",
+      },
+      logger,
+    );
 
     logger.info("Unsupported file type marked as completed", {
       filePath: data.filePath.join("/"),
@@ -106,12 +111,16 @@ async function handleDocumentJobFinalFailure(job: JobInfo): Promise<void> {
 
   try {
     if (data.filePath && data.teamId) {
-      // process-document job - uses filePath array
-      await updateDocumentByPath(db, {
-        pathTokens: data.filePath,
-        teamId: data.teamId,
-        processingStatus: "failed",
-      });
+      // process-document job - uses filePath array (AP-WORKER-6 Rust status)
+      await updateProcessDocumentStatus(
+        db,
+        {
+          pathTokens: data.filePath,
+          teamId: data.teamId,
+          processingStatus: "failed",
+        },
+        logger,
+      );
       logger.info("Document status updated to failed", {
         filePath: data.filePath.join("/"),
       });

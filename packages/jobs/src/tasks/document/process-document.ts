@@ -1,5 +1,9 @@
 import { getDb } from "@jobs/init";
 import { processDocumentSchema } from "@jobs/schema";
+import {
+  postProcessDocumentStatus,
+  processDocumentDelegationTarget,
+} from "@jobs/utils/process-document-delegate";
 import { updateDocumentByPath } from "@midday/db/queries";
 import { loadDocument } from "@midday/documents/loader";
 import { getContentSample } from "@midday/documents/utils";
@@ -8,6 +12,39 @@ import { schemaTask, tasks } from "@trigger.dev/sdk";
 import { classifyDocument } from "./classify-document";
 import { classifyImage } from "./classify-image";
 import { convertHeic } from "./convert-heic";
+
+async function markProcessDocumentFailed(
+  filePath: string[],
+  teamId: string,
+): Promise<void> {
+  const target = processDocumentDelegationTarget();
+  if (target) {
+    try {
+      await postProcessDocumentStatus(
+        {
+          teamId,
+          pathTokens: filePath,
+          processingStatus: "failed",
+        },
+        target,
+      );
+      return;
+    } catch (error) {
+      if (target.mode === "replacement") {
+        throw error;
+      }
+      console.warn(
+        "process-document rust failed; falling back to drizzle",
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+  await updateDocumentByPath(getDb(), {
+    pathTokens: filePath,
+    teamId,
+    processingStatus: "failed",
+  });
+}
 
 // NOTE: Process documents and images for classification
 export const processDocument = schemaTask({
@@ -85,11 +122,7 @@ export const processDocument = schemaTask({
     } catch (error) {
       console.error(error);
 
-      await updateDocumentByPath(getDb(), {
-        pathTokens: filePath,
-        teamId,
-        processingStatus: "failed",
-      });
+      await markProcessDocumentFailed(filePath, teamId);
     }
   },
 });
