@@ -1,8 +1,9 @@
-import { getInvoiceById, updateInvoice } from "@midday/db/queries";
+import { getInvoiceById } from "@midday/db/queries";
 import { Notifications } from "@midday/notifications";
 import { createClient } from "@midday/supabase/job";
 import type { Job } from "bullmq";
 import type { SendInvoiceEmailPayload } from "../../schemas/invoices";
+import { updateInvoiceSentDelegated } from "../../utils/accounting-insights-invoice";
 import { getDb } from "../../utils/db";
 import { BaseProcessor } from "../base";
 
@@ -131,14 +132,18 @@ export class SendInvoiceEmailProcessor extends BaseProcessor<SendInvoiceEmailPay
 
     this.logger.debug("Invoice email sent", { invoiceId, customerEmail });
 
-    // Update invoice status using Drizzle
-    const updated = await updateInvoice(db, {
-      id: invoiceId,
-      teamId: invoice.teamId,
-      status: "unpaid",
-      sentTo: customerEmail,
-      sentAt: new Date().toISOString(),
-    });
+    // Update invoice status (SQL via Rust when dual/replacement; Resend already done)
+    const updated = await updateInvoiceSentDelegated(
+      db,
+      {
+        id: invoiceId,
+        teamId: invoice.teamId,
+        status: "unpaid",
+        sentTo: customerEmail,
+        sentAt: new Date().toISOString(),
+      },
+      this.logger,
+    );
 
     if (!updated) {
       this.logger.error("Failed to update invoice status after email", {

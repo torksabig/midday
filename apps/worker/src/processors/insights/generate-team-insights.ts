@@ -14,6 +14,7 @@ import {
 } from "@midday/insights";
 import { triggerJob } from "@midday/job-client";
 import type { Job } from "bullmq";
+import { persistTeamInsightDelegated } from "../../utils/accounting-insights-invoice";
 import { getDb } from "../../utils/db";
 import { BaseProcessor } from "../base";
 
@@ -176,20 +177,24 @@ export class GenerateInsightsProcessor extends BaseProcessor<GenerateTeamInsight
         locale,
       });
 
-      await updateInsight(db, {
-        id: insightId,
-        teamId,
-        status: "completed",
-        title: result.content.title,
-        selectedMetrics: result.selectedMetrics,
-        allMetrics: result.allMetrics as Record<string, InsightMetric>,
-        anomalies: result.anomalies,
-        expenseAnomalies: result.expenseAnomalies,
-        activity: result.activity,
-        content: result.content,
-        predictions: result.predictions,
-        generatedAt: new Date(),
-      });
+      await persistTeamInsightDelegated(
+        db,
+        {
+          id: insightId,
+          teamId,
+          status: "completed",
+          title: result.content.title,
+          selectedMetrics: result.selectedMetrics,
+          allMetrics: result.allMetrics as Record<string, InsightMetric>,
+          anomalies: result.anomalies,
+          expenseAnomalies: result.expenseAnomalies,
+          activity: result.activity,
+          content: result.content,
+          predictions: result.predictions,
+          generatedAt: new Date(),
+        },
+        this.logger,
+      );
 
       this.logger.info("Insight generation completed", {
         teamId,
@@ -242,12 +247,16 @@ export class GenerateInsightsProcessor extends BaseProcessor<GenerateTeamInsight
         status: existingInsight ? "updated" : "created",
       };
     } catch (error) {
-      // Mark insight as failed
-      await updateInsight(db, {
-        id: insightId,
-        teamId,
-        status: "failed",
-      });
+      // Mark insight as failed (SQL via Rust when dual/replacement)
+      await persistTeamInsightDelegated(
+        db,
+        {
+          id: insightId,
+          teamId,
+          status: "failed",
+        },
+        this.logger,
+      );
       throw error;
     }
   }

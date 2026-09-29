@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **ninth handler live** — team onboard SQL context via `POST /api/v1/workers/onboard-team` (AP-WORKER-9). Resend + Trigger `wait.for` stay on Node. Invite row inserts / team delete-prep already via tRPC (AP-60/61) — not forked into workers. `invite-team-members`, BullMQ `delete-team`, cancellation emails, and `payment-issue` stay gated (email/provider, no separable SQL in bodies). Prior workers (bank sync, import/export, `process-document`, inbox matching, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
+Status: **Stage 3 SQL slices complete** — AP-WORKER-10 accounting export / insights / invoice PDF+email SQL half via `POST /api/v1/workers/upsert-accounting-sync`, `update-accounting-attachment-mapping`, `persist-team-insight`, `update-invoice-file`, `update-invoice-sent`. Provider HTTP, PDF bytes, Resend, and LLM generation stay on Node. `dispatch-insights` deferred (timezone fan-out + enqueue only). Prior workers (team onboard, bank sync, import/export, `process-document`, inbox matching, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -74,7 +74,7 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 
 ### Rust foothold (clone)
 
-- Module: `crates/api/src/job_consumers.rs` (+ `inbox_matching_worker.rs`, `match_scoring.rs`, `process_document_worker.rs`, `transaction_import_export_worker.rs`, `bank_sync_worker.rs`, `team_jobs_worker.rs`)
+- Module: `crates/api/src/job_consumers.rs` (+ `inbox_matching_worker.rs`, `match_scoring.rs`, `process_document_worker.rs`, `transaction_import_export_worker.rs`, `bank_sync_worker.rs`, `team_jobs_worker.rs`, `accounting_insights_invoice_worker.rs`)
 - Route: `POST /api/v1/workers/noop` — accepts `{ job, payload }`, requires Midday Postgres auth, **executes nothing**
 - Route: `POST /api/v1/workers/check-invoice-status` — invoice match/overdue SQL (AP-WORKER-1)
 - Route: `POST /api/v1/workers/rates-scheduler` — idempotent `exchange_rates` upsert (AP-WORKER-2); FX fetch stays Node
@@ -91,7 +91,12 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 - Route: `POST /api/v1/workers/update-bank-account-sync` — balance / error / currency heal writes (AP-WORKER-8); provider balance/tx fetch stays Node
 - Route: `POST /api/v1/workers/remap-bank-account-ids` — post-reconnect account_id remaps (AP-WORKER-8); matching + provider accounts stay Node
 - Route: `POST /api/v1/workers/onboard-team` — user + trial/plan gate + bank_connections count (AP-WORKER-9); Resend + `wait.for` stay Node
-- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`, `import-transactions`, `process-export`, `export-transactions`, `upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`, `onboard-team`
+- Route: `POST /api/v1/workers/upsert-accounting-sync` — export batch status upsert (AP-WORKER-10); Fortnox/Xero/QB HTTP stays Node
+- Route: `POST /api/v1/workers/update-accounting-attachment-mapping` — attachment mapping + status (AP-WORKER-10); provider upload/delete stays Node
+- Route: `POST /api/v1/workers/persist-team-insight` — insight row of already-generated text (AP-WORKER-10); LLM stays Node
+- Route: `POST /api/v1/workers/update-invoice-file` — file_path / file_size after PDF (AP-WORKER-10); PDF bytes + vault stay Node
+- Route: `POST /api/v1/workers/update-invoice-sent` — status / sent_to / sent_at after email (AP-WORKER-10); Resend stays Node
+- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`, `import-transactions`, `process-export`, `export-transactions`, `upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`, `onboard-team`, `upsert-accounting-sync`, `update-accounting-attachment-mapping`, `persist-team-insight`, `update-invoice-file`, `update-invoice-sent`
 
 ---
 
@@ -140,7 +145,7 @@ Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real
 7. **Transaction import/export file pipelines** — **implemented (AP-WORKER-7).** Rust owns: insert imported rows (`import-transactions`), select rows for export (`process-export`), mark exported + optional `short_links` insert (`export-transactions`). Document export-path status reuses AP-WORKER-6. Node keeps: vault download/upload, CSV parse, CSV/XLSX/zip bytes, attachment blob download, signed URLs, Resend notification enqueue. `export-team-data` multi-entity reads (invoices/customers/tracker/inbox/tags) stay on Node for this slice; its transaction section uses `process-export`. No Trigger tasks for these four BullMQ names.
 8. **Bank sync / reconnect / delete-connection** — **implemented (AP-WORKER-8, SQL half).** Rust owns: upsert bank-sync rows (`upsert-transactions`), connection status / last_accessed / reference_id / disconnect-if-retries (`sync-connection-status`), account balance/error/currency writes (`update-bank-account-sync`), post-reconnect account remaps (`remap-bank-account-ids`). Reuses existing tRPC `bankConnections.delete` / `reconnect` SQL writers — no second dialect. Node keeps: provider HTTP (`connectionStatus`, `getBalance`, `getProviderTransactions`, `getProviderAccounts`, provider `deleteConnection`), vault decrypt/encrypt, Trigger schedules (`initial-bank-setup`, `bank-sync-scheduler`), enrich/match fan-out, notification enqueue. **Still gated (no separable SQL in the Trigger body):** `delete-connection` (provider teardown only; DB delete already via tRPC), `initial-bank-setup` (schedules + sync triggers only).
 9. **Team delete / onboarding / invite mail** — **implemented (AP-WORKER-9, SQL half).** Rust owns: onboard context reads (`onboard-team` — user + trial/plan gate + `bank_connections` count). Invite inserts / team delete-prep / delete / deleteMember already live on tRPC REST (AP-60/61/42) — reused, not forked into `/workers/*`. Node keeps: Resend (welcome, trial activation, invite batch, payment-issue), Trigger `wait.for`, BullMQ banking provider teardown on `delete-team`. **Still gated (no separable SQL in the job body):** `invite-team-members` (email only), `delete-team` (provider teardown only), `cancellation-email-*` (stubs), `payment-issue` (Resend only).
-10. **Accounting export / insights / invoice PDF+email** — after connectors and mail strategy.
+10. **Accounting export / insights / invoice PDF+email** — **implemented (AP-WORKER-10, SQL half).** Rust owns: export batch status upsert (`upsert-accounting-sync`), attachment mapping + status (`update-accounting-attachment-mapping`), insight row of already-generated text (`persist-team-insight`), invoice `file_path`/`file_size` (`update-invoice-file`), invoice `status`/`sent_to`/`sent_at` (`update-invoice-sent`). Reuses tRPC `accounting.disconnect` / `accounting.export` app lookup (AP-43/60) — not forked. Node keeps: Fortnox/Xero/QuickBooks HTTP, vault attachment download/upload, PDF render bytes, Resend invoice email, LLM insight generation, BullMQ enqueue. **Deferred (no separable SQL in the job body):** `dispatch-insights` (timezone fan-out + enqueue only).
 
 Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node execute + Rust shadow) for N days, then Node processor becomes a thin HTTP forwarder, then delete the TypeScript body **for that job only**.
 
@@ -148,7 +153,7 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, inbox matching, `process-document`, transaction import/export (`import-transactions`, `process-export`, `export-transactions`), bank sync SQL (`upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`), team onboard (`onboard-team`), and the noop
+- Implementing further `/workers/...` handlers beyond the AP-WORKER-1..10 allowlist and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
@@ -157,4 +162,4 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Next concrete slice
 
-Team onboard SQL is live (AP-WORKER-9). Next is **accounting export / insights / invoice PDF+email** — design-only until a dedicated slice; mail and accounting provider APIs stay on Node.
+**Stage 3 SQL slices are complete** (AP-WORKER-1..10). Remains gated on Node: live accounting provider HTTP, Resend / invoice email, PDF bytes, LLM insight text, decrypt/encrypt, live OAuth, Stripe/Polar, `dispatch-insights` fan-out, `invite-team-members` / `delete-team` / cancellation / `payment-issue`, `delete-connection` / `initial-bank-setup`, and Stage 4 decommission of `apps/api` (explicit user go-ahead only).

@@ -12,11 +12,11 @@ import {
 import {
   getAccountingSyncStatus,
   getTransactionAttachmentsForSync,
-  updateSyncedAttachmentMapping,
 } from "@midday/db/queries";
 import { createClient } from "@midday/supabase/job";
 import type { Job } from "bullmq";
 import type { AccountingAttachmentSyncPayload } from "../../schemas/accounting";
+import { updateSyncedAttachmentMappingDelegated } from "../../utils/accounting-insights-invoice";
 import { AccountingProcessorBase, type AccountingProviderId } from "./base";
 
 /**
@@ -289,10 +289,15 @@ export class SyncAttachmentsProcessor extends AccountingProcessorBase<Accounting
       }
 
       if (recordIdToUpdate) {
-        await updateSyncedAttachmentMapping(db, {
-          syncRecordId: recordIdToUpdate,
-          ...updateParams,
-        });
+        await updateSyncedAttachmentMappingDelegated(
+          db,
+          {
+            syncRecordId: recordIdToUpdate,
+            teamId,
+            ...updateParams,
+          },
+          this.logger,
+        );
 
         this.logger.info("Sync record status updated", {
           syncRecordId: recordIdToUpdate,

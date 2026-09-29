@@ -3,11 +3,11 @@ import {
   type AccountingSyncRecord,
   getAccountingSyncStatus,
   getTransactionsForAccountingSync,
-  upsertAccountingSyncRecord,
 } from "@midday/db/queries";
 import { triggerJob } from "@midday/job-client";
 import type { Job } from "bullmq";
 import type { AccountingExportPayload } from "../../schemas/accounting";
+import { upsertAccountingSyncRecordDelegated } from "../../utils/accounting-insights-invoice";
 import { AccountingProcessorBase, type AccountingProviderId } from "./base";
 
 /**
@@ -278,18 +278,22 @@ export class ExportTransactionsProcessor extends AccountingProcessorBase<Account
           for (const txResult of result.results) {
             const errorCode = deriveErrorCodeFromMessage(txResult.error);
 
-            await upsertAccountingSyncRecord(db, {
-              transactionId: txResult.transactionId,
-              teamId,
-              provider: providerId as AccountingProviderId,
-              providerTenantId: orgId,
-              providerTransactionId: txResult.providerTransactionId,
-              syncType: "manual",
-              status: txResult.success ? "synced" : "failed",
-              errorMessage: txResult.error,
-              errorCode,
-              providerEntityType: txResult.providerEntityType,
-            });
+            await upsertAccountingSyncRecordDelegated(
+              db,
+              {
+                transactionId: txResult.transactionId,
+                teamId,
+                provider: providerId as AccountingProviderId,
+                providerTenantId: orgId,
+                providerTransactionId: txResult.providerTransactionId,
+                syncType: "manual",
+                status: txResult.success ? "synced" : "failed",
+                errorMessage: txResult.error,
+                errorCode,
+                providerEntityType: txResult.providerEntityType,
+              },
+              this.logger,
+            );
 
             // Collect errors from failed transactions
             if (!txResult.success && txResult.error) {
@@ -422,15 +426,19 @@ export class ExportTransactionsProcessor extends AccountingProcessorBase<Account
           }
 
           for (const tx of batch) {
-            await upsertAccountingSyncRecord(db, {
-              transactionId: tx.id,
-              teamId,
-              provider: providerId as AccountingProviderId,
-              providerTenantId: orgId,
-              syncType: "manual",
-              status: "failed",
-              errorMessage,
-            });
+            await upsertAccountingSyncRecordDelegated(
+              db,
+              {
+                transactionId: tx.id,
+                teamId,
+                provider: providerId as AccountingProviderId,
+                providerTenantId: orgId,
+                syncType: "manual",
+                status: "failed",
+                errorMessage,
+              },
+              this.logger,
+            );
           }
         }
 

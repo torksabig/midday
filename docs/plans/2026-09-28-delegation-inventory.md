@@ -430,6 +430,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/update-bank-account-sync` | Yes · AP-WORKER-8. Balance / error / currency heal writes. Provider balance + tx fetch stay on Node |
 | `POST /api/v1/workers/remap-bank-account-ids` | Yes · AP-WORKER-8. Post-reconnect account_id remaps. Matching + provider accounts stay on Node |
 | `POST /api/v1/workers/onboard-team` | Yes · AP-WORKER-9. User + trial/plan gate + bank_connections count. Resend + `wait.for` stay on Trigger. Invite insert / team delete-prep already via tRPC AP-60/61 — not forked into workers. `invite-team-members` / `delete-team` / cancellation / `payment-issue` still gated (email/provider, no separable SQL) |
+| `POST /api/v1/workers/upsert-accounting-sync` | Yes · AP-WORKER-10. Export batch status upsert. Fortnox/Xero/QuickBooks HTTP stays on BullMQ Node |
+| `POST /api/v1/workers/update-accounting-attachment-mapping` | Yes · AP-WORKER-10. Attachment mapping + status. Provider upload/delete + vault download stay on Node |
+| `POST /api/v1/workers/persist-team-insight` | Yes · AP-WORKER-10. Insight row of already-generated text. LLM generation stays on Node. `dispatch-insights` deferred (fan-out only) |
+| `POST /api/v1/workers/update-invoice-file` | Yes · AP-WORKER-10. `file_path` / `file_size` after PDF. PDF bytes + vault upload stay on Node |
+| `POST /api/v1/workers/update-invoice-sent` | Yes · AP-WORKER-10. `status` / `sent_to` / `sent_at` after email. Resend stays on Node |
 
 ## Autopilot queue
 
@@ -459,6 +464,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-WORKER-7 | DONE | Transaction import/export SQL (`import-transactions`, `process-export`, `export-transactions`); CSV/XLSX/zip + vault + signed URLs stay on Node | worker |
 | AP-WORKER-8 | DONE | Bank sync SQL (`upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`); provider HTTP + decrypt + schedules stay on Trigger; `delete-connection` / `initial-bank-setup` still gated (no separable SQL) | worker |
 | AP-WORKER-9 | DONE | Team onboard SQL context (`onboard-team`); Resend + wait stay on Trigger; invite insert / delete-prep already via tRPC AP-60/61 (not forked); `invite-team-members` / BullMQ `delete-team` / cancellation / `payment-issue` still gated (email/provider, no separable SQL) | worker |
+| AP-WORKER-10 | DONE | Accounting export / insights / invoice PDF+email SQL (`upsert-accounting-sync`, `update-accounting-attachment-mapping`, `persist-team-insight`, `update-invoice-file`, `update-invoice-sent`); provider HTTP + PDF + Resend + LLM stay on Node; `dispatch-insights` deferred (fan-out only). **Stage 3 SQL slices complete.** | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |
@@ -502,7 +508,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** no remaining safe hybrid SQL left. Signed URLs have no SQL. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice:** Stage 3 SQL slices complete (AP-WORKER-1..10). Remains gated: live accounting provider HTTP, Resend/PDF/LLM, decrypt/encrypt, OAuth, Stripe/Polar, `dispatch-insights` fan-out, job bodies with no separable SQL. Signed URLs have no SQL. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path
@@ -514,6 +520,9 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 **External leftovers (OAuth / Stripe / providers / jobs-only):**
 - Live bank OAuth (`banking.*`, `inboxAccounts.connect/exchange`) — external OAuth
 - `accounting.getAccounts` — external provider API (app lookup could reuse AP-60 GET `/apps/:appId`)
+- Live Fortnox/Xero/QuickBooks export/attachment HTTP — external provider (SQL status via AP-WORKER-10)
+- LLM insight generation text — external AI (row persist via AP-WORKER-10); `dispatch-insights` fan-out only
+- Invoice PDF bytes + Resend send — Node (status fields via AP-WORKER-10)
 - `billing.*` / `invoicePayments.*` — Stripe/Polar
 - `connectors.*` — OAuth adapters
 - `transactions.export` — job-only (no SQL in handler)
@@ -522,4 +531,4 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 - `documents.signedUrl(s)` — Supabase storage only (no SQL)
 - Stage 4 delete `apps/api` — blocked · user must say decommission
 
-**Autopilot AP-12–62 + AP-STAGE3 sketch** (AP-15 remains BLOCKED). Stage 4 gated on explicit decommission.
+**Autopilot AP-12–62 + AP-STAGE3 + AP-WORKER-1..10** (AP-15 remains BLOCKED). Stage 3 SQL slices complete. Stage 4 gated on explicit decommission.

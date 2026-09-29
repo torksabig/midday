@@ -1,4 +1,4 @@
-import { getInvoiceById, updateInvoice } from "@midday/db/queries";
+import { getInvoiceById } from "@midday/db/queries";
 import { PdfTemplate, renderToBuffer } from "@midday/invoice";
 import { createClient } from "@midday/supabase/job";
 import type { Job } from "bullmq";
@@ -6,6 +6,7 @@ import { DEFAULT_JOB_OPTIONS } from "../../config/job-options";
 import { documentsQueue } from "../../queues/documents";
 import { invoicesQueue } from "../../queues/invoices";
 import type { GenerateInvoicePayload } from "../../schemas/invoices";
+import { updateInvoiceFileDelegated } from "../../utils/accounting-insights-invoice";
 import { getDb } from "../../utils/db";
 import { BaseProcessor } from "../base";
 
@@ -74,13 +75,17 @@ export class GenerateInvoiceProcessor extends BaseProcessor<GenerateInvoicePaylo
 
     this.logger.debug("PDF uploaded to storage", { invoiceId, fullPath });
 
-    // Update invoice with file path and size using Drizzle
-    const updated = await updateInvoice(db, {
-      id: invoiceId,
-      teamId: invoiceData.teamId,
-      filePath: [invoiceData.teamId, "invoices", filename],
-      fileSize: buffer.length,
-    });
+    // Update invoice with file path and size (SQL via Rust when dual/replacement)
+    const updated = await updateInvoiceFileDelegated(
+      db,
+      {
+        id: invoiceId,
+        teamId: invoiceData.teamId,
+        filePath: [invoiceData.teamId, "invoices", filename],
+        fileSize: buffer.length,
+      },
+      this.logger,
+    );
 
     if (!updated) {
       this.logger.error("Failed to update invoice with file info", {
