@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **seventh handler live** — transaction import/export SQL via `POST /api/v1/workers/import-transactions`, `process-export`, `export-transactions` (AP-WORKER-7). CSV/XLSX/zip bytes, vault upload/download, and signed URLs stay on Node. Prior workers (`process-document`, inbox matching, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
+Status: **eighth handler live** — bank sync SQL via `POST /api/v1/workers/upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids` (AP-WORKER-8). Provider HTTP, vault decrypt/encrypt, OAuth token exchange, Trigger schedules, and `delete-connection` provider teardown stay on Node. Prior workers (`import-transactions` / `process-export` / `export-transactions`, `process-document`, inbox matching, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -74,7 +74,7 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 
 ### Rust foothold (clone)
 
-- Module: `crates/api/src/job_consumers.rs` (+ `inbox_matching_worker.rs`, `match_scoring.rs`)
+- Module: `crates/api/src/job_consumers.rs` (+ `inbox_matching_worker.rs`, `match_scoring.rs`, `process_document_worker.rs`, `transaction_import_export_worker.rs`, `bank_sync_worker.rs`)
 - Route: `POST /api/v1/workers/noop` — accepts `{ job, payload }`, requires Midday Postgres auth, **executes nothing**
 - Route: `POST /api/v1/workers/check-invoice-status` — invoice match/overdue SQL (AP-WORKER-1)
 - Route: `POST /api/v1/workers/rates-scheduler` — idempotent `exchange_rates` upsert (AP-WORKER-2); FX fetch stays Node
@@ -86,7 +86,11 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 - Route: `POST /api/v1/workers/import-transactions` — bulk insert imported rows (AP-WORKER-7); CSV parse + vault download stay Node
 - Route: `POST /api/v1/workers/process-export` — select transaction rows for export (AP-WORKER-7); attachment download + CSV/XLSX stay Node
 - Route: `POST /api/v1/workers/export-transactions` — mark exported + optional short_link insert (AP-WORKER-7); zip/upload/signed URL stay Node
-- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`, `import-transactions`, `process-export`, `export-transactions`
+- Route: `POST /api/v1/workers/upsert-transactions` — bank-sync row insert ON CONFLICT DO NOTHING (AP-WORKER-8); provider fetch + transform stay Node
+- Route: `POST /api/v1/workers/sync-connection-status` — connection status / last_accessed / reference_id / disconnect-if-retries (AP-WORKER-8); provider `connectionStatus` stays Node
+- Route: `POST /api/v1/workers/update-bank-account-sync` — balance / error / currency heal writes (AP-WORKER-8); provider balance/tx fetch stays Node
+- Route: `POST /api/v1/workers/remap-bank-account-ids` — post-reconnect account_id remaps (AP-WORKER-8); matching + provider accounts stay Node
+- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`, `import-transactions`, `process-export`, `export-transactions`, `upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`
 
 ---
 
@@ -133,7 +137,7 @@ Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real
 5. **Inbox DB matching** — `batch-process-matching`, `match-transactions-bidirectional` — **implemented.** Rust finds/persists matches and status writes. Node still sends matching notifications (Resend / Slack / providers). Dual falls back to Drizzle; replacement does not.
 6. **Document SQL status transitions** — worker `process-document` — **implemented.** Rust updates `documents` by `path_tokens` (same status machine as tRPC `documents.reprocessDocument` / `updateDocumentByPath`). Classify, embed, OCR, HEIC stay on Node. Dual falls back to Drizzle; replacement does not.
 7. **Transaction import/export file pipelines** — **implemented (AP-WORKER-7).** Rust owns: insert imported rows (`import-transactions`), select rows for export (`process-export`), mark exported + optional `short_links` insert (`export-transactions`). Document export-path status reuses AP-WORKER-6. Node keeps: vault download/upload, CSV parse, CSV/XLSX/zip bytes, attachment blob download, signed URLs, Resend notification enqueue. `export-team-data` multi-entity reads (invoices/customers/tracker/inbox/tags) stay on Node for this slice; its transaction section uses `process-export`. No Trigger tasks for these four BullMQ names.
-8. **Bank sync / reconnect / delete-connection** — last among high-value paths; depends on connector + encrypt gates.
+8. **Bank sync / reconnect / delete-connection** — **implemented (AP-WORKER-8, SQL half).** Rust owns: upsert bank-sync rows (`upsert-transactions`), connection status / last_accessed / reference_id / disconnect-if-retries (`sync-connection-status`), account balance/error/currency writes (`update-bank-account-sync`), post-reconnect account remaps (`remap-bank-account-ids`). Reuses existing tRPC `bankConnections.delete` / `reconnect` SQL writers — no second dialect. Node keeps: provider HTTP (`connectionStatus`, `getBalance`, `getProviderTransactions`, `getProviderAccounts`, provider `deleteConnection`), vault decrypt/encrypt, Trigger schedules (`initial-bank-setup`, `bank-sync-scheduler`), enrich/match fan-out, notification enqueue. **Still gated (no separable SQL in the Trigger body):** `delete-connection` (provider teardown only; DB delete already via tRPC), `initial-bank-setup` (schedules + sync triggers only).
 9. **Team delete / onboarding / invite mail** — after SQL team APIs are stable; mail stays Node.
 10. **Accounting export / insights / invoice PDF+email** — after connectors and mail strategy.
 
@@ -143,7 +147,7 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, inbox matching, `process-document`, transaction import/export (`import-transactions`, `process-export`, `export-transactions`), and the noop
+- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, inbox matching, `process-document`, transaction import/export (`import-transactions`, `process-export`, `export-transactions`), bank sync SQL (`upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`), and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
@@ -152,4 +156,4 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Next concrete slice
 
-Transaction import/export SQL is live (AP-WORKER-7). Next is **bank sync / reconnect / delete-connection** (gated on connector + encrypt); then team mail and accounting export. Those stay design-only until dedicated slices.
+Bank sync SQL is live (AP-WORKER-8). Next is **team delete / onboarding / invite mail** (mail stays Node); then accounting export / insights / invoice PDF+email. Those stay design-only until dedicated slices.

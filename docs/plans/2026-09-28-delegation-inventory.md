@@ -425,6 +425,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/import-transactions` | Yes · AP-WORKER-7. Bulk insert imported rows. CSV parse + vault download stay on BullMQ Node |
 | `POST /api/v1/workers/process-export` | Yes · AP-WORKER-7. Select rows for export. Attachment download + CSV/XLSX/zip stay on Node |
 | `POST /api/v1/workers/export-transactions` | Yes · AP-WORKER-7. Mark exported + optional short_link. Signed URL + zip upload stay on Node |
+| `POST /api/v1/workers/upsert-transactions` | Yes · AP-WORKER-8. Bank-sync row insert (ON CONFLICT DO NOTHING). Provider fetch + transform stay on Trigger |
+| `POST /api/v1/workers/sync-connection-status` | Yes · AP-WORKER-8. Connection status / last_accessed / reference_id / disconnect-if-retries. Provider `connectionStatus` stays on Node |
+| `POST /api/v1/workers/update-bank-account-sync` | Yes · AP-WORKER-8. Balance / error / currency heal writes. Provider balance + tx fetch stay on Node |
+| `POST /api/v1/workers/remap-bank-account-ids` | Yes · AP-WORKER-8. Post-reconnect account_id remaps. Matching + provider accounts stay on Node |
 
 ## Autopilot queue
 
@@ -452,6 +456,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-WORKER-5 | DONE | Inbox DB matching (`batch-process-matching`, `match-transactions-bidirectional`) in Rust; Resend/Slack/provider notify stay on Node | worker |
 | AP-WORKER-6 | DONE | `process-document` by-path status SQL in Rust; classify/embed/OCR/HEIC stay on Node | worker |
 | AP-WORKER-7 | DONE | Transaction import/export SQL (`import-transactions`, `process-export`, `export-transactions`); CSV/XLSX/zip + vault + signed URLs stay on Node | worker |
+| AP-WORKER-8 | DONE | Bank sync SQL (`upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`); provider HTTP + decrypt + schedules stay on Trigger; `delete-connection` / `initial-bank-setup` still gated (no separable SQL) | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |

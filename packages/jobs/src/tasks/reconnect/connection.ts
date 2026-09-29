@@ -1,9 +1,45 @@
 import { reconnectConnectionSchema } from "@jobs/schema";
 import { syncConnection } from "@jobs/tasks/bank/sync/connection";
 import { matchAndUpdateAccountIds } from "@jobs/utils/account-matching";
+import {
+  bankSyncDelegationTarget,
+  postSyncConnectionStatus,
+} from "@jobs/utils/bank-sync-delegate";
 import { createClient } from "@midday/supabase/job";
 import { trpc } from "@midday/trpc";
 import { logger, schemaTask } from "@trigger.dev/sdk";
+
+async function updateConnectionReferenceId(params: {
+  connectionId: string;
+  teamId: string;
+  referenceId: string;
+}): Promise<boolean> {
+  const target = bankSyncDelegationTarget("sync-connection-status");
+  if (target) {
+    try {
+      await postSyncConnectionStatus(
+        {
+          connectionId: params.connectionId,
+          teamId: params.teamId,
+          referenceId: params.referenceId,
+        },
+        target,
+      );
+      return true;
+    } catch (error) {
+      if (target.mode === "replacement") {
+        throw error;
+      }
+      logger.warn(
+        "sync-connection-status rust failed; falling back to supabase",
+        {
+          error: error instanceof Error ? error.message : "unknown",
+        },
+      );
+    }
+  }
+  return false;
+}
 
 export const reconnectConnection = schemaTask({
   id: "reconnect-connection",
@@ -46,11 +82,18 @@ export const reconnectConnection = schemaTask({
       // Update the reference_id of the new connection
       if (referenceId) {
         logger.info("Updating reference_id for GoCardless connection");
-        await supabase
-          .from("bank_connections")
-          .update({ reference_id: referenceId })
-          .eq("id", connectionId)
-          .eq("team_id", teamId);
+        const usedRust = await updateConnectionReferenceId({
+          connectionId,
+          teamId,
+          referenceId,
+        });
+        if (!usedRust) {
+          await supabase
+            .from("bank_connections")
+            .update({ reference_id: referenceId })
+            .eq("id", connectionId)
+            .eq("team_id", teamId);
+        }
       }
 
       // Fetch fresh accounts from GoCardless API
@@ -69,6 +112,7 @@ export const reconnectConnection = schemaTask({
           apiAccounts: accountsResponse.data,
           connectionId,
           provider: "gocardless",
+          teamId,
         });
       }
     }
@@ -109,6 +153,7 @@ export const reconnectConnection = schemaTask({
           apiAccounts: accountsResponse.data,
           connectionId,
           provider: "teller",
+          teamId,
         });
       }
     }
@@ -148,6 +193,7 @@ export const reconnectConnection = schemaTask({
           apiAccounts: accountsResponse.data,
           connectionId,
           provider: "enablebanking",
+          teamId,
         });
       }
     }

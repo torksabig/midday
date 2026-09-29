@@ -1,10 +1,44 @@
 import { syncConnectionSchema } from "@jobs/schema";
+import {
+  bankSyncDelegationTarget,
+  postSyncConnectionStatus,
+} from "@jobs/utils/bank-sync-delegate";
 import { triggerSequenceAndWait } from "@jobs/utils/trigger-sequence";
 import { createClient } from "@midday/supabase/job";
 import { trpc } from "@midday/trpc";
 import { logger, schemaTask } from "@trigger.dev/sdk";
 import { transactionNotifications } from "../notifications/transactions";
 import { syncAccount } from "./account";
+
+async function updateConnectionStatus(params: {
+  connectionId: string;
+  teamId: string;
+  status?: "connected" | "disconnected";
+  lastAccessed?: string;
+  markDisconnectedIfAllRetries?: boolean;
+}): Promise<{ usedRust: boolean; disconnectedByRetries: boolean }> {
+  const target = bankSyncDelegationTarget("sync-connection-status");
+  if (target) {
+    try {
+      const body = await postSyncConnectionStatus(params, target);
+      return {
+        usedRust: true,
+        disconnectedByRetries: body.disconnectedByRetries,
+      };
+    } catch (error) {
+      if (target.mode === "replacement") {
+        throw error;
+      }
+      logger.warn(
+        "sync-connection-status rust failed; falling back to supabase",
+        {
+          error: error instanceof Error ? error.message : "unknown",
+        },
+      );
+    }
+  }
+  return { usedRust: false, disconnectedByRetries: false };
+}
 
 // Fan-out pattern. We want to trigger a task for each bank account (Transactions, Balance)
 export const syncConnection = schemaTask({
@@ -50,13 +84,22 @@ export const syncConnection = schemaTask({
       }
 
       if (connectionData.status === "connected") {
-        await supabase
-          .from("bank_connections")
-          .update({
-            status: "connected",
-            last_accessed: new Date().toISOString(),
-          })
-          .eq("id", connectionId);
+        const connectedWrite = await updateConnectionStatus({
+          connectionId,
+          teamId: data.team_id,
+          status: "connected",
+          lastAccessed: new Date().toISOString(),
+        });
+
+        if (!connectedWrite.usedRust) {
+          await supabase
+            .from("bank_connections")
+            .update({
+              status: "connected",
+              last_accessed: new Date().toISOString(),
+            })
+            .eq("id", connectionId);
+        }
 
         const query = supabase
           .from("bank_accounts")
@@ -118,27 +161,39 @@ export const syncConnection = schemaTask({
         // If all accounts have 3+ error retries, disconnect the connection
         // So the user will get a notification and can reconnect the bank
         try {
-          const { data: bankAccountsData } = await supabase
-            .from("bank_accounts")
-            .select("id, error_retries")
-            .eq("bank_connection_id", connectionId)
-            .eq("manual", false)
-            .eq("enabled", true)
-            .throwOnError();
+          const disconnectWrite = await updateConnectionStatus({
+            connectionId,
+            teamId: data.team_id,
+            markDisconnectedIfAllRetries: true,
+          });
 
-          if (
-            bankAccountsData?.every(
-              (account) => (account.error_retries ?? 0) >= 3,
-            )
-          ) {
+          if (!disconnectWrite.usedRust) {
+            const { data: bankAccountsData } = await supabase
+              .from("bank_accounts")
+              .select("id, error_retries")
+              .eq("bank_connection_id", connectionId)
+              .eq("manual", false)
+              .eq("enabled", true)
+              .throwOnError();
+
+            if (
+              bankAccountsData?.every(
+                (account) => (account.error_retries ?? 0) >= 3,
+              )
+            ) {
+              logger.info(
+                "All bank accounts have 3+ error retries, disconnecting connection",
+              );
+
+              await supabase
+                .from("bank_connections")
+                .update({ status: "disconnected" })
+                .eq("id", connectionId);
+            }
+          } else if (disconnectWrite.disconnectedByRetries) {
             logger.info(
               "All bank accounts have 3+ error retries, disconnecting connection",
             );
-
-            await supabase
-              .from("bank_connections")
-              .update({ status: "disconnected" })
-              .eq("id", connectionId);
           }
         } catch (error) {
           logger.error("Failed to check connection status by accounts", {
@@ -150,10 +205,18 @@ export const syncConnection = schemaTask({
       if (connectionData.status === "disconnected") {
         logger.info("Connection disconnected");
 
-        await supabase
-          .from("bank_connections")
-          .update({ status: "disconnected" })
-          .eq("id", connectionId);
+        const disconnectedWrite = await updateConnectionStatus({
+          connectionId,
+          teamId: data.team_id,
+          status: "disconnected",
+        });
+
+        if (!disconnectedWrite.usedRust) {
+          await supabase
+            .from("bank_connections")
+            .update({ status: "disconnected" })
+            .eq("id", connectionId);
+        }
       }
     } catch (error) {
       const errorDetails: Record<string, unknown> = {

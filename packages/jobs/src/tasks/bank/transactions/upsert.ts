@@ -1,4 +1,9 @@
 import { transformTransaction } from "@jobs/utils/transform";
+import {
+  bankSyncDelegationTarget,
+  postUpsertTransactions,
+  type BankUpsertTransactionRow,
+} from "@jobs/utils/bank-sync-delegate";
 import { createClient } from "@midday/supabase/job";
 import { logger, schemaTask, tasks } from "@trigger.dev/sdk";
 import { z } from "zod";
@@ -46,18 +51,65 @@ export const upsertTransactions = schemaTask({
         });
       });
 
-      // Upsert transactions into the transactions table, skipping duplicates based on internal_id
-      const { data: upsertedTransactions } = await supabase
-        .from("transactions")
-        // @ts-expect-error - TODO: Fix types with drizzle
-        .upsert(formattedTransactions, {
-          onConflict: "internal_id",
-          ignoreDuplicates: true,
-        })
-        .select("id")
-        .throwOnError();
+      let transactionIds: string[] = [];
+      let usedRust = false;
 
-      const transactionIds = upsertedTransactions?.map((tx) => tx.id) || [];
+      const target = bankSyncDelegationTarget("upsert-transactions");
+      if (target) {
+        const rows: BankUpsertTransactionRow[] = formattedTransactions.map(
+          (tx) => ({
+            name: tx.name,
+            date: tx.date,
+            amount: tx.amount,
+            currency: tx.currency,
+            teamId: tx.team_id,
+            bankAccountId: tx.bank_account_id,
+            internalId: tx.internal_id,
+            method: tx.method,
+            status: tx.status,
+            categorySlug: tx.category_slug,
+            description: tx.description,
+            balance: tx.balance,
+            counterpartyName: tx.counterparty_name,
+            merchantName: tx.merchant_name,
+            ...(tx.notified !== undefined ? { notified: tx.notified } : {}),
+          }),
+        );
+
+        try {
+          const body = await postUpsertTransactions(
+            { teamId, bankAccountId, transactions: rows },
+            target,
+          );
+          transactionIds = body.transactions.map((row) => row.id);
+          usedRust = true;
+        } catch (error) {
+          if (target.mode === "replacement") {
+            throw error;
+          }
+          logger.warn(
+            "upsert-transactions rust failed; falling back to supabase",
+            {
+              error: error instanceof Error ? error.message : "unknown",
+            },
+          );
+        }
+      }
+
+      if (!usedRust) {
+        // Upsert transactions into the transactions table, skipping duplicates based on internal_id
+        const { data: upsertedTransactions } = await supabase
+          .from("transactions")
+          // @ts-expect-error - TODO: Fix types with drizzle
+          .upsert(formattedTransactions, {
+            onConflict: "internal_id",
+            ignoreDuplicates: true,
+          })
+          .select("id")
+          .throwOnError();
+
+        transactionIds = upsertedTransactions?.map((tx) => tx.id) || [];
+      }
 
       if (transactionIds.length > 0) {
         await enrichTransactions.trigger({

@@ -4,6 +4,10 @@ import {
   findMatchingAccount,
   type MatchingResult,
 } from "@midday/supabase/account-matching";
+import {
+  bankSyncDelegationTarget,
+  postRemapBankAccountIds,
+} from "@jobs/utils/bank-sync-delegate";
 import { createClient } from "@midday/supabase/job";
 import { logger } from "@trigger.dev/sdk";
 
@@ -22,15 +26,24 @@ export async function matchAndUpdateAccountIds({
   apiAccounts,
   connectionId,
   provider,
+  teamId,
 }: {
   existingAccounts: DbAccount[];
   apiAccounts: ApiAccount[];
   connectionId: string;
   provider: string;
+  teamId?: string;
 }): Promise<MatchingResult> {
   const supabase = createClient();
   const matchedDbIds = new Set<string>();
   const results: MatchingResult = { matched: 0, unmatched: 0, errors: 0 };
+
+  const pendingUpdates: Array<{
+    id: string;
+    accountId: string;
+    accountReference?: string | null;
+    iban?: string | null;
+  }> = [];
 
   for (const apiAccount of apiAccounts) {
     const match = findMatchingAccount(
@@ -42,31 +55,23 @@ export async function matchAndUpdateAccountIds({
     if (match) {
       matchedDbIds.add(match.id);
 
-      const updates: Record<string, string | null> = {
-        account_id: apiAccount.id,
+      const updates: {
+        id: string;
+        accountId: string;
+        accountReference?: string | null;
+        iban?: string | null;
+      } = {
+        id: match.id,
+        accountId: apiAccount.id,
       };
       if (apiAccount.resource_id) {
-        updates.account_reference = apiAccount.resource_id;
+        updates.accountReference = apiAccount.resource_id;
       }
       if (apiAccount.iban) {
         updates.iban = apiAccount.iban;
       }
 
-      const { error } = await supabase
-        .from("bank_accounts")
-        .update(updates)
-        .eq("id", match.id);
-
-      if (error) {
-        logger.warn(`Failed to update ${provider} account`, {
-          resource_id: apiAccount.resource_id,
-          dbAccountId: match.id,
-          error: error.message,
-        });
-        results.errors++;
-      } else {
-        results.matched++;
-      }
+      pendingUpdates.push(updates);
     } else {
       logger.warn(`No matching DB account found for ${provider} account`, {
         resource_id: apiAccount.resource_id,
@@ -76,6 +81,66 @@ export async function matchAndUpdateAccountIds({
         name: apiAccount.name,
       });
       results.unmatched++;
+    }
+  }
+
+  let usedRust = false;
+  if (pendingUpdates.length > 0 && teamId) {
+    const target = bankSyncDelegationTarget("remap-bank-account-ids");
+    if (target) {
+      try {
+        const body = await postRemapBankAccountIds(
+          {
+            connectionId,
+            teamId,
+            updates: pendingUpdates,
+          },
+          target,
+        );
+        results.matched = body.matched;
+        results.errors = body.errors;
+        usedRust = true;
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        logger.warn(
+          "remap-bank-account-ids rust failed; falling back to supabase",
+          {
+            error: error instanceof Error ? error.message : "unknown",
+          },
+        );
+      }
+    }
+  }
+
+  if (!usedRust) {
+    for (const update of pendingUpdates) {
+      const supabaseUpdates: Record<string, string | null> = {
+        account_id: update.accountId,
+      };
+      if (update.accountReference) {
+        supabaseUpdates.account_reference = update.accountReference;
+      }
+      if (update.iban) {
+        supabaseUpdates.iban = update.iban;
+      }
+
+      const { error } = await supabase
+        .from("bank_accounts")
+        .update(supabaseUpdates)
+        .eq("id", update.id);
+
+      if (error) {
+        logger.warn(`Failed to update ${provider} account`, {
+          resource_id: update.accountReference,
+          dbAccountId: update.id,
+          error: error.message,
+        });
+        results.errors++;
+      } else {
+        results.matched++;
+      }
     }
   }
 

@@ -1,3 +1,7 @@
+import {
+  bankSyncDelegationTarget,
+  postUpdateBankAccountSync,
+} from "@jobs/utils/bank-sync-delegate";
 import { parseAPIError } from "@jobs/utils/parse-error";
 import { getClassification } from "@jobs/utils/transform";
 import { createClient } from "@midday/supabase/job";
@@ -7,6 +11,38 @@ import { z } from "zod";
 import { upsertTransactions } from "../transactions/upsert";
 
 const BATCH_SIZE = 500;
+
+async function updateBankAccountSync(params: {
+  accountId: string;
+  teamId: string;
+  balance?: number | null;
+  availableBalance?: number | null;
+  creditLimit?: number | null;
+  currency?: string;
+  errorDetails?: string | null;
+  errorRetries?: number | null;
+  clearErrors?: boolean;
+  setBalance?: boolean;
+}): Promise<boolean> {
+  const target = bankSyncDelegationTarget("update-bank-account-sync");
+  if (target) {
+    try {
+      await postUpdateBankAccountSync(params, target);
+      return true;
+    } catch (error) {
+      if (target.mode === "replacement") {
+        throw error;
+      }
+      logger.warn(
+        "update-bank-account-sync rust failed; falling back to supabase",
+        {
+          error: error instanceof Error ? error.message : "unknown",
+        },
+      );
+    }
+  }
+  return false;
+}
 
 export const syncAccount = schemaTask({
   id: "sync-account",
@@ -84,16 +120,11 @@ export const syncAccount = schemaTask({
       // Update balance (including zero/negative for overdrafts) and reset errors
       // Only skip update if balance is null (provider didn't return a balance)
       if (balance !== null) {
-        const updatePayload: Record<string, unknown> = {
-          balance,
-          available_balance: balanceData?.available_balance ?? null,
-          credit_limit: balanceData?.credit_limit ?? null,
-          error_details: null,
-          error_retries: null,
-        };
-
-        if (needsCurrencyHeal && balanceCurrencyValid) {
-          updatePayload.currency = balanceData.currency;
+        const currency =
+          needsCurrencyHeal && balanceCurrencyValid
+            ? balanceData.currency
+            : undefined;
+        if (currency) {
           currencyHealed = true;
           logger.info("Healing account currency from balance", {
             accountId,
@@ -102,16 +133,49 @@ export const syncAccount = schemaTask({
           });
         }
 
-        await supabase.from("bank_accounts").update(updatePayload).eq("id", id);
-      } else {
-        // Reset error details and retries even if balance is null
-        await supabase
-          .from("bank_accounts")
-          .update({
+        const usedRust = await updateBankAccountSync({
+          accountId: id,
+          teamId,
+          setBalance: true,
+          balance,
+          availableBalance: balanceData?.available_balance ?? null,
+          creditLimit: balanceData?.credit_limit ?? null,
+          clearErrors: true,
+          ...(currency ? { currency } : {}),
+        });
+
+        if (!usedRust) {
+          const updatePayload: Record<string, unknown> = {
+            balance,
+            available_balance: balanceData?.available_balance ?? null,
+            credit_limit: balanceData?.credit_limit ?? null,
             error_details: null,
             error_retries: null,
-          })
-          .eq("id", id);
+          };
+
+          if (currency) {
+            updatePayload.currency = currency;
+          }
+
+          await supabase.from("bank_accounts").update(updatePayload).eq("id", id);
+        }
+      } else {
+        // Reset error details and retries even if balance is null
+        const usedRust = await updateBankAccountSync({
+          accountId: id,
+          teamId,
+          clearErrors: true,
+        });
+
+        if (!usedRust) {
+          await supabase
+            .from("bank_accounts")
+            .update({
+              error_details: null,
+              error_retries: null,
+            })
+            .eq("id", id);
+        }
       }
     } catch (error) {
       const parsedError = parseAPIError(error);
@@ -122,13 +186,22 @@ export const syncAccount = schemaTask({
         const retries = errorRetries ? errorRetries + 1 : 1;
 
         // Update the account with the error details and retries
-        await supabase
-          .from("bank_accounts")
-          .update({
-            error_details: parsedError.message,
-            error_retries: retries,
-          })
-          .eq("id", id);
+        const usedRust = await updateBankAccountSync({
+          accountId: id,
+          teamId,
+          errorDetails: parsedError.message,
+          errorRetries: retries,
+        });
+
+        if (!usedRust) {
+          await supabase
+            .from("bank_accounts")
+            .update({
+              error_details: parsedError.message,
+              error_retries: retries,
+            })
+            .eq("id", id);
+        }
 
         throw error;
       }
@@ -147,13 +220,21 @@ export const syncAccount = schemaTask({
         });
 
       // Reset error details and retries if we successfully got the transactions
-      await supabase
-        .from("bank_accounts")
-        .update({
-          error_details: null,
-          error_retries: null,
-        })
-        .eq("id", id);
+      const cleared = await updateBankAccountSync({
+        accountId: id,
+        teamId,
+        clearErrors: true,
+      });
+
+      if (!cleared) {
+        await supabase
+          .from("bank_accounts")
+          .update({
+            error_details: null,
+            error_retries: null,
+          })
+          .eq("id", id);
+      }
 
       const transactionsData = transactionsResult.data;
 
@@ -180,10 +261,18 @@ export const syncAccount = schemaTask({
         )?.currency;
 
         if (txCurrency) {
-          await supabase
-            .from("bank_accounts")
-            .update({ currency: txCurrency })
-            .eq("id", id);
+          const usedRust = await updateBankAccountSync({
+            accountId: id,
+            teamId,
+            currency: txCurrency,
+          });
+
+          if (!usedRust) {
+            await supabase
+              .from("bank_accounts")
+              .update({ currency: txCurrency })
+              .eq("id", id);
+          }
 
           logger.info("Healing account currency from transaction", {
             accountId,
