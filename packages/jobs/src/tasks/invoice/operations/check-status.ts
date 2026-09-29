@@ -4,6 +4,12 @@ import { createClient } from "@midday/supabase/job";
 import { logger, schemaTask } from "@trigger.dev/sdk";
 import { subDays } from "date-fns";
 import { z } from "zod";
+import { sendInvoiceNotifications } from "../notifications/send-notifications";
+import {
+  notificationFromRust,
+  postCheckInvoiceStatus,
+  workerDelegationTarget,
+} from "./check-status-delegate";
 
 export const checkInvoiceStatus = schemaTask({
   id: "check-invoice-status",
@@ -14,6 +20,25 @@ export const checkInvoiceStatus = schemaTask({
     concurrencyLimit: 10,
   },
   run: async ({ invoiceId }) => {
+    const target = workerDelegationTarget();
+    if (target) {
+      try {
+        const body = await postCheckInvoiceStatus(invoiceId, target);
+        const notification = notificationFromRust(body);
+        if (notification) {
+          await sendInvoiceNotifications.trigger(notification);
+        }
+        return;
+      } catch (error) {
+        if (target.mode === "replacement") {
+          throw error;
+        }
+        logger.warn("check-invoice-status rust failed; falling back to supabase", {
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    }
+
     const supabase = createClient();
 
     const { data: invoice } = await supabase

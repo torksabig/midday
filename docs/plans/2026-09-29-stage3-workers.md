@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **design only** — Rust still has a noop foothold only (`POST /api/v1/workers/noop`).  
+Status: **first handler live** — `POST /api/v1/workers/check-invoice-status` does the Postgres match. `POST /api/v1/workers/noop` remains. Trigger still owns the schedule and the invoice notification (Resend).  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -116,7 +116,7 @@ Gated tRPC procedures that only *enqueue* jobs stay on Node; Rust may later own 
 
 Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real handler; keep Node processor until metrics match.
 
-1. **`check-invoice-status`** (Trigger) — overdue / status probe, mostly DB; already named in `KNOWN_JOB_IDS`.
+1. **`check-invoice-status`** (Trigger) — **implemented.** Rust writes the match/overdue rows. Node sends `invoice-notifications` when `notify` is true. Dual falls back to Supabase. Replacement does not. Set `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`, and `MIDDAY_WORKER_TOKEN` (or `REPLACEMENT_DELEGATION_TOKEN`).
 2. **`rates-scheduler`** (BullMQ) — scheduled FX upsert; bounded side effects.
 3. **`activity-notification-flush`** (BullMQ) — batch DB writes; no mail if flush is DB-only (verify before port).
 4. **`notification`** (BullMQ + Trigger) — **only** the DB insert / status half; leave Resend send on Node behind a flag.
@@ -133,16 +133,13 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing any real `/workers/...` handler beyond the existing noop
+- Implementing further `/workers/...` handlers beyond `check-invoice-status` and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
 
 ---
 
-## Next concrete slice (when implementing)
+## Next concrete slice
 
-1. Pick `check-invoice-status`: document payload + expected SQL.
-2. Add `POST /api/v1/workers/check-invoice-status` in clone (auth = Midday Postgres).
-3. Feature-flag the Trigger task to POST to Rust in dual mode; compare results.
-4. Only then mark a new AP-WORKER-* row DONE in the delegation inventory.
+`check-invoice-status` is the first handler. Next is `rates-scheduler` (BullMQ FX upsert), still with Node enqueue and no queue deletion.
