@@ -2,7 +2,7 @@
 
 Date: 2026-09-29  
 Branch: `cursor/backend-replace-ui-frozen-plans`  
-Status: **sixth handler live** — `process-document` SQL status transitions via `POST /api/v1/workers/process-document` (AP-WORKER-6). Classify, embed, OCR, and HEIC conversion stay on Node. Prior workers (`batch-process-matching`, `match-transactions-bidirectional`, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
+Status: **seventh handler live** — transaction import/export SQL via `POST /api/v1/workers/import-transactions`, `process-export`, `export-transactions` (AP-WORKER-7). CSV/XLSX/zip bytes, vault upload/download, and signed URLs stay on Node. Prior workers (`process-document`, inbox matching, `notification`, `activity-notification-flush`, `rates-scheduler`, `check-invoice-status`, `noop`) remain.  
 Do **not** rip out `apps/worker` or `packages/jobs` in this stage.
 
 Related: [`2026-09-28-clean-rust-replacement-no-proxy.md`](./2026-09-28-clean-rust-replacement-no-proxy.md) (Stage 3 = async & integrations), [`job_consumers.rs`](../../../clone/crates/api/src/job_consumers.rs) sketch in the clone API.
@@ -83,7 +83,10 @@ Many names overlap BullMQ (same domain work, dual enqueue paths historically). S
 - Route: `POST /api/v1/workers/batch-process-matching` — inbox suggestion/auto-match SQL (AP-WORKER-5); notifications stay Node
 - Route: `POST /api/v1/workers/match-transactions-bidirectional` — forward + reverse match SQL (AP-WORKER-5); notifications stay Node
 - Route: `POST /api/v1/workers/process-document` — document by-path status SQL (AP-WORKER-6); classify/embed/OCR/HEIC stay Node
-- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`
+- Route: `POST /api/v1/workers/import-transactions` — bulk insert imported rows (AP-WORKER-7); CSV parse + vault download stay Node
+- Route: `POST /api/v1/workers/process-export` — select transaction rows for export (AP-WORKER-7); attachment download + CSV/XLSX stay Node
+- Route: `POST /api/v1/workers/export-transactions` — mark exported + optional short_link insert (AP-WORKER-7); zip/upload/signed URL stay Node
+- Documented allowlist stub: `notification`, `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `batch-process-matching`, `match-transactions-bidirectional`, `process-document`, `import-transactions`, `process-export`, `export-transactions`
 
 ---
 
@@ -129,7 +132,7 @@ Port **read-mostly or Postgres-only** jobs first; dual-run against noop → real
 4. **`notification`** (BullMQ + Trigger) — **implemented.** Rust inserts/combines `activities` (preference priority). Node/`@midday/notifications` still sends Resend when `sendEmail` is true; BullMQ still calls `sendToProviders`. Dual falls back to Drizzle create; replacement does not.
 5. **Inbox DB matching** — `batch-process-matching`, `match-transactions-bidirectional` — **implemented.** Rust finds/persists matches and status writes. Node still sends matching notifications (Resend / Slack / providers). Dual falls back to Drizzle; replacement does not.
 6. **Document SQL status transitions** — worker `process-document` — **implemented.** Rust updates `documents` by `path_tokens` (same status machine as tRPC `documents.reprocessDocument` / `updateDocumentByPath`). Classify, embed, OCR, HEIC stay on Node. Dual falls back to Drizzle; replacement does not.
-7. **Transaction import/export file pipelines** — after document/inbox SQL parity; storage signed URLs stay Node.
+7. **Transaction import/export file pipelines** — **implemented (AP-WORKER-7).** Rust owns: insert imported rows (`import-transactions`), select rows for export (`process-export`), mark exported + optional `short_links` insert (`export-transactions`). Document export-path status reuses AP-WORKER-6. Node keeps: vault download/upload, CSV parse, CSV/XLSX/zip bytes, attachment blob download, signed URLs, Resend notification enqueue. `export-team-data` multi-entity reads (invoices/customers/tracker/inbox/tags) stay on Node for this slice; its transaction section uses `process-export`. No Trigger tasks for these four BullMQ names.
 8. **Bank sync / reconnect / delete-connection** — last among high-value paths; depends on connector + encrypt gates.
 9. **Team delete / onboarding / invite mail** — after SQL team APIs are stable; mail stays Node.
 10. **Accounting export / insights / invoice PDF+email** — after connectors and mail strategy.
@@ -140,7 +143,7 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Non-goals this doc does not authorize
 
-- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, inbox matching, `process-document`, and the noop
+- Implementing further `/workers/...` handlers beyond `check-invoice-status`, `rates-scheduler`, `activity-notification-flush`, `notification`, inbox matching, `process-document`, transaction import/export (`import-transactions`, `process-export`, `export-transactions`), and the noop
 - Removing or renaming BullMQ queues
 - Migrating Trigger schedules into Rust cron
 - Decommissioning Midday Node API, `packages/db`, or `packages/replacement-backend`
@@ -149,4 +152,4 @@ Exit criterion for each job: dual-run (Node enqueue → Rust execute **or** Node
 
 ## Next concrete slice
 
-`process-document` SQL status transitions are live (AP-WORKER-6). Next is **transaction import/export file pipelines**; storage signed URLs stay Node.
+Transaction import/export SQL is live (AP-WORKER-7). Next is **bank sync / reconnect / delete-connection** (gated on connector + encrypt); then team mail and accounting export. Those stay design-only until dedicated slices.

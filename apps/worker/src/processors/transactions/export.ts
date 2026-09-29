@@ -1,10 +1,5 @@
 import { PassThrough } from "node:stream";
 import { writeToString } from "@fast-csv/format";
-import {
-  createShortLink,
-  markTransactionsAsExported,
-  updateDocumentByPath,
-} from "@midday/db/queries";
 import { triggerJob } from "@midday/job-client";
 import { createClient } from "@midday/supabase/job";
 import { signedUrl } from "@midday/supabase/storage";
@@ -15,7 +10,9 @@ import { format } from "date-fns";
 import xlsx from "node-xlsx";
 import type { ExportTransactionsPayload } from "../../schemas/transactions";
 import { getDb } from "../../utils/db";
+import { updateProcessDocumentStatus } from "../../utils/process-document-status";
 import { TIMEOUTS, withTimeout } from "../../utils/timeout";
+import { finalizeExportTransactions } from "../../utils/transaction-import-export";
 import { BaseProcessor } from "../base";
 import { ProcessExportProcessor } from "./process-export";
 
@@ -225,17 +222,29 @@ export class ExportTransactionsProcessor extends BaseProcessor<ExportTransaction
 
     await this.updateProgress(job, 95);
 
-    // Update documents table (non-critical)
+    // Document status via process-document worker; mark exported (+ short link) via export-transactions
     const db = getDb();
     const pathTokens = fullPath.split("/");
-    await updateDocumentByPath(db, {
-      pathTokens,
-      teamId,
-      processingStatus: "completed",
-    });
+    await updateProcessDocumentStatus(
+      db,
+      {
+        pathTokens,
+        teamId,
+        processingStatus: "completed",
+      },
+      this.logger,
+    );
 
-    // Mark transactions as exported so they disappear from review tab
-    await markTransactionsAsExported(db, transactionIds, teamId);
+    let shortLinkPayload:
+      | {
+          url: string;
+          userId: string;
+          type: string;
+          fileName: string;
+          mimeType: string;
+          expiresAt: string;
+        }
+      | undefined;
 
     if (settings.sendEmail && settings.accountantEmail) {
       const expireIn = 7 * 24 * 60 * 60;
@@ -247,41 +256,54 @@ export class ExportTransactionsProcessor extends BaseProcessor<ExportTransaction
       });
 
       if (signedUrlData?.signedUrl) {
-        const shortLink = await createShortLink(getDb(), {
+        shortLinkPayload = {
           url: signedUrlData.signedUrl,
-          teamId,
           userId,
           type: "download",
           fileName,
           mimeType: "application/zip",
           expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
+        };
+      }
+    }
+
+    const { shortLink } = await finalizeExportTransactions(
+      db,
+      {
+        teamId,
+        transactionIds,
+        ...(shortLinkPayload ? { shortLink: shortLinkPayload } : {}),
+      },
+      this.logger,
+    );
+
+    if (
+      settings.sendEmail &&
+      settings.accountantEmail &&
+      shortLink?.shortId
+    ) {
+      const downloadLink = `${getAppUrl()}/s/${shortLink.shortId}`;
+
+      this.logger.debug("Short link created for export", { downloadLink });
+
+      try {
+        await triggerJob(
+          "notification",
+          {
+            type: "transactions_exported",
+            teamId,
+            userEmail,
+            transactionCount: rows.length,
+            downloadLink,
+            accountantEmail: settings.accountantEmail,
+            sendCopyToMe: userEmail ? settings.sendCopyToMe : false,
+          },
+          "notifications",
+        );
+      } catch (error) {
+        this.logger.warn("Failed to trigger export notification", {
+          error: error instanceof Error ? error.message : "Unknown error",
         });
-
-        if (shortLink) {
-          const downloadLink = `${getAppUrl()}/s/${shortLink.shortId}`;
-
-          this.logger.debug("Short link created for export", { downloadLink });
-
-          try {
-            await triggerJob(
-              "notification",
-              {
-                type: "transactions_exported",
-                teamId,
-                userEmail,
-                transactionCount: rows.length,
-                downloadLink,
-                accountantEmail: settings.accountantEmail,
-                sendCopyToMe: userEmail ? settings.sendCopyToMe : false,
-              },
-              "notifications",
-            );
-          } catch (error) {
-            this.logger.warn("Failed to trigger export notification", {
-              error: error instanceof Error ? error.message : "Unknown error",
-            });
-          }
-        }
       }
     }
 

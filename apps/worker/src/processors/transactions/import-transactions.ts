@@ -1,4 +1,3 @@
-import { upsertTransactions } from "@midday/db/queries";
 import { mapTransactions } from "@midday/import/mappings";
 import { transform } from "@midday/import/transform";
 import { validateTransactions } from "@midday/import/validate";
@@ -10,6 +9,7 @@ import type { ImportTransactionsPayload } from "../../schemas/transactions";
 import { getDb } from "../../utils/db";
 import { processBatch } from "../../utils/process-batch";
 import { TIMEOUTS, withTimeout } from "../../utils/timeout";
+import { upsertImportTransactions } from "../../utils/transaction-import-export";
 import { BaseProcessor } from "../base";
 
 const BATCH_SIZE = 500;
@@ -180,11 +180,15 @@ export class ImportTransactionsProcessor extends BaseProcessor<ImportTransaction
                 enrichmentCompleted: false,
               }));
 
-              // Upsert transactions with conflict handling on internalId
-              const upserted = await upsertTransactions(db, {
-                transactions: transformedBatch,
-                teamId,
-              });
+              // Upsert via Rust when dual/replacement; CSV parse stays Node
+              const upserted = await upsertImportTransactions(
+                db,
+                {
+                  transactions: transformedBatch,
+                  teamId,
+                },
+                this.logger,
+              );
 
               completedImportBatches += 1;
               const importingProgress =

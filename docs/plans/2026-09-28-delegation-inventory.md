@@ -422,6 +422,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/batch-process-matching` | Yes · AP-WORKER-5. Inbox suggestion/auto-match SQL. Matching notifications stay on Node |
 | `POST /api/v1/workers/match-transactions-bidirectional` | Yes · AP-WORKER-5. Forward + reverse match SQL. Matching notifications stay on Node |
 | `POST /api/v1/workers/process-document` | Yes · AP-WORKER-6. Document by-path status SQL. Classify/embed/OCR/HEIC stay on Node |
+| `POST /api/v1/workers/import-transactions` | Yes · AP-WORKER-7. Bulk insert imported rows. CSV parse + vault download stay on BullMQ Node |
+| `POST /api/v1/workers/process-export` | Yes · AP-WORKER-7. Select rows for export. Attachment download + CSV/XLSX/zip stay on Node |
+| `POST /api/v1/workers/export-transactions` | Yes · AP-WORKER-7. Mark exported + optional short_link. Signed URL + zip upload stay on Node |
 
 ## Autopilot queue
 
@@ -448,6 +451,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-WORKER-4 | DONE | `notification` activities insert/combine in Rust; Resend + sendToProviders stay on Node | worker |
 | AP-WORKER-5 | DONE | Inbox DB matching (`batch-process-matching`, `match-transactions-bidirectional`) in Rust; Resend/Slack/provider notify stay on Node | worker |
 | AP-WORKER-6 | DONE | `process-document` by-path status SQL in Rust; classify/embed/OCR/HEIC stay on Node | worker |
+| AP-WORKER-7 | DONE | Transaction import/export SQL (`import-transactions`, `process-export`, `export-transactions`); CSV/XLSX/zip + vault + signed URLs stay on Node | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |

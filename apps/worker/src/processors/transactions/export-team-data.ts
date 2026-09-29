@@ -12,7 +12,6 @@ import {
   getTrackerProjects,
   getTrackerRecordsByRange,
   getTransactions,
-  updateDocumentByPath,
 } from "@midday/db/queries";
 import { createClient } from "@midday/supabase/job";
 import { download } from "@midday/supabase/storage";
@@ -21,6 +20,7 @@ import type { Job } from "bullmq";
 import { format, formatISO } from "date-fns";
 import type { ExportTeamDataPayload } from "../../schemas/transactions";
 import { getDb } from "../../utils/db";
+import { updateProcessDocumentStatus } from "../../utils/process-document-status";
 import { TIMEOUTS, withTimeout } from "../../utils/timeout";
 import { BaseProcessor } from "../base";
 import { ProcessExportProcessor } from "./process-export";
@@ -495,11 +495,15 @@ export class ExportTeamDataProcessor extends BaseProcessor<ExportTeamDataPayload
     await this.updateProgress(job, 96);
 
     const pathTokens = fullPath.split("/");
-    await updateDocumentByPath(db, {
-      pathTokens,
-      teamId,
-      processingStatus: "completed",
-    });
+    await updateProcessDocumentStatus(
+      db,
+      {
+        pathTokens,
+        teamId,
+        processingStatus: "completed",
+      },
+      this.logger,
+    );
 
     await this.updateProgress(job, 100);
 

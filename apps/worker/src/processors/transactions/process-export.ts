@@ -1,4 +1,3 @@
-import { getTransactionsByIds } from "@midday/db/queries";
 import { createClient } from "@midday/supabase/job";
 import { download } from "@midday/supabase/storage";
 import { ensureFileExtension } from "@midday/utils";
@@ -12,6 +11,7 @@ import { format, parseISO } from "date-fns";
 import type { ProcessExportPayload } from "../../schemas/transactions";
 import { getDb } from "../../utils/db";
 import { processBatch } from "../../utils/process-batch";
+import { getExportTransactionsByIds } from "../../utils/transaction-import-export";
 import { BaseProcessor } from "../base";
 
 const ATTACHMENT_BATCH_SIZE = 20;
@@ -41,10 +41,11 @@ export class ProcessExportProcessor extends BaseProcessor<ProcessExportPayload> 
 
     if (onProgress) await onProgress(10);
 
-    const transactionsData = await getTransactionsByIds(db, {
-      ids,
-      teamId,
-    });
+    const transactionsData = await getExportTransactionsByIds(
+      db,
+      { ids, teamId },
+      this.logger,
+    );
 
     if (onProgress) await onProgress(30);
 
