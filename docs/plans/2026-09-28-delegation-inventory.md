@@ -429,6 +429,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `POST /api/v1/workers/sync-connection-status` | Yes · AP-WORKER-8. Connection status / last_accessed / reference_id / disconnect-if-retries. Provider `connectionStatus` stays on Node |
 | `POST /api/v1/workers/update-bank-account-sync` | Yes · AP-WORKER-8. Balance / error / currency heal writes. Provider balance + tx fetch stay on Node |
 | `POST /api/v1/workers/remap-bank-account-ids` | Yes · AP-WORKER-8. Post-reconnect account_id remaps. Matching + provider accounts stay on Node |
+| `POST /api/v1/workers/onboard-team` | Yes · AP-WORKER-9. User + trial/plan gate + bank_connections count. Resend + `wait.for` stay on Trigger. Invite insert / team delete-prep already via tRPC AP-60/61 — not forked into workers. `invite-team-members` / `delete-team` / cancellation / `payment-issue` still gated (email/provider, no separable SQL) |
 
 ## Autopilot queue
 
@@ -457,6 +458,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-WORKER-6 | DONE | `process-document` by-path status SQL in Rust; classify/embed/OCR/HEIC stay on Node | worker |
 | AP-WORKER-7 | DONE | Transaction import/export SQL (`import-transactions`, `process-export`, `export-transactions`); CSV/XLSX/zip + vault + signed URLs stay on Node | worker |
 | AP-WORKER-8 | DONE | Bank sync SQL (`upsert-transactions`, `sync-connection-status`, `update-bank-account-sync`, `remap-bank-account-ids`); provider HTTP + decrypt + schedules stay on Trigger; `delete-connection` / `initial-bank-setup` still gated (no separable SQL) | worker |
+| AP-WORKER-9 | DONE | Team onboard SQL context (`onboard-team`); Resend + wait stay on Trigger; invite insert / delete-prep already via tRPC AP-60/61 (not forked); `invite-team-members` / BullMQ `delete-team` / cancellation / `payment-issue` still gated (email/provider, no separable SQL) | worker |
 | AP-22 | DONE | `team.update` + `tags.create`/`update`/`delete` writes | write |
 | AP-23 | DONE | `documentTags.create`/`delete` + `documentTagAssignments.create`/`delete` | write |
 | AP-24 | DONE | `transactionTags.create`/`delete` + `customers.delete` + `transactionCategories.getById` | write+read |
