@@ -237,6 +237,7 @@ export {
   mapReplacementToOAuthApplicationDelete,
   mapReplacementToInboxAccountsGet,
   type MiddayBankAccountsGetShape,
+  type MiddayAccountingConnectionShape,
   type MiddayNotificationsListShape,
   type MiddayNotificationShape,
   type MiddayUserUpdateShape,
@@ -264,10 +265,6 @@ export {
   type MiddayTransactionsGetShape,
   type ReplacementAuthMePayload,
   type ReplacementTeamCurrentPayload,
-  type ReplacementTrackerProjectsListQuery,
-  type ReplacementTrackerEntriesByRangeQuery,
-  type ReplacementTrackerBillableHoursQuery,
-  type ReplacementBankConnectionsListQuery,
 };
 
 const DEFAULT_TIMEOUT_MS = 5_000;

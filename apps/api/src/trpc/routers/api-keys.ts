@@ -90,8 +90,8 @@ export const apiKeysRouter = createTRPCRouter({
         teamId: teamId!,
       });
 
-      if (data?.keyHash) {
-        await apiKeyCache.delete(data.keyHash);
+      if (data) {
+        await apiKeyCache.delete(data);
       }
 
       return data;

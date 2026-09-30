@@ -45,7 +45,7 @@ export const invoiceProductsRouter = createTRPCRouter({
 
       if (shouldDelegateToReplacementBackend()) {
         const delegated = await tryDelegateInvoiceProductsGet(
-          { sortBy, limit, includeInactive, currency },
+          { sortBy, limit, includeInactive, currency: currency ?? undefined },
           accessToken,
         );
         if (delegated) {

@@ -371,7 +371,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
             accessToken,
           );
           if (delegated) {
-            existing = delegated as typeof existing;
+            existing = delegated as unknown as typeof existing;
           } else {
             assertLegacyIdentityFallbackAllowed();
           }

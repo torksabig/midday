@@ -66,13 +66,15 @@ export const documentsRouter = createTRPCRouter({
     .input(getDocumentSchema)
     .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
       if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateDocumentsGetById(
-          input.id,
-          input.filePath,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.document ?? null;
+        if (input.id) {
+          const delegated = await tryDelegateDocumentsGetById(
+            input.id,
+            input.filePath,
+            accessToken,
+          );
+          if (delegated.delegated) {
+            return delegated.document ?? null;
+          }
         }
         assertLegacyIdentityFallbackAllowed();
       }

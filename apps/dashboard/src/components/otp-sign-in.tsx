@@ -11,15 +11,11 @@ import {
   FormMessage,
 } from "@midday/ui/form";
 import { Input } from "@midday/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@midday/ui/input-otp";
-import { Spinner } from "@midday/ui/spinner";
 import { SubmitButton } from "@midday/ui/submit-button";
 import { useSearchParams } from "next/navigation";
-import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v3";
-import { verifyOtpAction } from "@/actions/verify-otp-action";
 
 const formSchema = z.object({
   email: z
@@ -28,6 +24,7 @@ const formSchema = z.object({
     .refine((email) => !email.includes("+"), {
       message: "Email addresses with '+' are not allowed",
     }),
+  password: z.string().min(1, "Password is required"),
 });
 
 type Props = {
@@ -35,93 +32,36 @@ type Props = {
 };
 
 export function OTPSignIn({ className }: Props) {
-  const verifyOtp = useAction(verifyOtpAction);
   const [isLoading, setLoading] = useState(false);
-  const [isSent, setSent] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [email, setEmail] = useState<string>();
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
   const searchParams = useSearchParams();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      email: "thiidenlampi@gmail.com",
+      password: "",
     },
   });
 
-  async function onSubmit({ email }: z.infer<typeof formSchema>) {
+  async function onSubmit({ email, password }: z.infer<typeof formSchema>) {
     setLoading(true);
+    setError(null);
 
-    setEmail(email);
-
-    await supabase.auth.signInWithOtp({ email });
-
-    setSent(true);
-    setLoading(false);
-  }
-
-  async function onComplete(token: string) {
-    if (!email) return;
-
-    setIsVerifying(true);
-
-    verifyOtp.execute({
-      token,
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      redirectTo: `${window.location.origin}/${searchParams.get("return_to") || ""}`,
+      password,
     });
-  }
 
-  if (isSent) {
-    return (
-      <div className={cn("flex flex-col space-y-4 items-center", className)}>
-        <div className="h-[62px] w-full flex items-center justify-center">
-          {verifyOtp.isExecuting || isVerifying ? (
-            <div className="flex items-center justify-center h-full bg-background/95 border border-input w-full">
-              <div className="flex items-center space-x-2 bg-background px-4 py-2 rounded-md shadow-sm">
-                <Spinner size={16} className="text-primary" />
-                <span className="text-sm text-foreground font-medium">
-                  Verifying...
-                </span>
-              </div>
-            </div>
-          ) : (
-            <InputOTP
-              maxLength={6}
-              autoFocus
-              onComplete={onComplete}
-              disabled={verifyOtp.isExecuting || isVerifying}
-              render={({ slots }) => (
-                <InputOTPGroup>
-                  {slots.map((slot, index) => (
-                    <InputOTPSlot
-                      key={index.toString()}
-                      {...slot}
-                      className="w-[62px] h-[62px]"
-                    />
-                  ))}
-                </InputOTPGroup>
-              )}
-            />
-          )}
-        </div>
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
 
-        <div className="flex space-x-2">
-          <span className="text-sm text-[#878787]">
-            Didn't receive the email?
-          </span>
-          <button
-            onClick={() => setSent(false)}
-            type="button"
-            className="text-sm text-primary underline font-medium"
-            disabled={verifyOtp.isExecuting || isVerifying}
-          >
-            Resend code
-          </button>
-        </div>
-      </div>
-    );
+    const returnTo = searchParams.get("return_to");
+    window.location.href = `${window.location.origin}/${returnTo || ""}`;
   }
 
   return (
@@ -146,6 +86,26 @@ export function OTPSignIn({ className }: Props) {
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    placeholder="Enter password"
+                    type="password"
+                    {...field}
+                    autoComplete="current-password"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {error ? <p className="text-sm text-red-500">{error}</p> : null}
 
           <SubmitButton
             type="submit"
