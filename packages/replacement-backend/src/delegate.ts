@@ -9,7 +9,6 @@ import {
   mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
   mapReplacementToInboxSearch,
-  mapReplacementToOverviewSummary,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
@@ -126,7 +125,6 @@ import {
   type MiddayInboxCheckAttachmentsShape,
   type MiddayInboxGetShape,
   type MiddayInboxSearchItemShape,
-  type MiddayOverviewSummaryShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
   type MiddayTransactionsGetShape,
@@ -201,7 +199,6 @@ export {
   mapReplacementToAccountingConnections,
   mapReplacementToAccountingSyncStatus,
   mapReplacementToBankConnectionsGet,
-  mapReplacementToOverviewSummary,
   mapReplacementToPaymentStatus,
   mapReplacementToTeamCurrent,
   mapReplacementToTransactionById,
@@ -258,7 +255,6 @@ export {
   type MiddayInboxCheckAttachmentsShape,
   type MiddayInboxGetShape,
   type MiddayInboxSearchItemShape,
-  type MiddayOverviewSummaryShape,
   type MiddayPaymentStatusShape,
   type MiddayTransactionByIdShape,
   type MiddayTransactionCategoriesGetShape,
@@ -796,18 +792,6 @@ export async function fetchReplacementInboxCheckAttachments(
     token,
   );
   return mapReplacementToInboxCheckAttachments(payload);
-}
-
-export async function fetchReplacementOverviewSummary(
-  baseUrl: string,
-  token: string,
-): Promise<MiddayOverviewSummaryShape> {
-  const root = trimBase(baseUrl);
-  const payload = await replacementFetch<unknown>(
-    `${root}/api/v1/overview/summary`,
-    token,
-  );
-  return mapReplacementToOverviewSummary(payload);
 }
 
 export async function fetchReplacementInboxById(

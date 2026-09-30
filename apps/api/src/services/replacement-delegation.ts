@@ -229,7 +229,6 @@ import {
   fetchReplacementInboxCheckAttachments,
   fetchReplacementInboxList,
   fetchReplacementInboxSearch,
-  fetchReplacementOverviewSummary,
   fetchReplacementTeamCurrent,
   fetchReplacementTransactionById,
   fetchReplacementTransactionCategories,
@@ -662,42 +661,6 @@ export async function tryDelegateInboxCheckAttachments(
   try {
     const baseUrl = getReplacementApiUrl();
     return await fetchReplacementInboxCheckAttachments(baseUrl, token, id);
-  } catch (error) {
-    if (replacementDelegationRequiresSuccess()) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Replacement backend delegation failed",
-        cause: error,
-      });
-    }
-    return null;
-  }
-}
-
-export async function tryDelegateOverviewSummary(
-  sessionAccessToken?: string | null,
-) {
-  if (!shouldDelegateToReplacementBackend()) {
-    return null;
-  }
-
-  const token = await resolveReplacementBearerToken(
-    getReplacementApiUrl(),
-    sessionAccessToken,
-  );
-  if (!token) {
-    if (replacementDelegationRequiresSuccess()) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Replacement backend delegation failed: no bearer token",
-      });
-    }
-    return null;
-  }
-
-  try {
-    const baseUrl = getReplacementApiUrl();
-    return await fetchReplacementOverviewSummary(baseUrl, token);
   } catch (error) {
     if (replacementDelegationRequiresSuccess()) {
       throw new TRPCError({

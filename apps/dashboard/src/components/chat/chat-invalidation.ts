@@ -4,6 +4,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import type { UIMessage } from "ai";
 import { useEffect, useRef } from "react";
+import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 import { isToolPart, normalizeToolPart } from "./chat-utils";
 
@@ -46,7 +47,7 @@ function invalidateTransactions(trpc: TRPCProxy, qc: QueryClient) {
   qc.invalidateQueries({
     queryKey: trpc.reports.revenueForecast.queryKey(),
   });
-  qc.invalidateQueries({ queryKey: trpc.overview.summary.queryKey() });
+  qc.invalidateQueries({ queryKey: overviewSummaryQueryKey });
 }
 
 function invalidateInvoices(trpc: TRPCProxy, qc: QueryClient) {

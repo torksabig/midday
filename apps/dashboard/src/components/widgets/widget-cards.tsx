@@ -3,7 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useUserQuery } from "@/hooks/use-user";
-import { useTRPC } from "@/trpc/client";
+import { overviewSummaryQueryOptions } from "@/lib/rust-api/overview-client";
 import { formatAmount, secondsToHoursAndMinutes } from "@/utils/format";
 
 interface WidgetCardProps {
@@ -31,8 +31,7 @@ function WidgetCard({ label, href, value, detail }: WidgetCardProps) {
 }
 
 export function WidgetCards() {
-  const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.overview.summary.queryOptions());
+  const { data } = useSuspenseQuery(overviewSummaryQueryOptions());
   const { data: user } = useUserQuery();
   const locale = user?.locale;
 

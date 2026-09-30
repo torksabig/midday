@@ -6,6 +6,7 @@
     "build": "NODE_ENV=production next build --turbopack",
     "clean": "git clean -xdf .next .turbo node_modules",
     "dev": "TZ=UTC next dev -p 3001 --turbopack",
+    "generate:rust-api": "openapi-typescript ../../../clone/crates/api/openapi.json -o src/lib/rust-api/openapi.generated.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -99,6 +100,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "^1.0.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "catalog:"
   }
 }

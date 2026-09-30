@@ -10,7 +10,6 @@ import {
   mapReplacementToInboxSearch,
   mapReplacementToGlobalSearch,
   mapReplacementToInvoiceSummary,
-  mapReplacementToOverviewSummary,
   mapReplacementToPaymentStatus,
   mapReplacementToRelatedDocuments,
   mapReplacementToReportJson,
@@ -503,32 +502,6 @@ describe("replacement mappers", () => {
     expect(mapped[0]).toMatchObject({
       type: "customer",
       created_at: "2026-01-01",
-    });
-  });
-
-  test("mapReplacementToOverviewSummary maps dashboard home payload", () => {
-    const mapped = mapReplacementToOverviewSummary({
-      open_invoices: { count: 2, total_amount: 100, currency: "USD" },
-      unbilled_time: {
-        total_duration: 3600,
-        total_amount: 50,
-        project_count: 1,
-        currency: "USD",
-      },
-      inbox_pending: { count: 3 },
-      transactions_to_review: { count: 4 },
-      cash_balance: {
-        total_balance: 5000,
-        currency: "USD",
-        account_count: 2,
-      },
-      runway: 12,
-    });
-    expect(mapped).toMatchObject({
-      openInvoices: { count: 2, totalAmount: 100 },
-      inboxPending: { count: 3 },
-      cashBalance: { totalBalance: 5000, accountCount: 2 },
-      runway: 12,
     });
   });
 

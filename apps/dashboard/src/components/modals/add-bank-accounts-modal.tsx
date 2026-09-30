@@ -16,6 +16,7 @@ import { useToast } from "@midday/ui/use-toast";
 import { getInitials } from "@midday/utils/format";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import { FormatAmount } from "../format-amount";
@@ -138,9 +139,7 @@ export function AddBankAccountsModal({
         queryClient.invalidateQueries({
           queryKey: trpc.bankAccounts.get.queryKey(),
         });
-        queryClient.invalidateQueries({
-          queryKey: trpc.overview.summary.queryKey(),
-        });
+        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
         setSelectedIds(new Set());
         onOpenChange(false);
         onAccountsAdded?.();

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
+import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import { FormatAmount } from "./format-amount";
@@ -155,9 +156,7 @@ export function BankAccount({ data, provider }: Props) {
         queryClient.invalidateQueries({
           queryKey: trpc.bankConnections.get.queryKey(),
         });
-        queryClient.invalidateQueries({
-          queryKey: trpc.overview.summary.queryKey(),
-        });
+        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
         setDeleteValue("");
         setDeleteOpen(false);
       },
@@ -173,9 +172,7 @@ export function BankAccount({ data, provider }: Props) {
         queryClient.invalidateQueries({
           queryKey: trpc.bankConnections.get.queryKey(),
         });
-        queryClient.invalidateQueries({
-          queryKey: trpc.overview.summary.queryKey(),
-        });
+        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
       },
     }),
   );

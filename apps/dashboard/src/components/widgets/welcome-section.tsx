@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUserQuery } from "@/hooks/use-user";
-import { useTRPC } from "@/trpc/client";
+import { overviewSummaryQueryOptions } from "@/lib/rust-api/overview-client";
 import { formatAmount, secondsToHoursAndMinutes } from "@/utils/format";
 
 function getTimeBasedGreeting(timezone?: string): string {
@@ -327,8 +327,7 @@ export function WelcomeGreeting() {
 
 export function WelcomeSummary() {
   const { data: user } = useUserQuery();
-  const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.overview.summary.queryOptions());
+  const { data } = useSuspenseQuery(overviewSummaryQueryOptions());
   const insights = buildInsights(data, user?.locale);
 
   return <SummaryTicker insights={insights} />;

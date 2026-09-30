@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 
 export function useInvalidateTransactionQueries() {
@@ -43,9 +44,7 @@ export function useInvalidateTransactionQueries() {
     });
 
     // Invalidate overview summary
-    queryClient.invalidateQueries({
-      queryKey: trpc.overview.summary.queryKey(),
-    });
+    queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
 
     // Invalidate global search
     queryClient.invalidateQueries({

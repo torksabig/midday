@@ -25,6 +25,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 
 type BankConnection = NonNullable<
@@ -47,9 +48,7 @@ export function DeleteConnection({ connection }: Props) {
         queryClient.invalidateQueries({
           queryKey: trpc.bankConnections.get.queryKey(),
         });
-        queryClient.invalidateQueries({
-          queryKey: trpc.overview.summary.queryKey(),
-        });
+        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
 
         setOpen(false);
         setValue("");
