@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { downloadFile } from "@/lib/download";
+import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { CopyInput } from "./copy-input";
@@ -186,7 +187,7 @@ export function InvoiceSuccess() {
           <Button
             onClick={async () => {
               await queryClient.refetchQueries({
-                queryKey: trpc.invoice.defaultSettings.queryKey(),
+                queryKey: invoiceDefaultSettingsQueryKey,
               });
               setParams(null);
 

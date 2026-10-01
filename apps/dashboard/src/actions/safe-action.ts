@@ -5,7 +5,8 @@ import {
   DEFAULT_SERVER_ERROR_MESSAGE,
 } from "next-safe-action";
 import { z } from "zod";
-import { getQueryClient, trpc } from "@/trpc/server";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
+import { getQueryClient } from "@/trpc/server";
 import { logger } from "@/utils/logger";
 
 export const actionClient = createSafeActionClient({
@@ -55,7 +56,7 @@ export const authActionClient = actionClientWithMeta
   })
   .use(async ({ next, metadata }) => {
     const queryClient = getQueryClient();
-    const user = await queryClient.fetchQuery(trpc.user.me.queryOptions());
+    const user = await queryClient.fetchQuery(viewerServerQueryOptions());
 
     const supabase = await createClient();
 

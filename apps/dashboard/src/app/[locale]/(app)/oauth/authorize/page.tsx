@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { OAuthConsentScreen } from "@/components/oauth/oauth-consent-screen";
 import { OAuthErrorMessage } from "@/components/oauth/oauth-error-message";
 import { loadOAuthParams } from "@/hooks/use-oauth-params";
+import { teamCurrentServerQueryOptions } from "@/lib/rust-api/team-server";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 import { categorizeOAuthError, validateOAuthParams } from "@/utils/oauth-utils";
 
@@ -43,7 +45,7 @@ export default async function Page(props: Props) {
   // This is critical for the MCP OAuth flow where ChatGPT/Claude redirect
   // the user's browser here before they've authenticated with Midday.
   const user = await queryClient
-    .fetchQuery(trpc.user.me.queryOptions())
+    .fetchQuery(viewerServerQueryOptions())
     .catch(() => null);
 
   if (!user) {
@@ -80,7 +82,7 @@ export default async function Page(props: Props) {
         }),
       ),
       queryClient.prefetchQuery(trpc.team.list.queryOptions()),
-      queryClient.prefetchQuery(trpc.team.current.queryOptions()),
+      queryClient.prefetchQuery(teamCurrentServerQueryOptions()),
     ]);
 
     // Render the consent screen

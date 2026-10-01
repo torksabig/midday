@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { revalidateAfterCheckout } from "@/actions/revalidate-action";
+import { viewerQueryOptions } from "@/lib/rust-api/viewer-client";
 import { useTRPC } from "@/trpc/client";
 
 const POLLING_TIMEOUT_MS = 30_000;
@@ -27,7 +28,7 @@ export function Plans() {
   > | null>(null);
 
   const { data: user } = useQuery({
-    ...trpc.user.me.queryOptions(),
+    ...viewerQueryOptions(),
     refetchInterval: (query) => {
       if (!isPollingForPlan) return false;
 

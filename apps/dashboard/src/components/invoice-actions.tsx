@@ -33,6 +33,7 @@ import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -125,7 +126,7 @@ export function InvoiceActions({
         });
 
         queryClient.invalidateQueries({
-          queryKey: trpc.invoice.defaultSettings.queryKey(),
+          queryKey: invoiceDefaultSettingsQueryKey,
         });
       },
     }),

@@ -2,6 +2,7 @@ import { getCountryCode, getCurrency } from "@midday/location";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { OnboardingPage } from "@/components/onboarding/onboarding-page";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default async function Page() {
   const queryClient = getQueryClient();
 
   const user = await queryClient
-    .fetchQuery(trpc.user.me.queryOptions())
+    .fetchQuery(viewerServerQueryOptions())
     .catch(() => redirect("/login"));
 
   if (!user) {

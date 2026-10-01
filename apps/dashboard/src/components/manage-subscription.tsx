@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTeamQuery } from "@/hooks/use-team";
 import { useUserQuery } from "@/hooks/use-user";
+import { viewerQueryKey } from "@/lib/rust-api/viewer";
 import { useTRPC } from "@/trpc/client";
 import { CancellationDialog } from "./cancellation-dialog";
 
@@ -32,7 +33,7 @@ export function ManageSubscription() {
     trpc.billing.reactivateSubscription.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: trpc.user.me.queryKey(),
+          queryKey: viewerQueryKey,
         });
       },
     }),

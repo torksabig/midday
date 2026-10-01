@@ -1,9 +1,9 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useUserQuery } from "@/hooks/use-user";
 import { overviewSummaryQueryOptions } from "@/lib/rust-api/overview-client";
+import { viewerQueryOptions } from "@/lib/rust-api/viewer-client";
 import { formatAmount, secondsToHoursAndMinutes } from "@/utils/format";
 
 interface WidgetCardProps {
@@ -32,7 +32,7 @@ function WidgetCard({ label, href, value, detail }: WidgetCardProps) {
 
 export function WidgetCards() {
   const { data } = useSuspenseQuery(overviewSummaryQueryOptions());
-  const { data: user } = useUserQuery();
+  const { data: user } = useQuery(viewerQueryOptions());
   const locale = user?.locale;
 
   const cashValue =

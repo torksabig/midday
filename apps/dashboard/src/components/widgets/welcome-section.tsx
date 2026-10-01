@@ -1,12 +1,12 @@
 "use client";
 
 import { TZDate } from "@date-fns/tz";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useUserQuery } from "@/hooks/use-user";
 import { overviewSummaryQueryOptions } from "@/lib/rust-api/overview-client";
+import { viewerQueryOptions } from "@/lib/rust-api/viewer-client";
 import { formatAmount, secondsToHoursAndMinutes } from "@/utils/format";
 
 function getTimeBasedGreeting(timezone?: string): string {
@@ -290,7 +290,7 @@ function SummaryTicker({ insights }: { insights: Insight[] }) {
 }
 
 export function WelcomeGreeting() {
-  const { data: user } = useUserQuery();
+  const { data: user } = useQuery(viewerQueryOptions());
   const [greeting, setGreeting] = useState(() =>
     getTimeBasedGreeting(user?.timezone ?? undefined),
   );
@@ -326,7 +326,7 @@ export function WelcomeGreeting() {
 }
 
 export function WelcomeSummary() {
-  const { data: user } = useUserQuery();
+  const { data: user } = useQuery(viewerQueryOptions());
   const { data } = useSuspenseQuery(overviewSummaryQueryOptions());
   const insights = buildInsights(data, user?.locale);
 

@@ -5,6 +5,9 @@ import { Header } from "@/components/header";
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider";
 import { Sidebar } from "@/components/sidebar";
 import { TimezoneDetector } from "@/components/timezone-detector";
+import { invoiceDefaultSettingsServerQueryOptions } from "@/lib/rust-api/invoice-default-settings-server";
+import { teamCurrentServerQueryOptions } from "@/lib/rust-api/team-server";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import {
   batchPrefetch,
   getQueryClient,
@@ -19,18 +22,23 @@ export default async function Layout({
 }) {
   const queryClient = getQueryClient();
 
+  void queryClient.prefetchQuery(teamCurrentServerQueryOptions()).catch(() => {
+    // Avoid unhandled promise rejections from fire-and-forget prefetches.
+  });
+  void queryClient
+    .prefetchQuery(invoiceDefaultSettingsServerQueryOptions())
+    .catch(() => {
+      // Avoid unhandled promise rejections from fire-and-forget prefetches.
+    });
+
   // NOTE: These are used in the global sheets
-  batchPrefetch([
-    trpc.team.current.queryOptions(),
-    trpc.invoice.defaultSettings.queryOptions(),
-    trpc.search.global.queryOptions({ searchTerm: "" }),
-  ]);
+  batchPrefetch([trpc.search.global.queryOptions({ searchTerm: "" })]);
 
   // Fetch the user – .catch → redirect so a transient API failure
   // (timeout, 5xx, expired session, etc.) doesn't crash the entire
   // layout and blank the page.
   const user = await queryClient
-    .fetchQuery(trpc.user.me.queryOptions())
+    .fetchQuery(viewerServerQueryOptions())
     .catch(() => redirect("/login"));
 
   if (!user) {

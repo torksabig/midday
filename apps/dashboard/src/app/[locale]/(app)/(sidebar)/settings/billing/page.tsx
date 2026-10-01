@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ManageSubscription } from "@/components/manage-subscription";
 import { Orders } from "@/components/orders";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, prefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 
 export default async function Billing() {
   const queryClient = getQueryClient();
-  const user = await queryClient.fetchQuery(trpc.user.me.queryOptions());
+  const user = await queryClient.fetchQuery(viewerServerQueryOptions());
 
   const team = user?.team;
 

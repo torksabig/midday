@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { forwardRef, useRef, useState } from "react";
 import { useUpload } from "@/hooks/use-upload";
+import { viewerQueryKey } from "@/lib/rust-api/viewer";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -32,7 +33,7 @@ export const AvatarUpload = forwardRef<HTMLInputElement, Props>(
       trpc.user.update.mutationOptions({
         onSuccess: () => {
           queryClient.invalidateQueries({
-            queryKey: trpc.user.me.queryKey(),
+            queryKey: viewerQueryKey,
           });
         },
       }),

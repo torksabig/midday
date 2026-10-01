@@ -1,15 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { viewerQueryKey } from "@/lib/rust-api/viewer";
+import { viewerQueryOptions } from "@/lib/rust-api/viewer-client";
 import { useTRPC } from "@/trpc/client";
 
 export function useUserQuery() {
-  const trpc = useTRPC();
   // useQuery instead of useSuspenseQuery so components outside a Suspense
   // boundary don't blank the page during hydration. Data is always
-  // pre-fetched by the (sidebar) layout which awaits user.me.
+  // pre-fetched by the (sidebar) layout which awaits the Rust viewer.
   const result = useQuery({
-    ...trpc.user.me.queryOptions(),
+    ...viewerQueryOptions(),
     refetchInterval: 6 * 60 * 60 * 1000,
   });
   return result as typeof result & { data: NonNullable<typeof result.data> };
@@ -24,14 +25,14 @@ export function useUserMutation() {
       onMutate: async (newData) => {
         // Cancel outgoing refetches
         await queryClient.cancelQueries({
-          queryKey: trpc.user.me.queryKey(),
+          queryKey: viewerQueryKey,
         });
 
         // Get current data
-        const previousData = queryClient.getQueryData(trpc.user.me.queryKey());
+        const previousData = queryClient.getQueryData(viewerQueryKey);
 
         // Optimistically update
-        queryClient.setQueryData(trpc.user.me.queryKey(), (old: any) => ({
+        queryClient.setQueryData(viewerQueryKey, (old: any) => ({
           ...old,
           ...newData,
         }));
@@ -40,15 +41,12 @@ export function useUserMutation() {
       },
       onError: (_, __, context) => {
         // Rollback on error
-        queryClient.setQueryData(
-          trpc.user.me.queryKey(),
-          context?.previousData,
-        );
+        queryClient.setQueryData(viewerQueryKey, context?.previousData);
       },
       onSettled: () => {
         // Refetch after error or success
         queryClient.invalidateQueries({
-          queryKey: trpc.user.me.queryKey(),
+          queryKey: viewerQueryKey,
         });
       },
     }),

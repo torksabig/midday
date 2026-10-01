@@ -22,6 +22,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useDebounceValue } from "usehooks-ts";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
@@ -108,7 +109,7 @@ export function Form() {
         // otherwise "Create another" resets from stale defaultSettings and shows
         // a duplicate-number validation error.
         queryClient.invalidateQueries({
-          queryKey: trpc.invoice.defaultSettings.queryKey(),
+          queryKey: invoiceDefaultSettingsQueryKey,
         });
 
         setParams({ invoiceType: "success", invoiceId: data.id });
@@ -386,7 +387,7 @@ export function Form() {
             queryKey: trpc.invoice.invoiceSummary.queryKey(),
           });
           queryClient.invalidateQueries({
-            queryKey: trpc.invoice.defaultSettings.queryKey(),
+            queryKey: invoiceDefaultSettingsQueryKey,
           });
           setParams({ invoiceType: "success", invoiceId: values.id });
         } else {

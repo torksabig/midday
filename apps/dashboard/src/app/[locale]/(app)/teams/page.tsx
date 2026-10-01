@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { SelectTeamTable } from "@/components/tables/select-team/table";
 import { TeamInvites } from "@/components/team-invites";
 import { UserMenu } from "@/components/user-menu";
+import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default async function Teams() {
     trpc.team.invitesByEmail.queryOptions(),
   );
 
-  const user = await queryClient.fetchQuery(trpc.user.me.queryOptions());
+  const user = await queryClient.fetchQuery(viewerServerQueryOptions());
 
   // If no teams and no invites, redirect to onboarding
   if (!teams?.length && !invites?.length) {

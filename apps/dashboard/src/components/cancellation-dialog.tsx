@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUserQuery } from "@/hooks/use-user";
+import { viewerQueryKey } from "@/lib/rust-api/viewer";
 import { useTRPC } from "@/trpc/client";
 
 type CancellationReason =
@@ -105,7 +106,7 @@ export function CancellationDialog({
         setStep("done");
 
         queryClient.invalidateQueries({
-          queryKey: trpc.user.me.queryKey(),
+          queryKey: viewerQueryKey,
         });
 
         track({
@@ -129,7 +130,7 @@ export function CancellationDialog({
       if (!value) {
         if (step === "done") {
           queryClient.invalidateQueries({
-            queryKey: trpc.user.me.queryKey(),
+            queryKey: viewerQueryKey,
           });
         }
         setTimeout(reset, 200);
@@ -168,7 +169,7 @@ export function CancellationDialog({
           planType: yearlyPlanType,
         });
         queryClient.invalidateQueries({
-          queryKey: trpc.user.me.queryKey(),
+          queryKey: viewerQueryKey,
         });
       });
 

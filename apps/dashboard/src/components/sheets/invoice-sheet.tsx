@@ -9,6 +9,8 @@ import {
 import { FormContext } from "@/components/invoice/form-context";
 import { InvoiceContent } from "@/components/invoice-content";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
+import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import { invoiceDefaultSettingsQueryOptions } from "@/lib/rust-api/invoice-default-settings-client";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 
@@ -24,7 +26,7 @@ export function InvoiceSheet() {
 
   // Get default settings for new invoices
   const { data: defaultSettings } = useSuspenseQuery(
-    trpc.invoice.defaultSettings.queryOptions(),
+    invoiceDefaultSettingsQueryOptions(),
   );
 
   // Get draft invoice for edit
@@ -48,7 +50,7 @@ export function InvoiceSheet() {
       });
 
       queryClient.invalidateQueries({
-        queryKey: trpc.invoice.defaultSettings.queryKey(),
+        queryKey: invoiceDefaultSettingsQueryKey,
       });
 
       // Clear the draft snapshot so the next open starts fresh

@@ -3,7 +3,7 @@
 import NumberFlow from "@number-flow/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { useTRPC } from "@/trpc/client";
+import { viewerQueryOptions } from "@/lib/rust-api/viewer-client";
 
 type Props = {
   value: number;
@@ -20,7 +20,6 @@ export function AnimatedNumber({
   maximumFractionDigits,
   locale,
 }: Props) {
-  const trpc = useTRPC();
   const hasReceivedValue = useRef(false);
 
   useEffect(() => {
@@ -30,7 +29,7 @@ export function AnimatedNumber({
   }, [value]);
 
   const { data: user } = useQuery({
-    ...trpc.user.me.queryOptions(),
+    ...viewerQueryOptions(),
     retry: false,
     throwOnError: false,
   });

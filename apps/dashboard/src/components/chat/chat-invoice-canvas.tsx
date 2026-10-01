@@ -13,6 +13,7 @@ import { Form } from "@/components/invoice/form";
 import { FormContext } from "@/components/invoice/form-context";
 import { InvoiceSuccess } from "@/components/invoice-success";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
+import { invoiceDefaultSettingsQueryOptions } from "@/lib/rust-api/invoice-default-settings-client";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 
@@ -33,7 +34,7 @@ function InvoiceCanvasContent() {
   }, [invoiceId, queryClient, trpc.invoice.getById]);
 
   const { data: defaultSettings } = useSuspenseQuery(
-    trpc.invoice.defaultSettings.queryOptions(),
+    invoiceDefaultSettingsQueryOptions(),
   );
 
   const { data } = useQuery(

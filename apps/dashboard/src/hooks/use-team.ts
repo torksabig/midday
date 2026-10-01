@@ -5,11 +5,12 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { teamCurrentQueryKey } from "@/lib/rust-api/team";
+import { teamCurrentQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 export function useTeamQuery() {
-  const trpc = useTRPC();
-  return useSuspenseQuery(trpc.team.current.queryOptions());
+  return useSuspenseQuery(teamCurrentQueryOptions());
 }
 
 export function useTeamMutation() {
@@ -21,16 +22,14 @@ export function useTeamMutation() {
       onMutate: async (newData) => {
         // Cancel outgoing refetches
         await queryClient.cancelQueries({
-          queryKey: trpc.team.current.queryKey(),
+          queryKey: teamCurrentQueryKey,
         });
 
         // Get current data
-        const previousData = queryClient.getQueryData(
-          trpc.team.current.queryKey(),
-        );
+        const previousData = queryClient.getQueryData(teamCurrentQueryKey);
 
         // Optimistically update
-        queryClient.setQueryData(trpc.team.current.queryKey(), (old: any) => ({
+        queryClient.setQueryData(teamCurrentQueryKey, (old: any) => ({
           ...old,
           ...newData,
         }));
@@ -39,15 +38,12 @@ export function useTeamMutation() {
       },
       onError: (_, __, context) => {
         // Rollback on error
-        queryClient.setQueryData(
-          trpc.team.current.queryKey(),
-          context?.previousData,
-        );
+        queryClient.setQueryData(teamCurrentQueryKey, context?.previousData);
       },
       onSettled: () => {
         // Refetch after error or success
         queryClient.invalidateQueries({
-          queryKey: trpc.team.current.queryKey(),
+          queryKey: teamCurrentQueryKey,
         });
       },
     }),
