@@ -1,8 +1,7 @@
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
-type RawNotificationsList =
-  components["schemas"]["NotificationsListResponse"];
+type RawNotificationsList = components["schemas"]["NotificationsListResponse"];
 type RawNotificationActivity = components["schemas"]["NotificationActivity"];
 
 export type NotificationStatus = "unread" | "read" | "archived";
@@ -115,5 +114,71 @@ export async function fetchNotificationsList(
     );
   }
 
-  return normalizeNotificationsList((await response.json()) as RawNotificationsList);
+  return normalizeNotificationsList(
+    (await response.json()) as RawNotificationsList,
+  );
+}
+
+async function putNotificationStatus(
+  url: string,
+  accessToken: string | null,
+  status: NotificationStatus,
+): Promise<Response> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  return fetch(url, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+    signal: AbortSignal.timeout(8_000),
+  });
+}
+
+export async function updateNotificationStatus(
+  baseUrl: string,
+  accessToken: string | null,
+  activityId: string,
+  status: NotificationStatus,
+): Promise<NotificationActivity> {
+  const response = await putNotificationStatus(
+    `${baseUrl}/api/v1/notifications/${encodeURIComponent(activityId)}/status`,
+    accessToken,
+    status,
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeNotificationActivity(
+    (await response.json()) as RawNotificationActivity,
+  );
+}
+
+export async function updateAllNotificationStatus(
+  baseUrl: string,
+  accessToken: string | null,
+  status: NotificationStatus,
+): Promise<NotificationActivity[]> {
+  const response = await putNotificationStatus(
+    `${baseUrl}/api/v1/notifications/status`,
+    accessToken,
+    status,
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawNotificationActivity[];
+  return payload.map(normalizeNotificationActivity);
 }

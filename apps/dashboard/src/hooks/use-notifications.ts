@@ -1,27 +1,30 @@
 "use client";
 
-import type { AppRouter } from "@midday/api/trpc/routers/_app";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { inferRouterInputs } from "@trpc/server";
 import { useCallback, useMemo } from "react";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
 import {
   fetchNotificationsList,
   type NotificationActivity,
+  type NotificationStatus,
   type NotificationsList,
+  updateAllNotificationStatus,
+  updateNotificationStatus,
 } from "@/lib/rust-api/notifications";
 import { useTRPC } from "@/trpc/client";
 import { getAccessToken } from "@/utils/session";
 
-// Infer mutation inputs from tRPC while writes remain on the temporary façade.
-type RouterInputs = inferRouterInputs<AppRouter>;
-
 // Use the natural tRPC types without modification
 export type Activity = NotificationActivity;
 
-type UpdateStatusInput = RouterInputs["notifications"]["updateStatus"];
-type UpdateAllStatusInput = RouterInputs["notifications"]["updateAllStatus"];
+type UpdateStatusInput = {
+  activityId: string;
+  status: NotificationStatus;
+};
+type UpdateAllStatusInput = {
+  status: NotificationStatus;
+};
 
 function getRustApiUrl() {
   const url = process.env.NEXT_PUBLIC_RUST_API_URL;
@@ -105,213 +108,222 @@ export function useNotifications() {
   });
 
   // Mutations
-  const updateStatusMutation = useMutation(
-    trpc.notifications.updateStatus.mutationOptions({
-      onMutate: async (variables: UpdateStatusInput) => {
-        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-        await queryClient.cancelQueries({
-          queryKey: trpc.notifications.list.queryKey(),
-        });
+  const updateStatusMutation = useMutation({
+    mutationFn: async (variables: UpdateStatusInput) =>
+      updateNotificationStatus(
+        getRustApiUrl(),
+        await getAccessToken(),
+        variables.activityId,
+        variables.status,
+      ),
+    onMutate: async (variables: UpdateStatusInput) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({
+        queryKey: trpc.notifications.list.queryKey(),
+      });
 
-        // Define query keys for both inbox and archived
-        const inboxQueryKey = trpc.notifications.list.queryKey({
-          maxPriority: 3,
-          pageSize: 20,
-          status: ["unread", "read"],
-        });
+      // Define query keys for both inbox and archived
+      const inboxQueryKey = trpc.notifications.list.queryKey({
+        maxPriority: 3,
+        pageSize: 20,
+        status: ["unread", "read"],
+      });
 
-        const archivedQueryKey = trpc.notifications.list.queryKey({
-          maxPriority: 3,
-          pageSize: 20,
-          status: "archived",
-        });
+      const archivedQueryKey = trpc.notifications.list.queryKey({
+        maxPriority: 3,
+        pageSize: 20,
+        status: "archived",
+      });
 
-        // Snapshot both query states
-        const previousInboxData =
-          queryClient.getQueryData<NotificationsList>(inboxQueryKey);
-        const previousArchivedData =
-          queryClient.getQueryData<NotificationsList>(archivedQueryKey);
+      // Snapshot both query states
+      const previousInboxData =
+        queryClient.getQueryData<NotificationsList>(inboxQueryKey);
+      const previousArchivedData =
+        queryClient.getQueryData<NotificationsList>(archivedQueryKey);
 
-        if (variables.status === "archived") {
-          // Moving from inbox to archived
-          let notificationToMove: Activity | null = null;
+      if (variables.status === "archived") {
+        // Moving from inbox to archived
+        let notificationToMove: Activity | null = null;
 
-          // Remove from inbox
-          queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
-            if (!old?.data) return old;
+        // Remove from inbox
+        queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
+          if (!old?.data) return old;
 
-            const filteredData = old.data.filter((notification) => {
-              if (notification.id === variables.activityId) {
-                notificationToMove = { ...notification, status: "archived" };
-                return false;
-              }
-              return true;
-            });
-
-            return { ...old, data: filteredData };
+          const filteredData = old.data.filter((notification) => {
+            if (notification.id === variables.activityId) {
+              notificationToMove = { ...notification, status: "archived" };
+              return false;
+            }
+            return true;
           });
 
-          // Add to archived (if we found the notification)
-          if (notificationToMove) {
-            queryClient.setQueryData<NotificationsList>(
-              archivedQueryKey,
-              (old) => {
-                if (!old?.data)
-                  return {
-                    data: [notificationToMove!],
-                    meta: old?.meta || {
-                      cursor: null,
-                      hasPreviousPage: false,
-                      hasNextPage: false,
-                    },
-                  };
-                return { ...old, data: [notificationToMove!, ...old.data] };
-              },
-            );
-          }
-        } else {
-          // For other status changes (like unread -> read), just update the inbox
-          queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
-            if (!old?.data) return old;
+          return { ...old, data: filteredData };
+        });
 
-            return {
-              ...old,
-              data: old.data.map((notification) =>
-                notification.id === variables.activityId
-                  ? { ...notification, status: variables.status }
-                  : notification,
-              ),
-            };
-          });
-        }
-
-        // Return context for rollback
-        return {
-          previousInboxData,
-          previousArchivedData,
-          inboxQueryKey,
-          archivedQueryKey,
-        };
-      },
-      onError: (_, __, context) => {
-        // Rollback both queries if mutation fails
-        if (context?.previousInboxData) {
+        // Add to archived (if we found the notification)
+        if (notificationToMove) {
           queryClient.setQueryData<NotificationsList>(
-            context.inboxQueryKey,
-            context.previousInboxData as NotificationsList,
+            archivedQueryKey,
+            (old) => {
+              if (!old?.data)
+                return {
+                  data: [notificationToMove!],
+                  meta: old?.meta || {
+                    cursor: null,
+                    hasPreviousPage: false,
+                    hasNextPage: false,
+                  },
+                };
+              return { ...old, data: [notificationToMove!, ...old.data] };
+            },
           );
         }
-        if (context?.previousArchivedData) {
+      } else {
+        // For other status changes (like unread -> read), just update the inbox
+        queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
+          if (!old?.data) return old;
+
+          return {
+            ...old,
+            data: old.data.map((notification) =>
+              notification.id === variables.activityId
+                ? { ...notification, status: variables.status }
+                : notification,
+            ),
+          };
+        });
+      }
+
+      // Return context for rollback
+      return {
+        previousInboxData,
+        previousArchivedData,
+        inboxQueryKey,
+        archivedQueryKey,
+      };
+    },
+    onError: (_, __, context) => {
+      // Rollback both queries if mutation fails
+      if (context?.previousInboxData) {
+        queryClient.setQueryData<NotificationsList>(
+          context.inboxQueryKey,
+          context.previousInboxData as NotificationsList,
+        );
+      }
+      if (context?.previousArchivedData) {
+        queryClient.setQueryData<NotificationsList>(
+          context.archivedQueryKey,
+          context.previousArchivedData as NotificationsList,
+        );
+      }
+    },
+  });
+
+  const updateAllStatusMutation = useMutation({
+    mutationFn: async (variables: UpdateAllStatusInput) =>
+      updateAllNotificationStatus(
+        getRustApiUrl(),
+        await getAccessToken(),
+        variables.status,
+      ),
+    onMutate: async (variables: UpdateAllStatusInput) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({
+        queryKey: trpc.notifications.list.queryKey(),
+      });
+
+      // Define query keys for both inbox and archived
+      const inboxQueryKey = trpc.notifications.list.queryKey({
+        maxPriority: 3,
+        pageSize: 20,
+        status: ["unread", "read"],
+      });
+
+      const archivedQueryKey = trpc.notifications.list.queryKey({
+        maxPriority: 3,
+        pageSize: 20,
+        status: "archived",
+      });
+
+      // Snapshot both query states
+      const previousInboxData =
+        queryClient.getQueryData<NotificationsList>(inboxQueryKey);
+      const previousArchivedData =
+        queryClient.getQueryData<NotificationsList>(archivedQueryKey);
+
+      if (variables.status === "archived") {
+        // Moving all inbox notifications to archived
+        let notificationsToMove: Activity[] = [];
+
+        // Clear inbox and collect notifications to move
+        queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
+          if (!old?.data) return old;
+
+          notificationsToMove = old.data.map((notification) => ({
+            ...notification,
+            status: "archived" as const,
+          }));
+
+          return { ...old, data: [] };
+        });
+
+        // Add all to archived
+        if (notificationsToMove.length > 0) {
           queryClient.setQueryData<NotificationsList>(
-            context.archivedQueryKey,
-            context.previousArchivedData as NotificationsList,
+            archivedQueryKey,
+            (old) => {
+              if (!old?.data)
+                return {
+                  data: notificationsToMove,
+                  meta: old?.meta || {
+                    cursor: null,
+                    hasPreviousPage: false,
+                    hasNextPage: false,
+                  },
+                };
+              return { ...old, data: [...notificationsToMove, ...old.data] };
+            },
           );
         }
-      },
-    }),
-  );
+      } else if (variables.status === "read") {
+        // Update all unread to read in inbox (don't move between queries)
+        queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
+          if (!old?.data) return old;
 
-  const updateAllStatusMutation = useMutation(
-    trpc.notifications.updateAllStatus.mutationOptions({
-      onMutate: async (variables: UpdateAllStatusInput) => {
-        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-        await queryClient.cancelQueries({
-          queryKey: trpc.notifications.list.queryKey(),
-        });
-
-        // Define query keys for both inbox and archived
-        const inboxQueryKey = trpc.notifications.list.queryKey({
-          maxPriority: 3,
-          pageSize: 20,
-          status: ["unread", "read"],
-        });
-
-        const archivedQueryKey = trpc.notifications.list.queryKey({
-          maxPriority: 3,
-          pageSize: 20,
-          status: "archived",
-        });
-
-        // Snapshot both query states
-        const previousInboxData =
-          queryClient.getQueryData<NotificationsList>(inboxQueryKey);
-        const previousArchivedData =
-          queryClient.getQueryData<NotificationsList>(archivedQueryKey);
-
-        if (variables.status === "archived") {
-          // Moving all inbox notifications to archived
-          let notificationsToMove: Activity[] = [];
-
-          // Clear inbox and collect notifications to move
-          queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
-            if (!old?.data) return old;
-
-            notificationsToMove = old.data.map((notification) => ({
+          return {
+            ...old,
+            data: old.data.map((notification) => ({
               ...notification,
-              status: "archived" as const,
-            }));
+              status: variables.status,
+            })),
+          };
+        });
+      }
 
-            return { ...old, data: [] };
-          });
-
-          // Add all to archived
-          if (notificationsToMove.length > 0) {
-            queryClient.setQueryData<NotificationsList>(
-              archivedQueryKey,
-              (old) => {
-                if (!old?.data)
-                  return {
-                    data: notificationsToMove,
-                    meta: old?.meta || {
-                      cursor: null,
-                      hasPreviousPage: false,
-                      hasNextPage: false,
-                    },
-                  };
-                return { ...old, data: [...notificationsToMove, ...old.data] };
-              },
-            );
-          }
-        } else if (variables.status === "read") {
-          // Update all unread to read in inbox (don't move between queries)
-          queryClient.setQueryData<NotificationsList>(inboxQueryKey, (old) => {
-            if (!old?.data) return old;
-
-            return {
-              ...old,
-              data: old.data.map((notification) => ({
-                ...notification,
-                status: variables.status,
-              })),
-            };
-          });
-        }
-
-        // Return context for rollback
-        return {
-          previousInboxData,
-          previousArchivedData,
-          inboxQueryKey,
-          archivedQueryKey,
-        };
-      },
-      onError: (_, __, context) => {
-        // Rollback both queries if mutation fails
-        if (context?.previousInboxData) {
-          queryClient.setQueryData<NotificationsList>(
-            context.inboxQueryKey,
-            context.previousInboxData as NotificationsList,
-          );
-        }
-        if (context?.previousArchivedData) {
-          queryClient.setQueryData<NotificationsList>(
-            context.archivedQueryKey,
-            context.previousArchivedData as NotificationsList,
-          );
-        }
-      },
-    }),
-  );
+      // Return context for rollback
+      return {
+        previousInboxData,
+        previousArchivedData,
+        inboxQueryKey,
+        archivedQueryKey,
+      };
+    },
+    onError: (_, __, context) => {
+      // Rollback both queries if mutation fails
+      if (context?.previousInboxData) {
+        queryClient.setQueryData<NotificationsList>(
+          context.inboxQueryKey,
+          context.previousInboxData as NotificationsList,
+        );
+      }
+      if (context?.previousArchivedData) {
+        queryClient.setQueryData<NotificationsList>(
+          context.archivedQueryKey,
+          context.previousArchivedData as NotificationsList,
+        );
+      }
+    },
+  });
 
   // Return notification activities directly without transformation
   const notifications = activitiesData?.data || [];

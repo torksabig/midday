@@ -802,12 +802,13 @@ const replacementInboxRelatedItemSchema = z.object({
   inbox_account_id: z.string().nullable().optional(),
 });
 
-export const replacementInboxDetailSchema = replacementInboxListItemSchema.extend({
-  grouped_inbox_id: z.string().nullable().optional(),
-  meta: z.unknown().nullable().optional(),
-  suggestion: replacementInboxSuggestionSchema,
-  related_items: z.array(replacementInboxRelatedItemSchema).optional(),
-});
+export const replacementInboxDetailSchema =
+  replacementInboxListItemSchema.extend({
+    grouped_inbox_id: z.string().nullable().optional(),
+    meta: z.unknown().nullable().optional(),
+    suggestion: replacementInboxSuggestionSchema,
+    related_items: z.array(replacementInboxRelatedItemSchema).optional(),
+  });
 
 export type MiddayInboxByIdShape = MiddayInboxListItemShape & {
   groupedInboxId: string | null;
@@ -886,7 +887,9 @@ function mapReplacementInboxListItem(
   };
 }
 
-export function mapReplacementToInboxGet(payload: unknown): MiddayInboxGetShape {
+export function mapReplacementToInboxGet(
+  payload: unknown,
+): MiddayInboxGetShape {
   const parsed = replacementInboxListSchema.parse(payload);
   return {
     meta: {
@@ -948,9 +951,7 @@ export function mapReplacementToInboxById(
     groupedInboxId: parsed.grouped_inbox_id ?? null,
     meta: parsed.meta ?? null,
     suggestion,
-    ...(relatedItems && relatedItems.length > 0
-      ? { relatedItems }
-      : {}),
+    ...(relatedItems && relatedItems.length > 0 ? { relatedItems } : {}),
   };
 }
 
@@ -1027,7 +1028,10 @@ export function mapReplacementInboxSearchItem(
 export function mapReplacementToInboxSearch(
   payload: unknown,
 ): MiddayInboxSearchItemShape[] {
-  return z.array(replacementInboxSearchItemSchema).parse(payload).map(mapReplacementInboxSearchItem);
+  return z
+    .array(replacementInboxSearchItemSchema)
+    .parse(payload)
+    .map(mapReplacementInboxSearchItem);
 }
 
 const replacementInboxByStatusItemSchema = z.object({
@@ -1144,7 +1148,9 @@ export type MiddayPaginatedListShape = {
   data: unknown[];
 };
 
-function mapReplacementPaginatedList(payload: unknown): MiddayPaginatedListShape {
+function mapReplacementPaginatedList(
+  payload: unknown,
+): MiddayPaginatedListShape {
   const parsed = replacementPaginatedListSchema.parse(payload);
   return {
     meta: {
@@ -1198,15 +1204,21 @@ export function mapReplacementToTrackerProjectsGet(
   return mapReplacementPaginatedList(payload);
 }
 
-export function mapReplacementToTrackerEntriesByRange(payload: unknown): unknown {
+export function mapReplacementToTrackerEntriesByRange(
+  payload: unknown,
+): unknown {
   return deepCamelCaseKeys(payload);
 }
 
-export function mapReplacementToTrackerBillableHours(payload: unknown): unknown {
+export function mapReplacementToTrackerBillableHours(
+  payload: unknown,
+): unknown {
   return deepCamelCaseKeys(payload);
 }
 
-export function mapReplacementToTrackerEntriesByDate(payload: unknown): unknown {
+export function mapReplacementToTrackerEntriesByDate(
+  payload: unknown,
+): unknown {
   return deepCamelCaseKeys(payload);
 }
 
@@ -1214,12 +1226,16 @@ export function mapReplacementToTrackerProjectById(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToTrackerCurrentTimer(payload: unknown): unknown | null {
+export function mapReplacementToTrackerCurrentTimer(
+  payload: unknown,
+): unknown | null {
   if (payload === null) return null;
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToTrackerEntriesUpsert(payload: unknown): unknown[] {
+export function mapReplacementToTrackerEntriesUpsert(
+  payload: unknown,
+): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }
 
@@ -1241,9 +1257,10 @@ export function mapReplacementToInvoiceProduct(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToSaveLineItemAsProduct(
-  payload: unknown,
-): { product: unknown | null; shouldClearProductId: boolean } {
+export function mapReplacementToSaveLineItemAsProduct(payload: unknown): {
+  product: unknown | null;
+  shouldClearProductId: boolean;
+} {
   const row = z
     .object({
       product: z.unknown().nullable().optional(),
@@ -1255,9 +1272,7 @@ export function mapReplacementToSaveLineItemAsProduct(
   const shouldClear =
     row.shouldClearProductId ?? row.should_clear_product_id ?? false;
   const product =
-    row.product == null
-      ? null
-      : mapReplacementToInvoiceProduct(row.product);
+    row.product == null ? null : mapReplacementToInvoiceProduct(row.product);
   return { product, shouldClearProductId: shouldClear };
 }
 
@@ -1308,7 +1323,9 @@ export function mapReplacementToInvoiceRecurringMutation(payload: unknown): {
     z.record(z.string(), z.unknown()).parse(payload),
   ) as Record<string, unknown>;
   const jobIds = Array.isArray(obj.jobIds)
-    ? (obj.jobIds as unknown[]).filter((x): x is string => typeof x === "string")
+    ? (obj.jobIds as unknown[]).filter(
+        (x): x is string => typeof x === "string",
+      )
     : [];
   return {
     recurring: obj.recurring ?? null,
@@ -1322,9 +1339,7 @@ export function mapReplacementToInvoiceRecurringUpcoming(
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToBankAccountMutation(
-  payload: unknown,
-): unknown {
+export function mapReplacementToBankAccountMutation(payload: unknown): unknown {
   if (payload == null) return null;
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
@@ -1432,9 +1447,7 @@ export function mapReplacementToAvailablePlans(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToInvoiceTemplates(
-  payload: unknown,
-): unknown[] {
+export function mapReplacementToInvoiceTemplates(payload: unknown): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }
 
@@ -1491,11 +1504,15 @@ export function mapReplacementToAccountingConnections(
   });
 }
 
-export function mapReplacementToAccountingSyncStatus(payload: unknown): unknown[] {
+export function mapReplacementToAccountingSyncStatus(
+  payload: unknown,
+): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }
 
-export function mapReplacementToBankConnectionsGet(payload: unknown): unknown[] {
+export function mapReplacementToBankConnectionsGet(
+  payload: unknown,
+): unknown[] {
   return deepCamelCaseKeys(z.array(z.unknown()).parse(payload)) as unknown[];
 }
 
@@ -1613,15 +1630,18 @@ export type MiddayRelatedDocumentShape = {
 export function mapReplacementToRelatedDocuments(
   payload: unknown,
 ): MiddayRelatedDocumentShape[] {
-  return z.array(replacementRelatedDocumentSchema).parse(payload).map((row) => ({
-    id: row.id,
-    name: row.name,
-    metadata: row.metadata,
-    pathTokens: row.path_tokens ?? undefined,
-    tag: row.tag,
-    title: row.title,
-    summary: row.summary,
-  }));
+  return z
+    .array(replacementRelatedDocumentSchema)
+    .parse(payload)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      metadata: row.metadata,
+      pathTokens: row.path_tokens ?? undefined,
+      tag: row.tag,
+      title: row.title,
+      summary: row.summary,
+    }));
 }
 
 /** Chart, expense, tax, runway, and account-balance report payloads. */
@@ -1653,26 +1673,29 @@ const replacementUserInviteSchema = z.object({
 });
 
 export function mapReplacementToUserInvites(payload: unknown): unknown[] {
-  return z.array(replacementUserInviteSchema).parse(payload).map((row) => ({
-    id: row.id,
-    email: row.email,
-    code: row.code,
-    role: row.role,
-    user: row.user
-      ? {
-          id: row.user.id,
-          fullName: row.user.full_name ?? null,
-          email: row.user.email ?? null,
-        }
-      : null,
-    team: row.team
-      ? {
-          id: row.team.id,
-          name: row.team.name ?? null,
-          logoUrl: row.team.logo_url ?? null,
-        }
-      : null,
-  }));
+  return z
+    .array(replacementUserInviteSchema)
+    .parse(payload)
+    .map((row) => ({
+      id: row.id,
+      email: row.email,
+      code: row.code,
+      role: row.role,
+      user: row.user
+        ? {
+            id: row.user.id,
+            fullName: row.user.full_name ?? null,
+            email: row.user.email ?? null,
+          }
+        : null,
+      team: row.team
+        ? {
+            id: row.team.id,
+            name: row.team.name ?? null,
+            logoUrl: row.team.logo_url ?? null,
+          }
+        : null,
+    }));
 }
 
 const replacementBankBalanceRowSchema = z.object({
@@ -1886,9 +1909,9 @@ const replacementBankAccountTransactionCountSchema = z.object({
   count: z.number(),
 });
 
-export function mapReplacementToBankAccountTransactionCount(
-  payload: unknown,
-): { count: number } {
+export function mapReplacementToBankAccountTransactionCount(payload: unknown): {
+  count: number;
+} {
   return replacementBankAccountTransactionCountSchema.parse(payload);
 }
 
@@ -1983,9 +2006,7 @@ export function mapReplacementToAppsGet(payload: unknown): unknown[] {
 export function mapReplacementToOAuthApplicationsList(payload: unknown): {
   data: unknown[];
 } {
-  const parsed = z
-    .object({ data: z.array(z.unknown()) })
-    .parse(payload);
+  const parsed = z.object({ data: z.array(z.unknown()) }).parse(payload);
   return {
     data: deepCamelCaseKeys(parsed.data) as unknown[],
   };
@@ -1996,9 +2017,10 @@ export function mapReplacementToOAuthApplication(payload: unknown): unknown {
   return deepCamelCaseKeys(z.record(z.string(), z.unknown()).parse(payload));
 }
 
-export function mapReplacementToOAuthApplicationDelete(
-  payload: unknown,
-): { id: string; name: string } {
+export function mapReplacementToOAuthApplicationDelete(payload: unknown): {
+  id: string;
+  name: string;
+} {
   const row = deepCamelCaseKeys(
     z.record(z.string(), z.unknown()).parse(payload),
   ) as { id?: string; name?: string };

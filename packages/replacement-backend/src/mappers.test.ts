@@ -1,54 +1,54 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildReplacementTeamUpdateBody,
+  buildReplacementTransactionUpdateBody,
+  buildReplacementUserUpdateBody,
+  mapReplacementToAccountingConnections,
+  mapReplacementToAppsGet,
+  mapReplacementToAverageInvoiceSize,
+  mapReplacementToBankAccountsBalances,
   mapReplacementToBankAccountsGet,
+  mapReplacementToBankAccountTransactionCount,
+  mapReplacementToBankConnectionsGet,
+  mapReplacementToCategoryById,
+  mapReplacementToCountMetric,
   mapReplacementToCustomersGet,
   mapReplacementToDocumentsGet,
+  mapReplacementToDocumentTagAssignment,
+  mapReplacementToDocumentTagCreate,
+  mapReplacementToDocumentTagDelete,
+  mapReplacementToDocumentTagsGet,
+  mapReplacementToGlobalSearch,
+  mapReplacementToInboxAccountsGet,
   mapReplacementToInboxById,
   mapReplacementToInboxByStatus,
   mapReplacementToInboxCheckAttachments,
   mapReplacementToInboxGet,
   mapReplacementToInboxSearch,
-  mapReplacementToGlobalSearch,
   mapReplacementToInvoiceSummary,
+  mapReplacementToMostActiveClient,
+  mapReplacementToNotification,
+  mapReplacementToNotificationsList,
+  mapReplacementToNotificationsUpdateAll,
+  mapReplacementToOAuthApplicationsList,
   mapReplacementToPaymentStatus,
   mapReplacementToRelatedDocuments,
   mapReplacementToReportJson,
+  mapReplacementToTagMutation,
+  mapReplacementToTagsGet,
   mapReplacementToTeamCurrent,
+  mapReplacementToTeamUpdate,
+  mapReplacementToTopRevenueClient,
+  mapReplacementToTrackerEntriesByRange,
+  mapReplacementToTrackerProjectsGet,
+  mapReplacementToTrackerTimerStatus,
   mapReplacementToTransactionById,
   mapReplacementToTransactionCategoriesGet,
   mapReplacementToTransactionsGet,
-  mapReplacementToUserMe,
-  mapReplacementToTrackerProjectsGet,
-  mapReplacementToTrackerEntriesByRange,
-  mapReplacementToTrackerTimerStatus,
-  mapReplacementToAccountingConnections,
-  mapReplacementToBankConnectionsGet,
-  mapReplacementToUserInvites,
-  mapReplacementToBankAccountsBalances,
-  mapReplacementToDocumentTagsGet,
-  mapReplacementToTagsGet,
-  mapReplacementToBankAccountTransactionCount,
-  buildReplacementTransactionUpdateBody,
-  mapReplacementToNotificationsList,
-  mapReplacementToNotification,
-  mapReplacementToNotificationsUpdateAll,
-  mapReplacementToUserUpdate,
-  buildReplacementUserUpdateBody,
-  mapReplacementToTeamUpdate,
-  buildReplacementTeamUpdateBody,
-  mapReplacementToTagMutation,
-  mapReplacementToDocumentTagCreate,
-  mapReplacementToDocumentTagDelete,
-  mapReplacementToDocumentTagAssignment,
   mapReplacementToTransactionTagCreate,
-  mapReplacementToCategoryById,
-  mapReplacementToMostActiveClient,
-  mapReplacementToAverageInvoiceSize,
-  mapReplacementToTopRevenueClient,
-  mapReplacementToCountMetric,
-  mapReplacementToAppsGet,
-  mapReplacementToOAuthApplicationsList,
-  mapReplacementToInboxAccountsGet,
+  mapReplacementToUserInvites,
+  mapReplacementToUserMe,
+  mapReplacementToUserUpdate,
 } from "./mappers";
 
 describe("replacement mappers", () => {
@@ -482,8 +482,16 @@ describe("replacement mappers", () => {
 
   test("mapReplacementToReportJson camelCases revenue forecast meta", () => {
     const mapped = mapReplacementToReportJson({
-      meta: { forecast_method: "bottom_up", team_collection_metrics: { on_time_rate: 70 } },
-    }) as { meta: { forecastMethod: string; teamCollectionMetrics: { onTimeRate: number } } };
+      meta: {
+        forecast_method: "bottom_up",
+        team_collection_metrics: { on_time_rate: 70 },
+      },
+    }) as {
+      meta: {
+        forecastMethod: string;
+        teamCollectionMetrics: { onTimeRate: number };
+      };
+    };
     expect(mapped.meta.forecastMethod).toBe("bottom_up");
     expect(mapped.meta.teamCollectionMetrics.onTimeRate).toBe(70);
   });
@@ -523,9 +531,19 @@ describe("replacement mappers", () => {
 
   test("mapReplacementToTrackerEntriesByRange camelCases nested result", () => {
     const mapped = mapReplacementToTrackerEntriesByRange({
-      meta: { total_duration: 3600, total_amount: 50, from: "2024-04-01", to: "2024-04-30" },
-      result: { "2024-04-15": [{ id: "e1", tracker_project: { billable: true } }] },
-    }) as { meta: { totalDuration: number }; result: Record<string, unknown[]> };
+      meta: {
+        total_duration: 3600,
+        total_amount: 50,
+        from: "2024-04-01",
+        to: "2024-04-30",
+      },
+      result: {
+        "2024-04-15": [{ id: "e1", tracker_project: { billable: true } }],
+      },
+    }) as {
+      meta: { totalDuration: number };
+      result: Record<string, unknown[]>;
+    };
     expect(mapped.meta.totalDuration).toBe(3600);
     expect(mapped.result["2024-04-15"][0]).toMatchObject({ id: "e1" });
   });
@@ -808,7 +826,9 @@ describe("replacement mappers", () => {
   });
 
   test("mapReplacementToTagMutation returns id and name", () => {
-    expect(mapReplacementToTagMutation({ id: "tag-1", name: "Urgent" })).toEqual({
+    expect(
+      mapReplacementToTagMutation({ id: "tag-1", name: "Urgent" }),
+    ).toEqual({
       id: "tag-1",
       name: "Urgent",
     });

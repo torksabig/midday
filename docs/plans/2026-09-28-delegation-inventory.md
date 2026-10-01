@@ -35,8 +35,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `team.create` | yes | **write** · multi-table + category seed SQL; tax helpers stay Node (AP-62) |
 | `team.*` (other) | no | — |
 | `notifications.list` | direct Rust | read · activities feed (AP-12); dashboard calls `GET /api/v1/notifications` with the Supabase session JWT and preserves the old React Query keys |
-| `notifications.updateStatus` | yes | **write** · single activity status (AP-20 follow-on) |
-| `notifications.updateAllStatus` | yes | **write** · bulk status for current user (AP-21) |
+| `notifications.updateStatus` | direct Rust | **write** · single activity status (AP-20 follow-on); dashboard calls `PUT /api/v1/notifications/:id/status` directly |
+| `notifications.updateAllStatus` | direct Rust | **write** · bulk status for current user (AP-21); dashboard calls `PUT /api/v1/notifications/status` directly |
 | `notifications.*` (other) | no | — |
 | `notificationSettings.get` | yes | read · user/team channel settings (AP-25) |
 | `notificationSettings.getAll` | yes | read · catalog + settings merge (AP-52) |
