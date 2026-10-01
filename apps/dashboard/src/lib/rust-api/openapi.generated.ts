@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/default-settings-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceDefaultSettingsData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotificationsList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/overview/summary": {
         parameters: {
             query?: never;
@@ -68,128 +100,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/invoices/default-settings-data": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getInvoiceDefaultSettingsData"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Health: {
-            /** @constant */
-            ok: true;
+        AuthenticatedViewer: {
+            avatarUrl?: string | null;
+            dateFormat?: string | null;
+            email?: string | null;
+            fileKey?: string | null;
+            fullName?: string | null;
+            id: string;
+            locale?: string | null;
+            team?: null | components["schemas"]["DashboardTeam"];
+            teamId?: string | null;
+            /** Format: double */
+            timeFormat?: number | null;
+            timezone?: string | null;
+            timezoneAutoSync?: boolean | null;
+            user: components["schemas"]["LegacyUser"];
+            weekStartsOnMonday?: boolean | null;
         };
         DashboardTeam: {
-            /** Format: uuid */
+            baseCurrency?: string | null;
+            base_currency?: string | null;
+            canceledAt?: string | null;
+            countryCode?: string | null;
+            createdAt?: string | null;
+            email?: string | null;
+            exportSettings?: null | components["schemas"]["Value"];
+            /** Format: int32 */
+            fiscalYearStartMonth?: number | null;
             id: string;
-            name: string | null;
-            logoUrl: string | null;
-            /** Format: email */
-            email: string | null;
+            inboxId?: string | null;
+            locale?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
             plan: string;
-            subscriptionStatus: string | null;
-            inboxId: string | null;
-            /** Format: date-time */
-            createdAt: string | null;
-            countryCode: string | null;
-            /** Format: date-time */
-            canceledAt: string | null;
-            baseCurrency: string | null;
-            fiscalYearStartMonth: number | null;
-            exportSettings: unknown;
-            stripeAccountId: string | null;
-            stripeConnectStatus: string | null;
+            stripeAccountId?: string | null;
+            stripeConnectStatus?: string | null;
+            subscriptionStatus?: string | null;
         };
-        AuthenticatedViewer: {
-            /** Format: uuid */
-            id: string;
-            fullName: string | null;
-            /** Format: email */
-            email: string | null;
-            avatarUrl: string | null;
-            locale: string | null;
-            timeFormat: number | null;
-            dateFormat: string | null;
-            weekStartsOnMonday: boolean | null;
-            timezone: string | null;
-            timezoneAutoSync: boolean | null;
-            /** Format: uuid */
-            teamId: string | null;
-            team: components["schemas"]["DashboardTeam"] | null;
-            fileKey: string | null;
+        Health: {
+            ok: boolean;
         };
         InvoiceDefaultSettingsData: {
             nextInvoiceNumber: string;
-            template: unknown;
-            team: {
-                /** Format: uuid */
-                id: string;
-                baseCurrency: string | null;
-            };
-            user: {
-                /** Format: uuid */
-                id: string;
-                locale: string | null;
-                timezone: string | null;
-                dateFormat: string | null;
-            };
+            team: components["schemas"]["InvoiceDefaultSettingsTeam"];
+            template?: null | components["schemas"]["Value"];
+            user: components["schemas"]["InvoiceDefaultSettingsUser"];
         };
-        AmountCount: {
-            /** Format: int64 */
-            count: number;
-            total_amount: number;
-            currency: string;
+        InvoiceDefaultSettingsTeam: {
+            baseCurrency?: string | null;
+            id: string;
         };
-        UnbilledTime: {
-            /** Format: int64 */
-            total_duration: number;
-            total_amount: number;
-            /** Format: int64 */
-            project_count: number;
-            currency: string;
+        InvoiceDefaultSettingsUser: {
+            dateFormat?: string | null;
+            id: string;
+            locale?: string | null;
+            timezone?: string | null;
         };
-        Count: {
-            /** Format: int64 */
-            count: number;
+        LegacyUser: {
+            email?: string | null;
+            id: string;
+            name?: string | null;
         };
-        CashBalance: {
-            total_balance: number;
-            currency: string;
+        NotificationActivity: {
+            createdAt: string;
+            groupId?: string | null;
+            id: string;
+            lastUsedAt?: string | null;
+            metadata: components["schemas"]["Value"];
+            /** Format: int32 */
+            priority: number;
+            source: string;
+            status: string;
+            teamId: string;
+            type: string;
+            userId?: string | null;
+        };
+        NotificationsListMeta: {
+            cursor?: string | null;
+            hasNextPage: boolean;
+            hasPreviousPage: boolean;
+        };
+        NotificationsListResponse: {
+            data: components["schemas"]["NotificationActivity"][];
+            meta: components["schemas"]["NotificationsListMeta"];
+        };
+        OverviewCashBalance: {
             /** Format: int64 */
             account_count: number;
+            currency: string;
+            /** Format: double */
+            total_balance: number;
+        };
+        OverviewInboxPending: {
+            /** Format: int64 */
+            count: number;
+        };
+        OverviewOpenInvoices: {
+            /** Format: int64 */
+            count: number;
+            currency: string;
+            /** Format: double */
+            total_amount: number;
         };
         OverviewSummary: {
-            open_invoices: components["schemas"]["AmountCount"];
-            unbilled_time: components["schemas"]["UnbilledTime"];
-            inbox_pending: components["schemas"]["Count"];
-            transactions_to_review: components["schemas"]["Count"];
-            cash_balance: components["schemas"]["CashBalance"];
+            cash_balance: components["schemas"]["OverviewCashBalance"];
+            inbox_pending: components["schemas"]["OverviewInboxPending"];
+            open_invoices: components["schemas"]["OverviewOpenInvoices"];
             /** Format: int64 */
             runway: number;
+            transactions_to_review: components["schemas"]["OverviewTransactionsToReview"];
+            unbilled_time: components["schemas"]["OverviewUnbilledTime"];
         };
-    };
-    responses: {
-        /** @description Missing, invalid, or expired Supabase session JWT */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content?: never;
+        OverviewTransactionsToReview: {
+            /** Format: int64 */
+            count: number;
         };
+        OverviewUnbilledTime: {
+            currency: string;
+            /** Format: int64 */
+            project_count: number;
+            /** Format: double */
+            total_amount: number;
+            /** Format: int64 */
+            total_duration: number;
+        };
+        Value: unknown;
     };
+    responses: never;
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -215,7 +256,13 @@ export interface operations {
                     "application/json": components["schemas"]["AuthenticatedViewer"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     health: {
@@ -238,6 +285,69 @@ export interface operations {
             };
         };
     };
+    getInvoiceDefaultSettingsData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Raw invoice default settings data for dashboard normalization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getNotificationsList: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+                status?: string[];
+                user_id?: string;
+                userId?: string;
+                priority?: number;
+                maxPriority?: number;
+                createdAfter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped notification activity feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getOverviewSummary: {
         parameters: {
             query?: never;
@@ -256,7 +366,13 @@ export interface operations {
                     "application/json": components["schemas"]["OverviewSummary"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getCurrentTeam: {
@@ -277,28 +393,13 @@ export interface operations {
                     "application/json": components["schemas"]["DashboardTeam"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    getInvoiceDefaultSettingsData: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Raw invoice default settings data for dashboard normalization */
-            200: {
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
-                };
+                content?: never;
             };
-            401: components["responses"]["Unauthorized"];
         };
     };
 }

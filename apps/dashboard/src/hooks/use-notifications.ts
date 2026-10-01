@@ -2,23 +2,35 @@
 
 import type { AppRouter } from "@midday/api/trpc/routers/_app";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import type { inferRouterInputs } from "@trpc/server";
 import { useCallback, useMemo } from "react";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  fetchNotificationsList,
+  type NotificationActivity,
+  type NotificationsList,
+} from "@/lib/rust-api/notifications";
 import { useTRPC } from "@/trpc/client";
+import { getAccessToken } from "@/utils/session";
 
-// Infer types from tRPC router
-type RouterOutputs = inferRouterOutputs<AppRouter>;
+// Infer mutation inputs from tRPC while writes remain on the temporary façade.
 type RouterInputs = inferRouterInputs<AppRouter>;
-type NotificationsList = RouterOutputs["notifications"]["list"];
-type NotificationsData = NotificationsList["data"];
 
 // Use the natural tRPC types without modification
-export type Activity = NotificationsData[number];
+export type Activity = NotificationActivity;
 
 type UpdateStatusInput = RouterInputs["notifications"]["updateStatus"];
 type UpdateAllStatusInput = RouterInputs["notifications"]["updateAllStatus"];
+
+function getRustApiUrl() {
+  const url = process.env.NEXT_PUBLIC_RUST_API_URL;
+
+  if (url) return url.replace(/\/$/, "");
+  if (process.env.NODE_ENV !== "production") return "http://127.0.0.1:8787";
+
+  throw new Error("NEXT_PUBLIC_RUST_API_URL must be configured");
+}
 
 // Utility functions to safely handle metadata without excessive casting
 export function getMetadata(activity: Activity): Record<string, any> {
@@ -44,23 +56,35 @@ export function useNotifications() {
     data: activitiesData,
     isLoading,
     error,
-  } = useQuery(
-    trpc.notifications.list.queryOptions({
+  } = useQuery({
+    queryKey: trpc.notifications.list.queryKey({
       maxPriority: 3, // Only fetch notifications (priority <= 3)
       pageSize: 20,
       status: ["unread", "read"], // Exclude archived notifications from query
     }),
-  );
+    queryFn: async () =>
+      fetchNotificationsList(getRustApiUrl(), await getAccessToken(), {
+        maxPriority: 3,
+        pageSize: 20,
+        status: ["unread", "read"],
+      }),
+  });
 
   // Separate query for archived notifications
   const { data: archivedActivitiesData, isLoading: archivedIsLoading } =
-    useQuery(
-      trpc.notifications.list.queryOptions({
+    useQuery({
+      queryKey: trpc.notifications.list.queryKey({
         maxPriority: 3,
         pageSize: 20,
         status: "archived", // Only archived notifications
       }),
-    );
+      queryFn: async () =>
+        fetchNotificationsList(getRustApiUrl(), await getAccessToken(), {
+          maxPriority: 3,
+          pageSize: 20,
+          status: "archived",
+        }),
+    });
 
   // Real-time subscription for activities filtered by user_id
   useRealtime({
@@ -172,15 +196,15 @@ export function useNotifications() {
       onError: (_, __, context) => {
         // Rollback both queries if mutation fails
         if (context?.previousInboxData) {
-          queryClient.setQueryData(
+          queryClient.setQueryData<NotificationsList>(
             context.inboxQueryKey,
-            context.previousInboxData,
+            context.previousInboxData as NotificationsList,
           );
         }
         if (context?.previousArchivedData) {
-          queryClient.setQueryData(
+          queryClient.setQueryData<NotificationsList>(
             context.archivedQueryKey,
-            context.previousArchivedData,
+            context.previousArchivedData as NotificationsList,
           );
         }
       },
@@ -274,15 +298,15 @@ export function useNotifications() {
       onError: (_, __, context) => {
         // Rollback both queries if mutation fails
         if (context?.previousInboxData) {
-          queryClient.setQueryData(
+          queryClient.setQueryData<NotificationsList>(
             context.inboxQueryKey,
-            context.previousInboxData,
+            context.previousInboxData as NotificationsList,
           );
         }
         if (context?.previousArchivedData) {
-          queryClient.setQueryData(
+          queryClient.setQueryData<NotificationsList>(
             context.archivedQueryKey,
-            context.previousArchivedData,
+            context.previousArchivedData as NotificationsList,
           );
         }
       },

@@ -1721,23 +1721,23 @@ export function mapReplacementToTagsGet(payload: unknown): unknown[] {
 
 const replacementNotificationRowSchema = z.object({
   id: z.string(),
-  created_at: z.string(),
-  team_id: z.string(),
-  user_id: z.string().nullable().optional(),
+  createdAt: z.string(),
+  teamId: z.string(),
+  userId: z.string().nullable().optional(),
   type: z.string(),
   priority: z.number(),
-  group_id: z.string().nullable().optional(),
+  groupId: z.string().nullable().optional(),
   source: z.enum(["system", "user"]),
   metadata: z.record(z.string(), z.any()),
   status: z.enum(["unread", "read", "archived"]),
-  last_used_at: z.string().nullable().optional(),
+  lastUsedAt: z.string().nullable().optional(),
 });
 
 const replacementNotificationsListSchema = z.object({
   meta: z.object({
     cursor: z.string().nullable(),
-    has_previous_page: z.boolean(),
-    has_next_page: z.boolean(),
+    hasPreviousPage: z.boolean(),
+    hasNextPage: z.boolean(),
   }),
   data: z.array(replacementNotificationRowSchema),
 });
@@ -1770,8 +1770,8 @@ export function mapReplacementToNotificationsList(
   return {
     meta: {
       cursor: parsed.meta.cursor,
-      hasPreviousPage: parsed.meta.has_previous_page,
-      hasNextPage: parsed.meta.has_next_page,
+      hasPreviousPage: parsed.meta.hasPreviousPage,
+      hasNextPage: parsed.meta.hasNextPage,
     },
     data: parsed.data.map((row) => mapNotificationRow(row)),
   };
@@ -1785,16 +1785,16 @@ function mapNotificationRow(
 ): MiddayNotificationShape {
   return {
     id: row.id,
-    createdAt: row.created_at,
-    teamId: row.team_id,
-    userId: row.user_id ?? null,
+    createdAt: row.createdAt,
+    teamId: row.teamId,
+    userId: row.userId ?? null,
     type: row.type,
     priority: row.priority,
-    groupId: row.group_id ?? null,
+    groupId: row.groupId ?? null,
     source: row.source,
     metadata: row.metadata,
     status: row.status,
-    lastUsedAt: row.last_used_at ?? null,
+    lastUsedAt: row.lastUsedAt ?? null,
   };
 }
 

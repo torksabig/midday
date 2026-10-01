@@ -664,22 +664,22 @@ describe("replacement mappers", () => {
     const mapped = mapReplacementToNotificationsList({
       meta: {
         cursor: "20",
-        has_previous_page: true,
-        has_next_page: false,
+        hasPreviousPage: true,
+        hasNextPage: false,
       },
       data: [
         {
           id: "a1",
-          created_at: "2024-01-01T00:00:00.000Z",
-          team_id: "team-1",
-          user_id: "user-1",
+          createdAt: "2024-01-01T00:00:00.000Z",
+          teamId: "team-1",
+          userId: "user-1",
           type: "transactions_created",
           priority: 3,
-          group_id: null,
+          groupId: null,
           source: "system",
           metadata: { count: 2 },
           status: "unread",
-          last_used_at: null,
+          lastUsedAt: null,
         },
       ],
     });
@@ -690,16 +690,16 @@ describe("replacement mappers", () => {
   test("mapReplacementToNotification maps a single activity row", () => {
     const mapped = mapReplacementToNotification({
       id: "a1",
-      created_at: "2024-01-01T00:00:00.000Z",
-      team_id: "team-1",
-      user_id: "user-1",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      teamId: "team-1",
+      userId: "user-1",
       type: "transactions_created",
       priority: 3,
-      group_id: null,
+      groupId: null,
       source: "system",
       metadata: { count: 2 },
       status: "read",
-      last_used_at: null,
+      lastUsedAt: null,
     });
     expect(mapped).toMatchObject({
       id: "a1",
@@ -713,16 +713,16 @@ describe("replacement mappers", () => {
     const mapped = mapReplacementToNotificationsUpdateAll([
       {
         id: "a1",
-        created_at: "2024-01-01T00:00:00.000Z",
-        team_id: "team-1",
-        user_id: "user-1",
+        createdAt: "2024-01-01T00:00:00.000Z",
+        teamId: "team-1",
+        userId: "user-1",
         type: "transactions_created",
         priority: 3,
-        group_id: null,
+        groupId: null,
         source: "system",
         metadata: {},
         status: "read",
-        last_used_at: null,
+        lastUsedAt: null,
       },
     ]);
     expect(mapped).toHaveLength(1);
