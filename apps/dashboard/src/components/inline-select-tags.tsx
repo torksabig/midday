@@ -15,7 +15,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { useTransactionTableContextOptional } from "@/components/tables/transactions/transaction-table-context";
-import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
+import {
+  createTagFromRust,
+  tagsQueryOptions,
+} from "@/lib/rust-api/tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Tag = {
@@ -69,19 +72,18 @@ export function InlineSelectTags({ transactionId, tags = [] }: Props) {
     }),
   );
 
-  const createTagMutation = useMutation(
-    trpc.tags.create.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: trpc.tags.get.queryKey() });
-        if (data) {
-          createTransactionTagMutation.mutate({
-            transactionId,
-            tagId: data.id,
-          });
-        }
-      },
-    }),
-  );
+  const createTagMutation = useMutation({
+    mutationFn: createTagFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: trpc.tags.get.queryKey() });
+      if (data) {
+        createTransactionTagMutation.mutate({
+          transactionId,
+          tagId: data.id,
+        });
+      }
+    },
+  });
 
   const [inputValue, setInputValue] = useState("");
 

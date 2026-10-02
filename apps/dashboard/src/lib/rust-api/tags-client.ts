@@ -2,7 +2,16 @@
 
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
-import { fetchTags, type Tag } from "./tags";
+import {
+  type CreateTagInput,
+  createTag,
+  type DeleteTagInput,
+  deleteTag,
+  fetchTags,
+  type Tag,
+  type UpdateTagInput,
+  updateTag,
+} from "./tags";
 
 function getRustApiUrl() {
   const url = process.env.NEXT_PUBLIC_RUST_API_URL;
@@ -22,4 +31,16 @@ export function tagsQueryOptions(queryKey: QueryKey) {
     queryKey,
     queryFn: fetchBrowserTags,
   });
+}
+
+export async function createTagFromRust(input: CreateTagInput) {
+  return createTag(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function updateTagFromRust(input: UpdateTagInput) {
+  return updateTag(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteTagFromRust(input: DeleteTagInput) {
+  return deleteTag(getRustApiUrl(), await getAccessToken(), input);
 }

@@ -203,9 +203,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | yes | **write** · insert share link; shortUrl in Node (AP-40) |
 | `tags.get` | direct Rust | read · transaction tag list (Phase 11); dashboard calls `GET /api/v1/tags` directly and preserves the old React Query cache key |
-| `tags.create` | yes | **write** · insert tag (AP-22) |
-| `tags.update` | yes | **write** · rename tag (AP-22) |
-| `tags.delete` | yes | **write** · delete tag (AP-22) |
+| `tags.create` | direct Rust | **write** · insert tag (AP-22); dashboard calls `POST /api/v1/tags` directly and preserves the old React Query cache key |
+| `tags.update` | direct Rust | **write** · rename tag (AP-22); dashboard calls `PUT /api/v1/tags/:id` directly and preserves the old React Query cache key |
+| `tags.delete` | direct Rust | **write** · delete tag (AP-22); dashboard calls `DELETE /api/v1/tags/:id` directly and preserves the old React Query cache key |
 | `shortLinks.get` | yes | public read · by shortId (AP-42) |
 | `shortLinks.createForUrl` | yes | **write** · insert redirect; shortUrl in Node (AP-42) |
 | `shortLinks.createForDocument` | yes | **write** · signed URL Node + Postgres insert (AP-55) |

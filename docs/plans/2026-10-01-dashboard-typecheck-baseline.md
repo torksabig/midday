@@ -51,3 +51,7 @@ not this transaction tag read path):
 ```sh
 bun run --filter=@midday/dashboard typecheck 2>&1 | rg "rust-api/tags|select-tags|transaction-table-context|transactions/page|transactions-search-filter|tracker-search-filter|bulk-actions|inline-select-tags" || true
 ```
+
+For the transaction tags direct-Rust write slice on 2026-10-02, the full error
+count stayed `1234`. Remaining targeted hits are still the pre-existing
+`bulk-actions` and `vault-select-tags` issues, not the Rust tag catalog helpers.

@@ -12,7 +12,12 @@ import MultipleSelector from "@midday/ui/multiple-selector";
 import { SubmitButton } from "@midday/ui/submit-button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
+import {
+  createTagFromRust,
+  deleteTagFromRust,
+  tagsQueryOptions,
+  updateTagFromRust,
+} from "@/lib/rust-api/tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Option = {
@@ -37,34 +42,31 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
   const queryClient = useQueryClient();
   const { data } = useQuery(tagsQueryOptions(trpc.tags.get.queryKey()));
 
-  const updateTagMutation = useMutation(
-    trpc.tags.update.mutationOptions({
-      onSuccess: () => {
-        setIsOpen(false);
-        queryClient.invalidateQueries({
-          queryKey: trpc.tags.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const updateTagMutation = useMutation({
+    mutationFn: updateTagFromRust,
+    onSuccess: () => {
+      setIsOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: trpc.tags.get.queryKey(),
+      });
+    },
+  });
 
-  const deleteTagMutation = useMutation(
-    trpc.tags.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.tags.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const deleteTagMutation = useMutation({
+    mutationFn: deleteTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.tags.get.queryKey(),
+      });
+    },
+  });
 
-  const createTagMutation = useMutation(
-    trpc.tags.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: trpc.tags.get.queryKey() });
-      },
-    }),
-  );
+  const createTagMutation = useMutation({
+    mutationFn: createTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trpc.tags.get.queryKey() });
+    },
+  });
 
   const transformedTags = data
     ?.map((tag) => ({

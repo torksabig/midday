@@ -205,8 +205,24 @@ export interface paths {
     };
     get: operations["getTags"];
     put?: never;
-    post?: never;
+    post: operations["createTag"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/tags/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["updateTag"];
+    post?: never;
+    delete: operations["deleteTag"];
     options?: never;
     head?: never;
     patch?: never;
@@ -251,6 +267,9 @@ export interface components {
     };
     BulkUpdateNotificationSettingsBody: {
       updates: components["schemas"]["UpsertNotificationSettingBody"][];
+    };
+    CreateTagBody: {
+      name: string;
     };
     DashboardTeam: {
       baseCurrency?: string | null;
@@ -459,6 +478,10 @@ export interface components {
       /** Format: int64 */
       total_duration: number;
     };
+    TagMutationResponse: {
+      id: string;
+      name: string;
+    };
     TagRow: {
       createdAt: string;
       id: string;
@@ -467,6 +490,9 @@ export interface components {
     };
     UpdateNotificationStatusBody: {
       status: string;
+    };
+    UpdateTagBody: {
+      name: string;
     };
     UpsertNotificationSettingBody: {
       channel: string;
@@ -888,6 +914,136 @@ export interface operations {
       };
       /** @description Missing, invalid, or expired Supabase session JWT */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  createTag: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTagBody"];
+      };
+    };
+    responses: {
+      /** @description Created transaction tag */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TagMutationResponse"];
+        };
+      };
+      /** @description Tag create requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateTag: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Tag id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTagBody"];
+      };
+    };
+    responses: {
+      /** @description Updated transaction tag */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TagMutationResponse"];
+        };
+      };
+      /** @description Tag update requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Tag not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  deleteTag: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Tag id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Deleted transaction tag */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TagMutationResponse"];
+        };
+      };
+      /** @description Tag delete requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Tag not found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
