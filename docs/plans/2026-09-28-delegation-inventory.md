@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, and customers get/getById/getInvoiceSummary. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, and invoices get/getById/paymentStatus/invoiceSummary. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -143,12 +143,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `customers.getPortalInvoices` | yes | public read · portal invoice list (AP-50) |
 | `customers.enrich` | yes | **write** · set enrichment pending; enrich job stays Node (AP-59) |
 | `customers.*` (other) | no | — |
-| `invoice.get` | yes | read · list (Phase 4) |
-| `invoice.getById` | yes | read (Phase 4) |
+| `invoice.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/invoices` directly and preserves tRPC infinite query keys |
+| `invoice.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/invoices/{id}` directly |
 | `invoice.getInvoiceByToken` | yes | public · token verified in API, read by id (Phase 6 slice 1) |
-| `invoice.paymentStatus` | yes | read · weighted score (Phase 5 slice 1) |
+| `invoice.paymentStatus` | direct Rust | read · weighted score (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/payment-status` directly |
 | `invoice.searchInvoiceNumber` | yes | read · ILIKE existence check (AP-25) |
-| `invoice.invoiceSummary` | yes | read · FX rollup (Phase 5 slice 1) |
+| `invoice.invoiceSummary` | direct Rust | read · FX rollup (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/summary` directly |
 | `invoice.mostActiveClient` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.inactiveClientsCount` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.averageDaysToPayment` | yes | read · 30d dashboard metric (Phase 10) |

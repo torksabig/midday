@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@midday/ui/card";
 import { Skeleton } from "@midday/ui/skeleton";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { invoicePaymentStatusQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import { PaymentScoreVisualizer } from "./payment-score-visualizer";
@@ -28,7 +29,9 @@ export function InvoicePaymentScoreSkeleton() {
 
 export function InvoicePaymentScore() {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.invoice.paymentStatus.queryOptions());
+  const { data } = useSuspenseQuery(
+    invoicePaymentStatusQueryOptions(trpc.invoice.paymentStatus.queryKey()),
+  );
   const t = useI18n();
 
   return (

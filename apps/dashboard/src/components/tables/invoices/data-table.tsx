@@ -18,6 +18,8 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
+import { invoicesInfiniteQueryOptions } from "@/lib/rust-api/invoices-client";
+import type { InvoiceListItem } from "@/lib/rust-api/invoices";
 import { useInvoiceStore } from "@/store/invoice";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS, SUMMARY_GRID_HEIGHTS } from "@/utils/table-configs";
@@ -63,20 +65,20 @@ export function DataTable({ initialSettings }: Props) {
     columnIds: COLUMN_IDS,
   });
 
-  const infiniteQueryOptions = trpc.invoice.get.infiniteQueryOptions(
-    {
-      sort: params.sort,
-      ...filter,
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const invoicesFilter = {
+    sort: params.sort,
+    ...filter,
+  };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useSuspenseInfiniteQuery(infiniteQueryOptions);
+    useSuspenseInfiniteQuery(
+      invoicesInfiniteQueryOptions(
+        trpc.invoice.get.infiniteQueryKey(invoicesFilter),
+        invoicesFilter,
+      ),
+    );
 
-  const tableData = useMemo(() => {
+  const tableData = useMemo((): InvoiceListItem[] => {
     return data?.pages.flatMap((page) => page?.data ?? []) ?? [];
   }, [data]);
 
@@ -91,7 +93,7 @@ export function DataTable({ initialSettings }: Props) {
 
   const table = useReactTable({
     data: tableData,
-    getRowId: ({ id }) => id,
+    getRowId: (row: InvoiceListItem) => row.id,
     columns,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),

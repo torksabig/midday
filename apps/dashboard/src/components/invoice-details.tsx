@@ -18,6 +18,7 @@ import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { getWebsiteLogo } from "@/utils/logos";
@@ -37,19 +38,40 @@ export function InvoiceDetails() {
 
   const isOpen = invoiceId !== null;
 
-  const { data, isLoading } = useQuery({
-    ...trpc.invoice.getById.queryOptions({ id: invoiceId! }),
-    enabled: isOpen,
-  });
+  const { data, isLoading } = useQuery(
+    invoiceByIdQueryOptions(
+      trpc.invoice.getById.queryKey({ id: invoiceId! }),
+      invoiceId!,
+      { enabled: isOpen },
+    ),
+  );
 
   // Fetch upcoming invoices for recurring series
-  const { data: upcomingInvoices } = useQuery({
-    ...trpc.invoiceRecurring.getUpcoming.queryOptions({
-      id: data?.invoiceRecurringId ?? "",
-      limit: 5,
-    }),
-    enabled: !!data?.invoiceRecurringId && data?.recurring?.status === "active",
-  });
+  const recurringId =
+    typeof data?.invoiceRecurringId === "string"
+      ? data.invoiceRecurringId
+      : "";
+  const { data: upcomingInvoices } = useQuery(
+    trpc.invoiceRecurring.getUpcoming.queryOptions(
+      {
+        id: recurringId,
+        limit: 5,
+      },
+      {
+        enabled: Boolean(recurringId) && data?.recurring?.status === "active",
+      },
+    ),
+  ) as {
+    data:
+      | {
+          invoices?: Array<{ date: string; amount: number }>;
+          summary?: {
+            totalCount: number | null;
+            totalAmount: number | null;
+          };
+        }
+      | undefined;
+  };
 
   const { url: downloadUrl } = useFileUrl({
     type: "invoice",
@@ -374,9 +396,9 @@ export function InvoiceDetails() {
 
             {/* Summary */}
             <div className="flex justify-between text-sm mt-4 pt-4 border-t border-border">
-              {upcomingInvoices &&
-              upcomingInvoices.summary?.totalCount !== null &&
-              upcomingInvoices.summary?.totalAmount !== null ? (
+              {upcomingInvoices?.summary &&
+              upcomingInvoices.summary.totalCount !== null &&
+              upcomingInvoices.summary.totalAmount !== null ? (
                 <>
                   <span>
                     {upcomingInvoices.summary.totalCount} invoices total

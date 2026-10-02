@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { TZDate } from "@date-fns/tz";
 import { getFrequencyShortLabel } from "@midday/invoice/recurring";
 import { Avatar, AvatarFallback, AvatarImageNext } from "@midday/ui/avatar";
@@ -20,6 +19,7 @@ import type { MouseEvent } from "react";
 import { FormatAmount } from "@/components/format-amount";
 import { InvoiceStatus } from "@/components/invoice-status";
 import { useCustomerParams } from "@/hooks/use-customer-params";
+import type { InvoiceListItem } from "@/lib/rust-api/invoices";
 import { getDueDateStatus } from "@/utils/format";
 import { getWebsiteLogo } from "@/utils/logos";
 import { ActionsMenu } from "./actions-menu";
@@ -38,9 +38,7 @@ function formatDateUTC(date: string, dateFormat?: string | null): string {
   return format(tzDate, dateFormat ?? "P");
 }
 
-export type Invoice = NonNullable<
-  RouterOutputs["invoice"]["get"]["data"]
->[number];
+export type Invoice = InvoiceListItem;
 
 export const columns: ColumnDef<Invoice>[] = [
   {
@@ -319,7 +317,6 @@ export const columns: ColumnDef<Invoice>[] = [
       className: "w-[100px] min-w-[80px]",
     },
     cell: ({ row }) => {
-      // @ts-expect-error template is a jsonb field
       const vatRate = row.original.template.vatRate as number | undefined;
       const value =
         vatRate !== undefined && vatRate !== null ? `${vatRate}%` : "-";
@@ -375,7 +372,6 @@ export const columns: ColumnDef<Invoice>[] = [
       className: "w-[100px] min-w-[80px]",
     },
     cell: ({ row }) => {
-      // @ts-expect-error template is a jsonb field
       const taxRate = row.original.template.taxRate as number | undefined;
       const value =
         taxRate !== undefined && taxRate !== null ? `${taxRate}%` : "-";

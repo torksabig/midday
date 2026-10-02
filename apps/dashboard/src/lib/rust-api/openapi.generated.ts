@@ -372,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/default-settings-data": {
         parameters: {
             query?: never;
@@ -380,6 +396,54 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getInvoiceDefaultSettingsData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/payment-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoicePaymentStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1121,6 +1185,27 @@ export interface components {
             locale?: string | null;
             timezone?: string | null;
         };
+        InvoiceSummaryBreakdownRow: {
+            /** Format: double */
+            converted_amount: number;
+            /** Format: int64 */
+            count: number;
+            currency: string;
+            /** Format: double */
+            original_amount: number;
+        };
+        InvoiceSummaryResponse: {
+            breakdown?: components["schemas"]["InvoiceSummaryBreakdownRow"][] | null;
+            currency: string;
+            /** Format: int64 */
+            invoice_count: number;
+            /** Format: double */
+            total_amount: number;
+        };
+        InvoicesListResponse: {
+            data: Record<string, never>[];
+            meta: components["schemas"]["CustomersListMeta"];
+        };
         LegacyUser: {
             email?: string | null;
             id: string;
@@ -1291,6 +1376,11 @@ export interface components {
             total_amount: number;
             /** Format: int64 */
             total_duration: number;
+        };
+        PaymentStatusResponse: {
+            payment_status: string;
+            /** Format: int32 */
+            score: number;
         };
         ReconnectBankConnectionBody: {
             expiresAt?: string | null;
@@ -2585,6 +2675,45 @@ export interface operations {
             };
         };
     };
+    getInvoices: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+                q?: string;
+                statuses?: string[];
+                customers?: string[];
+                start?: string;
+                end?: string;
+                sort?: string[];
+                ids?: string[];
+                recurringIds?: string[];
+                recurring?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated team invoices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicesListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInvoiceDefaultSettingsData: {
         parameters: {
             query?: never;
@@ -2605,6 +2734,99 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoicePaymentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Weighted invoice payment score */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentStatusResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceSummary: {
+        parameters: {
+            query?: {
+                statuses?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice FX summary rollup */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceSummaryResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

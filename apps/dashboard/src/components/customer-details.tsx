@@ -51,6 +51,7 @@ import {
   customerByIdQueryOptions,
   customerInvoiceSummaryQueryOptions,
 } from "@/lib/rust-api/customers-client";
+import { invoicesInfiniteQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { getWebsiteLogo } from "@/utils/logos";
 import { CustomerDetailsSkeleton } from "./customer-details.loading";
@@ -261,15 +262,10 @@ export function CustomerDetails() {
     },
   });
 
-  const infiniteQueryOptions = trpc.invoice.get.infiniteQueryOptions(
-    {
-      customers: customerId ? [customerId] : undefined,
-      pageSize: 5,
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const invoicesFilter = {
+    customers: customerId ? [customerId] : undefined,
+    pageSize: 5,
+  };
 
   const {
     data: invoicesData,
@@ -277,7 +273,10 @@ export function CustomerDetails() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...infiniteQueryOptions,
+    ...invoicesInfiniteQueryOptions(
+      trpc.invoice.get.infiniteQueryKey(invoicesFilter),
+      invoicesFilter,
+    ),
     enabled: isOpen,
   });
 

@@ -26,7 +26,12 @@ export function BottomBar({ data }: Props) {
       return;
     }
 
-    await handleDownloadZip(downloadableInvoices);
+    await handleDownloadZip(
+      downloadableInvoices.map((invoice) => ({
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber ?? null,
+      })),
+    );
   };
 
   return (

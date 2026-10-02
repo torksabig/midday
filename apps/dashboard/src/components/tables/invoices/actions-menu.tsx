@@ -134,9 +134,10 @@ export function ActionsMenu({ row }: Props) {
     trpc.invoice.duplicate.mutationOptions({
       onSuccess: (data) => {
         track(LogEvents.InvoiceDuplicated.name);
-        if (data) {
+        const duplicated = data as { id?: string } | null | undefined;
+        if (duplicated?.id) {
           setParams({
-            invoiceId: data.id,
+            invoiceId: duplicated.id,
             invoiceType: "edit",
           });
         }

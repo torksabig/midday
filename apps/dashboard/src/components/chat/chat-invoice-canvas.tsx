@@ -14,6 +14,7 @@ import { FormContext } from "@/components/invoice/form-context";
 import { InvoiceSuccess } from "@/components/invoice-success";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { invoiceDefaultSettingsQueryOptions } from "@/lib/rust-api/invoice-default-settings-client";
+import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 
@@ -38,8 +39,9 @@ function InvoiceCanvasContent() {
   );
 
   const { data } = useQuery(
-    trpc.invoice.getById.queryOptions(
-      { id: invoiceId! },
+    invoiceByIdQueryOptions(
+      trpc.invoice.getById.queryKey({ id: invoiceId! }),
+      invoiceId!,
       { enabled: !!invoiceId, staleTime: 30 * 1000 },
     ),
   );

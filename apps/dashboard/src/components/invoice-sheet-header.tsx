@@ -2,6 +2,7 @@
 
 import { SheetHeader } from "@midday/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
+import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -12,10 +13,9 @@ export function InvoiceSheetHeader({ invoiceId }: Props) {
   const trpc = useTRPC();
 
   const { data: invoice } = useQuery(
-    trpc.invoice.getById.queryOptions(
-      {
-        id: invoiceId,
-      },
+    invoiceByIdQueryOptions(
+      trpc.invoice.getById.queryKey({ id: invoiceId }),
+      invoiceId,
       {
         enabled: Boolean(invoiceId),
       },

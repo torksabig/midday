@@ -11,6 +11,7 @@ import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { downloadFile } from "@/lib/download";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { CopyInput } from "./copy-input";
@@ -25,10 +26,9 @@ export function InvoiceSuccess() {
   const isCanvas = canvas === true;
 
   const { data: invoice } = useQuery(
-    trpc.invoice.getById.queryOptions(
-      {
-        id: invoiceId!,
-      },
+    invoiceByIdQueryOptions(
+      trpc.invoice.getById.queryKey({ id: invoiceId! }),
+      invoiceId!,
       {
         enabled: !!invoiceId,
       },
@@ -93,7 +93,6 @@ export function InvoiceSuccess() {
               {invoice.template.customerLabel}
             </span>
             <div className="text-[#878787]">
-              {/* @ts-expect-error - customerDetails is JSONB */}
               {formatEditorContent(invoice.customerDetails)}
             </div>
           </motion.div>

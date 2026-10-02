@@ -18,6 +18,11 @@ import { DataTable } from "@/components/tables/invoices/data-table";
 import { InvoiceSkeleton } from "@/components/tables/invoices/skeleton";
 import { loadInvoiceFilterParams } from "@/hooks/use-invoice-filter-params";
 import { loadSortParams } from "@/hooks/use-sort-params";
+import {
+  invoicePaymentStatusServerQueryOptions,
+  invoiceSummaryServerQueryOptions,
+  invoicesServerInfiniteQueryOptions,
+} from "@/lib/rust-api/invoices-server";
 import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
 import { getInitialTableSettings } from "@/utils/columns";
 
@@ -38,27 +43,41 @@ export default async function Page(props: Props) {
   // Get unified table settings from cookie
   const initialSettings = await getInitialTableSettings("invoices");
 
+  const invoicesFilter = {
+    ...filter,
+    sort,
+  };
+  const openStatuses = ["draft", "scheduled", "unpaid"] as const;
+  const paidStatuses = ["paid"] as const;
+  const overdueStatuses = ["overdue"] as const;
+
   batchPrefetch([
-    trpc.invoice.get.infiniteQueryOptions(
-      {
-        ...filter,
-        sort,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+    invoicesServerInfiniteQueryOptions(
+      trpc.invoice.get.infiniteQueryKey(invoicesFilter),
+      invoicesFilter,
     ),
-    trpc.invoice.invoiceSummary.queryOptions({
-      statuses: ["draft", "scheduled", "unpaid"],
-    }),
-    trpc.invoice.invoiceSummary.queryOptions({
-      statuses: ["paid"],
-    }),
-    trpc.invoice.invoiceSummary.queryOptions({
-      statuses: ["overdue"],
-    }),
-    trpc.invoice.paymentStatus.queryOptions(),
-  ]);
+    invoiceSummaryServerQueryOptions(
+      trpc.invoice.invoiceSummary.queryKey({
+        statuses: [...openStatuses],
+      }),
+      { statuses: [...openStatuses] },
+    ),
+    invoiceSummaryServerQueryOptions(
+      trpc.invoice.invoiceSummary.queryKey({
+        statuses: [...paidStatuses],
+      }),
+      { statuses: [...paidStatuses] },
+    ),
+    invoiceSummaryServerQueryOptions(
+      trpc.invoice.invoiceSummary.queryKey({
+        statuses: [...overdueStatuses],
+      }),
+      { statuses: [...overdueStatuses] },
+    ),
+    invoicePaymentStatusServerQueryOptions(
+      trpc.invoice.paymentStatus.queryKey(),
+    ),
+  ] as unknown as Parameters<typeof batchPrefetch>[0]);
 
   return (
     <HydrateClient>

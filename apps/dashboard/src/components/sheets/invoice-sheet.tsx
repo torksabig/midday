@@ -11,6 +11,7 @@ import { InvoiceContent } from "@/components/invoice-content";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
 import { invoiceDefaultSettingsQueryOptions } from "@/lib/rust-api/invoice-default-settings-client";
+import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 
@@ -31,10 +32,9 @@ export function InvoiceSheet() {
 
   // Get draft invoice for edit
   const { data } = useQuery(
-    trpc.invoice.getById.queryOptions(
-      {
-        id: invoiceId!,
-      },
+    invoiceByIdQueryOptions(
+      trpc.invoice.getById.queryKey({ id: invoiceId! }),
+      invoiceId!,
       {
         enabled: !!invoiceId,
         staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
