@@ -12,6 +12,7 @@ import MultipleSelector from "@midday/ui/multiple-selector";
 import { SubmitButton } from "@midday/ui/submit-button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Option = {
@@ -34,7 +35,7 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { data } = useQuery(trpc.tags.get.queryOptions());
+  const { data } = useQuery(tagsQueryOptions(trpc.tags.get.queryKey()));
 
   const updateTagMutation = useMutation(
     trpc.tags.update.mutationOptions({

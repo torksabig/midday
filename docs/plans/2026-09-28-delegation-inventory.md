@@ -202,7 +202,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
 | `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
 | `reports.create` | yes | **write** · insert share link; shortUrl in Node (AP-40) |
-| `tags.get` | yes | read · transaction tag list (Phase 11) |
+| `tags.get` | direct Rust | read · transaction tag list (Phase 11); dashboard calls `GET /api/v1/tags` directly and preserves the old React Query cache key |
 | `tags.create` | yes | **write** · insert tag (AP-22) |
 | `tags.update` | yes | **write** · rename tag (AP-22) |
 | `tags.delete` | yes | **write** · delete tag (AP-22) |

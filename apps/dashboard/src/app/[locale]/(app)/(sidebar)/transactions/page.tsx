@@ -14,7 +14,13 @@ import { TransactionsUploadZone } from "@/components/transactions-upload-zone";
 import { loadSortParams } from "@/hooks/use-sort-params";
 import { loadTransactionFilterParams } from "@/hooks/use-transaction-filter-params";
 import { loadTransactionTab } from "@/hooks/use-transaction-tab";
-import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
+import { tagsServerQueryOptions } from "@/lib/rust-api/tags-server";
+import {
+  batchPrefetch,
+  getQueryClient,
+  HydrateClient,
+  trpc,
+} from "@/trpc/server";
 import { getInitialTableSettings } from "@/utils/columns";
 
 export const metadata: Metadata = {
@@ -55,6 +61,10 @@ export default async function Transactions(props: Props) {
   };
 
   // Prefetch all data needed for instant experience
+  void getQueryClient().prefetchQuery(
+    tagsServerQueryOptions(trpc.tags.get.queryKey()),
+  );
+
   batchPrefetch([
     // Transaction data for both tabs
     trpc.transactions.get.infiniteQueryOptions(allTabFilter, {
@@ -64,9 +74,8 @@ export default async function Transactions(props: Props) {
       getNextPageParam: ({ meta }) => meta?.cursor,
     }),
     trpc.transactions.getReviewCount.queryOptions(),
-    // Shared data used by table rows (assign user, tags)
+    // Shared data used by table rows (assign user)
     trpc.team.members.queryOptions(),
-    trpc.tags.get.queryOptions(),
     // Apps for export bar (accounting providers)
     trpc.apps.get.queryOptions(),
   ]);

@@ -15,6 +15,7 @@ import {
 import { Icons } from "@midday/ui/icons";
 import { useToast } from "@midday/ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { useTransactionsStore } from "@/store/transactions";
 import { useTRPC } from "@/trpc/client";
 import { SelectCategory } from "./select-category";
@@ -57,7 +58,7 @@ export function BulkActions({ ids }: Props) {
   );
 
   const { data: tags } = useQuery({
-    ...trpc.tags.get.queryOptions(),
+    ...tagsQueryOptions(trpc.tags.get.queryKey()),
     enabled: ids.length > 0,
   });
 

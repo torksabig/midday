@@ -196,6 +196,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/tags": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getTags"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/team/current": {
     parameters: {
       query?: never;
@@ -442,6 +458,12 @@ export interface components {
       total_amount: number;
       /** Format: int64 */
       total_duration: number;
+    };
+    TagRow: {
+      createdAt: string;
+      id: string;
+      name: string;
+      teamId: string;
     };
     UpdateNotificationStatusBody: {
       status: string;
@@ -835,6 +857,33 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["OverviewSummary"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getTags: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team-scoped transaction tags */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TagRow"][];
         };
       };
       /** @description Missing, invalid, or expired Supabase session JWT */

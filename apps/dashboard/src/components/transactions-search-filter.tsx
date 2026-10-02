@@ -21,6 +21,7 @@ import { useTransactionFilterParams } from "@/hooks/use-transaction-filter-param
 import { useTransactionFilterParamsWithPersistence } from "@/hooks/use-transaction-filter-params-with-persistence";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
 import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
+import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAccountName } from "@/utils/format";
@@ -158,7 +159,7 @@ function useFilterData(isOpen: boolean, isFocused: boolean) {
   const shouldFetch = isOpen || isFocused;
 
   const { data: tagsData } = useQuery({
-    ...trpc.tags.get.queryOptions(),
+    ...tagsQueryOptions(trpc.tags.get.queryKey()),
     enabled: shouldFetch || Boolean(filter.tags?.length),
   });
 

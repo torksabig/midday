@@ -42,3 +42,12 @@ the pre-existing `add-bank-accounts-modal` provider response typing:
 ```sh
 bun run --filter=@midday/dashboard typecheck 2>&1 | rg "bank-accounts|select-account|bank-account-list|manual-accounts|transaction-create-form|transaction-edit-form|field-mapping|settings/accounts/page|transactions-search-filter" || true
 ```
+
+For the transaction tags direct-Rust read slice on 2026-10-02, the full error
+count improved to `1234`. Remaining targeted hits are pre-existing local typing
+issues in `bulk-actions` (`SelectUser`) and `vault-select-tags` (document tags,
+not this transaction tag read path):
+
+```sh
+bun run --filter=@midday/dashboard typecheck 2>&1 | rg "rust-api/tags|select-tags|transaction-table-context|transactions/page|transactions-search-filter|tracker-search-filter|bulk-actions|inline-select-tags" || true
+```

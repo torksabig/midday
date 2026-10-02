@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { useTransactionTableContextOptional } from "@/components/tables/transactions/transaction-table-context";
+import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Tag = {
@@ -35,7 +36,7 @@ export function InlineSelectTags({ transactionId, tags = [] }: Props) {
   // Use shared context when available (inside transaction table), fallback to direct query
   const tableContext = useTransactionTableContextOptional();
   const { data: fallbackTags } = useQuery({
-    ...trpc.tags.get.queryOptions(),
+    ...tagsQueryOptions(trpc.tags.get.queryKey()),
     // Skip query if we have context data (already fetched by provider)
     enabled: !tableContext,
   });

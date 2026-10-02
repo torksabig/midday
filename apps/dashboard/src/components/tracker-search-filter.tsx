@@ -22,6 +22,7 @@ import { useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTrackerFilterParams } from "@/hooks/use-tracker-filter-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { useTRPC } from "@/trpc/client";
 import { FilterList } from "./filter-list";
 
@@ -29,6 +30,22 @@ const statusFilters = [
   { id: "in_progress", name: "In Progress" },
   { id: "completed", name: "Completed" },
 ];
+
+type TrackerMember = {
+  user: {
+    id: string;
+    fullName: string | null;
+  } | null;
+};
+
+type TrackerCustomer = {
+  id: string;
+  name: string;
+};
+
+type TrackerCustomersResult = {
+  data?: TrackerCustomer[];
+};
 
 export function TrackerSearchFilter() {
   const [input, setInput] = useState("");
@@ -53,7 +70,7 @@ export function TrackerSearchFilter() {
   });
 
   const { data: tagsData } = useQuery({
-    ...trpc.tags.get.queryOptions(),
+    ...tagsQueryOptions(trpc.tags.get.queryKey()),
     enabled: shouldFetch || Boolean(filter.tags?.length),
   });
 
@@ -99,10 +116,13 @@ export function TrackerSearchFilter() {
     (value) => value !== null,
   );
 
-  const members = membersData?.map((member) => ({
-    id: member.user!.id as string,
-    name: member.user!.fullName as string,
-  }));
+  const members = (membersData as TrackerMember[] | undefined)?.map(
+    (member) => ({
+      id: member.user!.id as string,
+      name: member.user!.fullName as string,
+    }),
+  );
+  const customers = (customersData as TrackerCustomersResult | undefined)?.data;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -111,7 +131,7 @@ export function TrackerSearchFilter() {
           filters={validFilters}
           onRemove={setFilter}
           members={members}
-          customers={customersData?.data}
+          customers={customers}
           statusFilters={statusFilters}
           tags={tagsData}
         />
@@ -251,7 +271,7 @@ export function TrackerSearchFilter() {
                 alignOffset={-4}
                 className="p-0"
               >
-                {customersData?.data?.map((customer) => (
+                {customers?.map((customer) => (
                   <DropdownMenuCheckboxItem
                     key={customer.id}
                     onSelect={(e) => e.preventDefault()}
@@ -267,7 +287,7 @@ export function TrackerSearchFilter() {
                   </DropdownMenuCheckboxItem>
                 ))}
 
-                {!customersData?.data?.length && (
+                {!customers?.length && (
                   <DropdownMenuItem disabled>
                     No customers found
                   </DropdownMenuItem>
