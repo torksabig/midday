@@ -13,6 +13,7 @@ import { useDocumentParams } from "@/hooks/use-document-params";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useScrollHeader } from "@/hooks/use-scroll-header";
 import { useUserQuery } from "@/hooks/use-user";
+import { documentsInfiniteQueryOptions } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 import { NoResults } from "./empty-states";
 import { VaultGetStarted } from "./vault-get-started";
@@ -60,18 +61,18 @@ export function VaultGrid() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const infiniteQueryOptions = trpc.documents.get.infiniteQueryOptions(
-    {
-      pageSize: 24,
-      ...filter,
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const documentsFilter = {
+    pageSize: 24,
+    ...filter,
+  };
 
   const { data, fetchNextPage, hasNextPage, refetch, isFetching } =
-    useSuspenseInfiniteQuery(infiniteQueryOptions);
+    useSuspenseInfiniteQuery(
+      documentsInfiniteQueryOptions(
+        trpc.documents.get.infiniteQueryKey(documentsFilter),
+        documentsFilter,
+      ),
+    );
 
   const documents = useMemo(() => {
     return data?.pages.flatMap((page) => page.data) ?? [];

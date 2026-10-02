@@ -8,6 +8,7 @@ import { VaultHeader } from "@/components/vault/vault-header";
 import { VaultSkeleton } from "@/components/vault/vault-skeleton";
 import { VaultView } from "@/components/vault/vault-view";
 import { loadDocumentFilterParams } from "@/hooks/use-document-filter-params";
+import { documentsServerInfiniteQueryOptions } from "@/lib/rust-api/documents-server";
 import { prefetch, trpc } from "@/trpc/server";
 import { getInitialTableSettings } from "@/utils/columns";
 
@@ -26,16 +27,16 @@ export default async function Page(props: Props) {
 
   const initialSettings = await getInitialTableSettings("vault");
 
+  const documentsFilter = {
+    ...filter,
+    pageSize: 24,
+  };
+
   prefetch(
-    trpc.documents.get.infiniteQueryOptions(
-      {
-        ...filter,
-        pageSize: 24,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
-    ),
+    documentsServerInfiniteQueryOptions(
+      trpc.documents.get.infiniteQueryKey(documentsFilter),
+      documentsFilter,
+    ) as Parameters<typeof prefetch>[0],
   );
 
   return (

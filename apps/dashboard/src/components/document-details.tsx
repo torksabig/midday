@@ -8,6 +8,7 @@ import { DocumentTags } from "@/components/document-tags";
 import { FileViewer } from "@/components/file-viewer";
 import { VaultRelatedFiles } from "@/components/vault/vault-related-files";
 import { useDocumentParams } from "@/hooks/use-document-params";
+import { documentByIdQueryOptions } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 import { formatSize } from "@/utils/format";
 
@@ -20,12 +21,18 @@ export function DocumentDetails() {
   const fullView = Boolean(params.documentId);
 
   const { data, isLoading } = useQuery({
-    ...trpc.documents.getById.queryOptions({
-      filePath: params.filePath!,
-      id: params.documentId!,
-    }),
-    enabled: isOpen,
-    staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+    ...documentByIdQueryOptions(
+      trpc.documents.getById.queryKey({
+        filePath: params.filePath!,
+        id: params.documentId!,
+      }),
+      params.documentId,
+      params.filePath,
+      {
+        enabled: isOpen,
+        staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+      },
+    ),
     placeholderData: () => {
       const pages = queryClient
         .getQueriesData({ queryKey: trpc.documents.get.infiniteQueryKey() })
@@ -36,7 +43,7 @@ export function DocumentDetails() {
       return pages.find(
         (d) =>
           d.id === params.documentId ||
-          d.path_tokens?.join("/") === params.filePath,
+          d.pathTokens?.join("/") === params.filePath,
       );
     },
   });

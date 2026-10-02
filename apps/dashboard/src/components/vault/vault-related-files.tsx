@@ -9,6 +9,7 @@ import {
 import { Carousel, CarouselContent, CarouselItem } from "@midday/ui/carousel";
 import { useQuery } from "@tanstack/react-query";
 import { useDocumentParams } from "@/hooks/use-document-params";
+import { relatedDocumentsQueryOptions } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 import { VaultItem } from "./vault-item";
 import { VaultRelatedFilesSkeleton } from "./vault-related-files-skeleton";
@@ -18,11 +19,13 @@ export function VaultRelatedFiles() {
   const { params } = useDocumentParams();
 
   const { data, isLoading } = useQuery(
-    trpc.documents.getRelatedDocuments.queryOptions(
-      {
+    relatedDocumentsQueryOptions(
+      trpc.documents.getRelatedDocuments.queryKey({
         pageSize: 12,
         id: params?.documentId ?? "",
-      },
+      }),
+      params?.documentId ?? "",
+      12,
       {
         enabled: !!params?.documentId,
       },

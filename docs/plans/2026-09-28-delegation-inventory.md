@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, and inbox get/getById/checkAttachments (+ search/getByStatus helpers). Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), and documents get/getById/getRelatedDocuments. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -118,9 +118,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inbox.create` | yes | **write** · insert inbox item (AP-57) |
 | `inbox.*` (other) | no | processAttachments / retryMatching (jobs) |
 | `overview.summary` | direct Rust | read · dashboard home; dashboard calls `GET /api/v1/overview/summary` with the Supabase session JWT |
-| `documents.get` | yes | read · list (Phase 4) |
-| `documents.getById` | yes | read (Phase 4) |
-| `documents.getRelatedDocuments` | yes | read · `match_similar_documents_by_title()` (Phase 5 slice 3) |
+| `documents.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/documents` directly and preserves tRPC infinite query keys |
+| `documents.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/documents/{id}` directly (`-` + `filePath` for path-only opens) |
+| `documents.getRelatedDocuments` | direct Rust | read · `match_similar_documents_by_title()`; dashboard calls `GET /api/v1/documents/{id}/related` directly |
 | `documents.checkAttachments` | yes | read · path token attachment check (AP-25) |
 | `documents.delete` | yes | **write** · DB + attachment cleanup (AP-26); storage remove in Node |
 | `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) |

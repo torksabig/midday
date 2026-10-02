@@ -180,6 +180,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDocumentById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{id}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRelatedDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -817,6 +865,47 @@ export interface components {
         DeleteTransactionsManyBody: {
             ids: string[];
         };
+        DocumentDetailRow: {
+            created_at: string;
+            date?: string | null;
+            document_tag_assignments: Record<string, never>;
+            id: string;
+            metadata?: Record<string, never> | null;
+            name?: string | null;
+            path_tokens?: string[] | null;
+            processing_status?: string | null;
+            summary?: string | null;
+            title?: string | null;
+        };
+        DocumentListRow: {
+            created_at: string;
+            date?: string | null;
+            document_tag_assignments: Record<string, never>;
+            id: string;
+            metadata?: Record<string, never> | null;
+            name?: string | null;
+            path_tokens?: string[] | null;
+            processing_status?: string | null;
+            summary?: string | null;
+            title?: string | null;
+        };
+        DocumentTagAssignment: {
+            document_tag: components["schemas"]["DocumentTagNested"];
+        };
+        DocumentTagNested: {
+            id: string;
+            name: string;
+            slug?: string | null;
+        };
+        DocumentsListMeta: {
+            cursor?: string | null;
+            has_next_page: boolean;
+            has_previous_page: boolean;
+        };
+        DocumentsListResponse: {
+            data: components["schemas"]["DocumentListRow"][];
+            meta: components["schemas"]["DocumentsListMeta"];
+        };
         Health: {
             ok: boolean;
         };
@@ -1150,6 +1239,15 @@ export interface components {
             expiresAt?: string | null;
             newReferenceId: string;
             referenceId: string;
+        };
+        RelatedDocumentItem: {
+            id: string;
+            metadata?: Record<string, never> | null;
+            name?: string | null;
+            path_tokens?: string[] | null;
+            summary?: string | null;
+            tag?: string | null;
+            title?: string | null;
         };
         TagMutationResponse: {
             id: string;
@@ -2037,6 +2135,111 @@ export interface operations {
             };
             /** @description Category not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDocuments: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+                q?: string;
+                tags?: string[];
+                start?: string;
+                end?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated team documents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentsListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDocumentById: {
+        parameters: {
+            query?: {
+                filePath?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Document id, or `-` when looking up by filePath only */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailRow"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getRelatedDocuments: {
+        parameters: {
+            query?: {
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Document id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Related documents by title similarity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelatedDocumentItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -26,6 +26,7 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
+import { documentsInfiniteQueryOptions } from "@/lib/rust-api/documents-client";
 import { useDocumentsStore } from "@/store/vault";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS } from "@/utils/table-configs";
@@ -76,6 +77,11 @@ export function DataTable({ initialSettings }: Props) {
     startFromColumn: 2, // Skip sticky columns: select, title
   });
 
+  const documentsFilter = {
+    pageSize: 24,
+    ...filter,
+  };
+
   const {
     data,
     fetchNextPage,
@@ -84,14 +90,9 @@ export function DataTable({ initialSettings }: Props) {
     isFetching,
     isFetchingNextPage,
   } = useSuspenseInfiniteQuery(
-    trpc.documents.get.infiniteQueryOptions(
-      {
-        pageSize: 24,
-        ...filter,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+    documentsInfiniteQueryOptions(
+      trpc.documents.get.infiniteQueryKey(documentsFilter),
+      documentsFilter,
     ),
   );
 

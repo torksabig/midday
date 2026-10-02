@@ -89,7 +89,7 @@ Incomplete OpenAPI-only or client-only work is **not** DONE; finish wiring or le
 | **DC-2** | **DONE** | Transactions reads: `transactions.get`, `transactions.getById`, `transactions.getReviewCount` | Done 2026-10-02. Routes: `GET /transactions`, `GET /transactions/{id}`, `GET /transactions/review-count`. Infinite query keys preserved. |
 | **DC-3** | **DONE** | Transactions writes used by the list/detail UI: `transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `transactions.moveToReview` | Done 2026-10-02. `transactions.create` remains tRPC for a follow-on. |
 | **DC-4** | **DONE** | Inbox reads: `inbox.get`, `inbox.getById`, `inbox.search`, `inbox.getByStatus`, `inbox.checkAttachments` | Done 2026-10-02. Routes: `GET /inbox`, `GET /inbox/{id}`, `GET /inbox/search`, `GET /inbox/by-status`, `GET /inbox/{id}/check-attachments`. Infinite/getById/checkAttachments keys preserved. Search/by-status helpers ready (no dashboard fetch sites yet). |
-| **DC-5** | PENDING | Documents: `documents.get`, `documents.getById` (+ `getRelatedDocuments` / processing-status if call sites are simple) | Skip `signedUrl(s)` (storage-only / no SQL). |
+| **DC-5** | **DONE** | Documents: `documents.get`, `documents.getById` (+ `getRelatedDocuments` / processing-status if call sites are simple) | Done 2026-10-02. Routes: `GET /documents`, `GET /documents/{id}`, `GET /documents/{id}/related`. Skip `signedUrl(s)`. No processing-status GET. |
 | **DC-6** | PENDING | Customers: `customers.get`, `customers.getById` (+ invoice-summary / portal reads if already on Rust) | |
 | **DC-7** | PENDING | Invoices list/detail: `invoice.get`, `invoice.getById` (+ paymentStatus / invoiceSummary metrics reads) | Send/PDF/remind email stay gated Node. |
 | **DC-8** | PENDING | Remaining high-traffic settings/misc already on Rust façade: document tags, tracker entries/projects, institutions, short-links, apiKeys.get/delete, apps disconnect/update (SQL-only) | Skip encrypt/OAuth/Stripe/Resend. |
@@ -154,7 +154,7 @@ Stop the autopilot loop and report once (do not invent workarounds):
 
 ## Already direct Rust (dashboard) — do not re-cut
 
-overview; identity/`team.current` + `team.members`/`team.list`/`team.update`; `user.update`; invoice defaults; notifications + status; notification settings prefs/update; categories get/getById/create/update/delete; bank accounts get/create/update/delete/currencies/getTransactionCount (+ balances when DC-0 done); tags CRUD; transactionTags create/delete; bankConnections get/reconnect (when DC-0 done); transactions get/getById/getReviewCount (DC-2); transactions update/updateMany/deleteMany/moveToReview (DC-3; create still tRPC); inbox get/getById/checkAttachments (+ search/getByStatus helpers) (DC-4).
+overview; identity/`team.current` + `team.members`/`team.list`/`team.update`; `user.update`; invoice defaults; notifications + status; notification settings prefs/update; categories get/getById/create/update/delete; bank accounts get/create/update/delete/currencies/getTransactionCount (+ balances when DC-0 done); tags CRUD; transactionTags create/delete; bankConnections get/reconnect (when DC-0 done); transactions get/getById/getReviewCount (DC-2); transactions update/updateMany/deleteMany/moveToReview (DC-3; create still tRPC); inbox get/getById/checkAttachments (+ search/getByStatus helpers) (DC-4); documents get/getById/getRelatedDocuments (DC-5).
 
 Façade-delegated procedures that are **not** yet `direct Rust` remain eligible for later DC rows.
 
