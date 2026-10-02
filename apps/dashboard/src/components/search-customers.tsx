@@ -2,6 +2,7 @@
 
 import { ComboboxDropdown } from "@midday/ui/combobox-dropdown";
 import { useQuery } from "@tanstack/react-query";
+import { customersQueryOptions } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -20,7 +21,7 @@ export function SearchCustomers({
   const trpc = useTRPC();
 
   const { data: customers } = useQuery(
-    trpc.customers.get.queryOptions({
+    customersQueryOptions(trpc.customers.get.queryKey({ pageSize: 100 }), {
       pageSize: 100,
     }),
   );

@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useInvoiceFilterParams } from "@/hooks/use-invoice-filter-params";
+import { customersQueryOptions } from "@/lib/rust-api/customers-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import { DateRangeFilter } from "./date-range-filter";
@@ -43,7 +44,9 @@ export function InvoiceSearchFilter() {
 
   const { setFilter, filter } = useInvoiceFilterParams();
 
-  const { data: customersData } = useQuery(trpc.customers.get.queryOptions());
+  const { data: customersData } = useQuery(
+    customersQueryOptions(trpc.customers.get.queryKey()),
+  );
 
   const statusFilters = allowedStatuses.map((status) => ({
     id: status,

@@ -24,6 +24,7 @@ import { useTrackerFilterParams } from "@/hooks/use-tracker-filter-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
 import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
+import { customersQueryOptions } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { FilterList } from "./filter-list";
 
@@ -61,7 +62,7 @@ export function TrackerSearchFilter() {
   const shouldFetch = isOpen;
 
   const { data: customersData } = useQuery({
-    ...trpc.customers.get.queryOptions(),
+    ...customersQueryOptions(trpc.customers.get.queryKey()),
     enabled: shouldFetch || Boolean(filter.customers?.length),
   });
 

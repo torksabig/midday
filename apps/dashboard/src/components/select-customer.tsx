@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import { useCustomerParams } from "@/hooks/use-customer-params";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
+import { customersQueryOptions } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 
 export function SelectCustomer() {
@@ -24,7 +25,7 @@ export function SelectCustomer() {
   const [value, setValue] = React.useState("");
 
   const { data: customers } = useQuery(
-    trpc.customers.get.queryOptions({
+    customersQueryOptions(trpc.customers.get.queryKey({ pageSize: 100 }), {
       pageSize: 100,
     }),
   );

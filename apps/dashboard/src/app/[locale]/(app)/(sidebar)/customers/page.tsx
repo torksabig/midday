@@ -15,6 +15,7 @@ import { CustomersSkeleton } from "@/components/tables/customers/skeleton";
 import { TopRevenueClient } from "@/components/top-revenue-client";
 import { loadCustomerFilterParams } from "@/hooks/use-customer-filter-params";
 import { loadSortParams } from "@/hooks/use-sort-params";
+import { customersServerInfiniteQueryOptions } from "@/lib/rust-api/customers-server";
 import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
 import { getInitialTableSettings } from "@/utils/columns";
 
@@ -35,22 +36,22 @@ export default async function Page(props: Props) {
   // Get unified table settings from cookie
   const initialSettings = await getInitialTableSettings("customers");
 
+  const customersFilter = {
+    ...filter,
+    sort,
+  };
+
   // Prefetch customer analytics
   batchPrefetch([
-    trpc.customers.get.infiniteQueryOptions(
-      {
-        ...filter,
-        sort,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+    customersServerInfiniteQueryOptions(
+      trpc.customers.get.infiniteQueryKey(customersFilter),
+      customersFilter,
     ),
     trpc.invoice.mostActiveClient.queryOptions(),
     trpc.invoice.inactiveClientsCount.queryOptions(),
     trpc.invoice.topRevenueClient.queryOptions(),
     trpc.invoice.newCustomersCount.queryOptions(),
-  ]);
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
     <HydrateClient>

@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), and documents get/getById/getRelatedDocuments. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, and customers get/getById/getInvoiceSummary. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -131,11 +131,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documentTags.delete` | yes | **write** · delete tag (AP-23) |
 | `documentTagAssignments.create` | yes | **write** · assign tag to document (AP-23) |
 | `documentTagAssignments.delete` | yes | **write** · unassign tag (AP-23) |
-| `customers.get` | yes | read · list (Phase 4) |
-| `customers.getById` | yes | read (Phase 4) |
+| `customers.get` | direct Rust | read · list (Phase 4); dashboard infinite/list queries call `GET /api/v1/customers` directly and preserve tRPC query keys |
+| `customers.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/customers/{id}` directly |
 | `customers.delete` | yes | **write** · fetch-then-delete (AP-24) |
 | `customers.upsert` | yes | **write** · DB upsert + tags (AP-28); enrichment job stays in Node |
-| `customers.getInvoiceSummary` | yes | read · FX rollup per customer (AP-48) |
+| `customers.getInvoiceSummary` | direct Rust | read · FX rollup per customer (AP-48); dashboard calls `GET /api/v1/customers/{id}/invoice-summary` directly |
 | `customers.cancelEnrichment` | yes | **write** · clear enrichment_status (AP-48) |
 | `customers.clearEnrichment` | yes | **write** · null enrichment fields (AP-48) |
 | `customers.togglePortal` | yes | **write** · portal_enabled + portal_id (AP-49) |

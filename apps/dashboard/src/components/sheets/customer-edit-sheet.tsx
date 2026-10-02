@@ -21,6 +21,7 @@ import { Icons } from "@midday/ui/icons";
 import { Sheet, SheetContent, SheetHeader } from "@midday/ui/sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCustomerParams } from "@/hooks/use-customer-params";
+import { customerByIdQueryOptions } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { CustomerForm } from "../forms/customer-form";
 
@@ -31,24 +32,25 @@ export function CustomerEditSheet() {
 
   const isOpen = Boolean(customerId && !details);
 
-  const { data: customer } = useQuery(
-    trpc.customers.getById.queryOptions(
-      { id: customerId! },
+  const { data: customer } = useQuery({
+    ...customerByIdQueryOptions(
+      trpc.customers.getById.queryKey({ id: customerId! }),
+      customerId!,
       {
         enabled: isOpen,
         staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
-        placeholderData: () => {
-          const pages = queryClient
-            .getQueriesData({ queryKey: trpc.customers.get.infiniteQueryKey() })
-            // @ts-expect-error
-            .flatMap(([, data]) => data?.pages ?? [])
-            .flatMap((page) => page.data ?? []);
-
-          return pages.find((d) => d.id === customerId);
-        },
       },
     ),
-  );
+    placeholderData: () => {
+      const pages = queryClient
+        .getQueriesData({ queryKey: trpc.customers.get.infiniteQueryKey() })
+        // @ts-expect-error
+        .flatMap(([, data]) => data?.pages ?? [])
+        .flatMap((page) => page.data ?? []);
+
+      return pages.find((d) => d.id === customerId);
+    },
+  });
 
   const deleteCustomerMutation = useMutation(
     trpc.customers.delete.mutationOptions({

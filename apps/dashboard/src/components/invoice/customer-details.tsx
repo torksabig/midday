@@ -8,6 +8,7 @@ import { Controller, useFormContext } from "react-hook-form";
 import { Editor } from "@/components/invoice/editor";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useTemplateUpdate } from "@/hooks/use-template-update";
+import { customerByIdQueryOptions } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { SelectCustomer } from "../select-customer";
 import { LabelInput } from "./label-input";
@@ -23,8 +24,9 @@ export function CustomerDetails() {
   const id = watch("id");
 
   const { data: customer } = useQuery(
-    trpc.customers.getById.queryOptions(
-      { id: selectedCustomerId! },
+    customerByIdQueryOptions(
+      trpc.customers.getById.queryKey({ id: selectedCustomerId! }),
+      selectedCustomerId!,
       {
         enabled: !!selectedCustomerId,
       },

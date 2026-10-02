@@ -47,6 +47,10 @@ import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import {
+  customerByIdQueryOptions,
+  customerInvoiceSummaryQueryOptions,
+} from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { getWebsiteLogo } from "@/utils/logos";
 import { CustomerDetailsSkeleton } from "./customer-details.loading";
@@ -131,10 +135,15 @@ export function CustomerDetails() {
     isLoading: isLoadingCustomer,
     refetch,
   } = useQuery({
-    ...trpc.customers.getById.queryOptions({ id: customerId! }),
-    enabled: isOpen,
+    ...customerByIdQueryOptions(
+      trpc.customers.getById.queryKey({ id: customerId! }),
+      customerId!,
+      {
+        enabled: isOpen,
+        staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+      },
+    ),
     placeholderData: keepPreviousData,
-    staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
   });
 
   // Mutation for re-enriching customer
@@ -278,8 +287,13 @@ export function CustomerDetails() {
 
   // Get invoice summary from server
   const { data: summary } = useQuery({
-    ...trpc.customers.getInvoiceSummary.queryOptions({ id: customerId! }),
-    enabled: isOpen && Boolean(customerId),
+    ...customerInvoiceSummaryQueryOptions(
+      trpc.customers.getInvoiceSummary.queryKey({ id: customerId! }),
+      customerId!,
+      {
+        enabled: isOpen && Boolean(customerId),
+      },
+    ),
   });
 
   const handleDownloadInvoice = (invoiceId: string) => {

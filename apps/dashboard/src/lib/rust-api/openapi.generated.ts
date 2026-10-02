@@ -180,6 +180,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCustomerById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{id}/invoice-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCustomerInvoiceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/documents": {
         parameters: {
             query?: never;
@@ -841,6 +889,15 @@ export interface components {
         };
         CreateTagBody: {
             name: string;
+        };
+        CustomersListMeta: {
+            cursor?: string | null;
+            has_next_page: boolean;
+            has_previous_page: boolean;
+        };
+        CustomersListResponse: {
+            data: Record<string, never>[];
+            meta: components["schemas"]["CustomersListMeta"];
         };
         DashboardTeam: {
             baseCurrency?: string | null;
@@ -2135,6 +2192,105 @@ export interface operations {
             };
             /** @description Category not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCustomers: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+                q?: string;
+                sort?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated team customers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomersListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCustomerById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCustomerInvoiceSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer invoice FX summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

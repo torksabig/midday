@@ -26,6 +26,7 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
+import { customersInfiniteQueryOptions } from "@/lib/rust-api/customers-client";
 import { useCustomersStore } from "@/store/customers";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS, SUMMARY_GRID_HEIGHTS } from "@/utils/table-configs";
@@ -72,19 +73,19 @@ export function DataTable({ initialSettings }: Props) {
     columnIds: COLUMN_IDS,
   });
 
-  const infiniteQueryOptions = trpc.customers.get.infiniteQueryOptions(
-    {
-      ...filter,
-      sort: params.sort,
-      q: deferredSearch,
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const customersFilter = {
+    ...filter,
+    sort: params.sort,
+    q: deferredSearch,
+  };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useSuspenseInfiniteQuery(infiniteQueryOptions);
+    useSuspenseInfiniteQuery(
+      customersInfiniteQueryOptions(
+        trpc.customers.get.infiniteQueryKey(customersFilter),
+        customersFilter,
+      ),
+    );
 
   const deleteCustomerMutation = useMutation(
     trpc.customers.delete.mutationOptions({
