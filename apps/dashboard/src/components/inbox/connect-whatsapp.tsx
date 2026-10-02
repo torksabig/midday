@@ -14,6 +14,7 @@ import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { appsQueryOptions } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 import { useConnectDialogReset } from "./use-connect-dialog";
 
@@ -28,7 +29,7 @@ export function ConnectWhatsApp({ showTrigger = true }: ConnectWhatsAppProps) {
   const [copied, setCopied] = useState(false);
   const [linkCode, setLinkCode] = useState("");
 
-  const { data: installedApps } = useQuery(trpc.apps.get.queryOptions());
+  const { data: installedApps } = useQuery(appsQueryOptions(trpc.apps.get.queryKey()));
   const whatsappApp = installedApps?.find((app) => app.app_id === "whatsapp");
   const connections = (whatsappApp?.config as any)?.connections || [];
 

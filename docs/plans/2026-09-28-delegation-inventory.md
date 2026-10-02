@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, and trackerProjects get/getById/upsert/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, and apps get/disconnect/update. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -55,15 +55,15 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `bankConnections.reconnect` | direct Rust | **write** · update reference + status (AP-46); Enable Banking session route calls Rust directly |
 | `bankConnections.delete` | yes | **write** · DB delete; Trigger delete-connection stays Node (AP-52) |
 | `bankConnections.*` (other) | no | create (encrypt), addAccounts (encrypt) |
-| `apps.get` | yes | read · team installed apps (AP-16); preserves `app_id` snake_case |
-| `apps.disconnect` | yes | **write** · delete app + platform identities (AP-39) |
-| `apps.update` | yes | **write** · single settings option (AP-39) |
-| `apps.updateSettings` | yes | **write** · replace settings array (AP-39) |
+| `apps.get` | direct Rust | read · team installed apps (AP-16); dashboard calls `GET /api/v1/apps` directly; preserves `app_id` snake_case |
+| `apps.disconnect` | direct Rust | **write** · delete app + platform identities (AP-39); dashboard calls `DELETE /api/v1/apps/{app_id}` directly |
+| `apps.update` | direct Rust | **write** · single settings option (AP-39); dashboard calls `PUT /api/v1/apps/{app_id}/settings` directly |
+| `apps.updateSettings` | yes | **write** · replace settings array (AP-39); no dashboard call sites |
 | `apps.removeWhatsAppConnection` | yes | **write** · platform identity + config (AP-57) |
 | `apps.createPlatformLinkToken` | yes | **write** · insert link token (AP-57) |
 | `apps.*` (other) | no | — |
-| `apiKeys.get` | yes | read · team keys metadata, no raw secrets (AP-26) |
-| `apiKeys.delete` | yes | **write** · DB delete; cache invalidation stays Node (AP-40) |
+| `apiKeys.get` | direct Rust | read · team keys metadata, no raw secrets (AP-26); dashboard calls `GET /api/v1/api-keys` directly |
+| `apiKeys.delete` | direct Rust | **write** · DB delete (AP-40); dashboard calls `DELETE /api/v1/api-keys/{id}` directly; cache invalidation via React Query |
 | `apiKeys.*` (other) | no | upsert (Resend email) |
 | `oauthApplications.list` | yes | read · team OAuth apps (AP-16) |
 | `oauthApplications.get` | yes | read · by id + createdByUser (AP-31) |
@@ -126,11 +126,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) |
 | `documents.processDocument` | yes | **write** · unsupported bulk status SQL; process-document jobs stay Node (AP-60) |
 | `documents.*` (other) | no | signed URLs (storage only, no SQL) |
-| `documentTags.get` | yes | read · vault tag list (Phase 10) |
-| `documentTags.create` | yes | **write** · insert tag (AP-23); embedding stays in Node |
-| `documentTags.delete` | yes | **write** · delete tag (AP-23) |
-| `documentTagAssignments.create` | yes | **write** · assign tag to document (AP-23) |
-| `documentTagAssignments.delete` | yes | **write** · unassign tag (AP-23) |
+| `documentTags.get` | direct Rust | read · vault tag list (Phase 10); dashboard calls `GET /api/v1/document-tags` directly |
+| `documentTags.create` | direct Rust | **write** · insert tag (AP-23); dashboard calls `POST /api/v1/document-tags` directly; embedding side-effect deferred (was Node) |
+| `documentTags.delete` | direct Rust | **write** · delete tag (AP-23); dashboard calls `DELETE /api/v1/document-tags/{id}` directly |
+| `documentTagAssignments.create` | direct Rust | **write** · assign tag to document (AP-23); dashboard calls `POST /api/v1/document-tag-assignments` directly |
+| `documentTagAssignments.delete` | direct Rust | **write** · unassign tag (AP-23); dashboard calls `DELETE /api/v1/document-tag-assignments` directly |
 | `customers.get` | direct Rust | read · list (Phase 4); dashboard infinite/list queries call `GET /api/v1/customers` directly and preserve tRPC query keys |
 | `customers.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/customers/{id}` directly |
 | `customers.delete` | yes | **write** · fetch-then-delete (AP-24) |
@@ -204,8 +204,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `tags.create` | direct Rust | **write** · insert tag (AP-22); dashboard calls `POST /api/v1/tags` directly and preserves the old React Query cache key |
 | `tags.update` | direct Rust | **write** · rename tag (AP-22); dashboard calls `PUT /api/v1/tags/:id` directly and preserves the old React Query cache key |
 | `tags.delete` | direct Rust | **write** · delete tag (AP-22); dashboard calls `DELETE /api/v1/tags/:id` directly and preserves the old React Query cache key |
-| `shortLinks.get` | yes | public read · by shortId (AP-42) |
-| `shortLinks.createForUrl` | yes | **write** · insert redirect; shortUrl in Node (AP-42) |
+| `shortLinks.get` | direct Rust | public read · by shortId (AP-42); public page calls `GET /api/v1/short-links/{short_id}` directly |
+| `shortLinks.createForUrl` | yes | **write** · insert redirect; shortUrl in Node (AP-42); no dashboard call sites; OpenAPI helper ready |
 | `shortLinks.createForDocument` | yes | **write** · signed URL Node + Postgres insert (AP-55) |
 | `shortLinks.*` (other) | no | — |
 | All other routers | no | oauth flow, banking adapters, etc. |
@@ -234,9 +234,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoiceRecurring.create` | yes | **write** · DB create/link; notifications stay Node (AP-56) |
 | `invoiceRecurring.update` | yes | **write** · DB update; cross-field validation stays Node (AP-56) |
 | `invoiceRecurring.*` (other) | no | — |
-| `institutions.get` | yes | read · country search list (AP-45) |
-| `institutions.getById` | yes | read · by id (AP-45) |
-| `institutions.updateUsage` | yes | **write** · bump popularity (AP-45) |
+| `institutions.get` | direct Rust | read · country search list (AP-45); dashboard calls `GET /api/v1/institutions` directly |
+| `institutions.getById` | yes | read · by id (AP-45); no dashboard call sites; OpenAPI ready |
+| `institutions.updateUsage` | direct Rust | **write** · bump popularity (AP-45); dashboard calls `POST /api/v1/institutions/{id}` directly |
 | `transactionAttachments.createMany` | yes | **write** · insert + sync cleanup + activity (AP-46) |
 | `transactionAttachments.delete` | yes | **write** · inbox/suggestion cleanup (AP-46) |
 | `transactionAttachments.*` (other) | no | processAttachment (jobs) |

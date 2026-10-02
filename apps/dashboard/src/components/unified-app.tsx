@@ -21,6 +21,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
+import { disconnectAppFromRust } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 import { getScopeDescription } from "@/utils/scopes";
 import { AppSettings } from "./app-settings";
@@ -246,15 +247,14 @@ export function UnifiedAppComponent({ app }: UnifiedAppProps) {
     },
   });
 
-  const disconnectOfficialAppMutation = useMutation(
-    trpc.apps.disconnect.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.apps.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const disconnectOfficialAppMutation = useMutation({
+    mutationFn: disconnectAppFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.apps.get.queryKey(),
+      });
+    },
+  });
 
   const revokeExternalAppMutation = useMutation(
     trpc.oauthApplications.revokeAccess.mutationOptions({

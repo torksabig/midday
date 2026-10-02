@@ -15,6 +15,7 @@ import { ConnectIMessage } from "@/components/inbox/connect-imessage";
 import { ConnectTelegram } from "@/components/inbox/connect-telegram";
 import { ConnectWhatsApp } from "@/components/inbox/connect-whatsapp";
 import { useUserQuery } from "@/hooks/use-user";
+import { appsQueryOptions } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 import { isOAuthMessage } from "@/utils/oauth-message";
 import { UnifiedAppComponent } from "./unified-app";
@@ -47,7 +48,7 @@ export function Apps() {
 
   // Fetch from both endpoints
   const { data: installedOfficialApps } = useSuspenseQuery(
-    trpc.apps.get.queryOptions(),
+    appsQueryOptions(trpc.apps.get.queryKey()),
   );
 
   const { data: externalAppsData } = useSuspenseQuery(

@@ -14,6 +14,7 @@ import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
+import { appsQueryOptions } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 
 export function ConnectSlack() {
@@ -23,7 +24,7 @@ export function ConnectSlack() {
   const [copied, setCopied] = useState(false);
   const [linkCode, setLinkCode] = useState("");
 
-  const { data: installedApps } = useQuery(trpc.apps.get.queryOptions());
+  const { data: installedApps } = useQuery(appsQueryOptions(trpc.apps.get.queryKey()));
   const isInstalled =
     installedApps?.some((app) => app.app_id === "slack") ?? false;
 

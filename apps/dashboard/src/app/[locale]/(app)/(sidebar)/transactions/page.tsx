@@ -16,6 +16,7 @@ import { loadTransactionFilterParams } from "@/hooks/use-transaction-filter-para
 import { loadTransactionTab } from "@/hooks/use-transaction-tab";
 import { tagsServerQueryOptions } from "@/lib/rust-api/tags-server";
 import { teamMembersServerQueryOptions } from "@/lib/rust-api/team-server";
+import { appsServerQueryOptions } from "@/lib/rust-api/apps-server";
 import {
   transactionsReviewCountServerQueryOptions,
   transactionsServerInfiniteQueryOptions,
@@ -86,7 +87,7 @@ export default async function Transactions(props: Props) {
     // Shared data used by table rows (assign user)
     teamMembersServerQueryOptions(trpc.team.members.queryKey()),
     // Apps for export bar (accounting providers)
-    trpc.apps.get.queryOptions(),
+    appsServerQueryOptions(trpc.apps.get.queryKey()),
   ] as Parameters<typeof batchPrefetch>[0]);
 
   return (

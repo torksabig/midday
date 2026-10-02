@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { MutableRefObject } from "react";
 import { useConnectParams } from "@/hooks/use-connect-params";
-import { useTRPC } from "@/trpc/client";
+import { updateInstitutionUsageFromRust } from "@/lib/rust-api/institutions-client";
 import { BankConnectButton } from "./bank-connect-button";
 import { EnableBankingConnect } from "./enablebanking-connect";
 import { GoCardLessConnect } from "./gocardless-connect";
@@ -27,10 +27,9 @@ export function ConnectBankProvider({
   connectRef,
 }: Props) {
   const { setParams } = useConnectParams();
-  const trpc = useTRPC();
-  const updateUsageMutation = useMutation(
-    trpc.institutions.updateUsage.mutationOptions(),
-  );
+  const updateUsageMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) => updateInstitutionUsageFromRust(id),
+  });
 
   const updateUsage = () => {
     updateUsageMutation.mutate({ id });

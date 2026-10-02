@@ -17,6 +17,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useTokenModalStore } from "@/store/token-modal";
+import { apiKeysQueryOptions } from "@/lib/rust-api/api-keys-client";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "./columns";
 import { EmptyState } from "./empty-state";
@@ -24,9 +25,9 @@ import { EmptyState } from "./empty-state";
 export function DataTable() {
   const trpc = useTRPC();
   const { setData } = useTokenModalStore();
-  const { data } = useSuspenseQuery({
-    ...trpc.apiKeys.get.queryOptions(),
-  });
+  const { data } = useSuspenseQuery(
+    apiKeysQueryOptions(trpc.apiKeys.get.queryKey()),
+  );
 
   const table = useReactTable({
     getRowId: (row) => row.id,

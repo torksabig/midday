@@ -3,6 +3,11 @@ import type { Option as MultipleSelectorOption } from "@midday/ui/multiple-selec
 import MultipleSelector from "@midday/ui/multiple-selector";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import {
+  createDocumentTagFromRust,
+  deleteDocumentTagFromRust,
+  documentTagsQueryOptions,
+} from "@/lib/rust-api/document-tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Option = MultipleSelectorOption & {
@@ -21,27 +26,27 @@ export function VaultSelectTags({ tags, onSelect, onRemove, onChange }: Props) {
 
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { data } = useQuery(trpc.documentTags.get.queryOptions());
-
-  const createTagMutation = useMutation(
-    trpc.documentTags.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documentTags.get.queryKey(),
-        });
-      },
-    }),
+  const { data } = useQuery(
+    documentTagsQueryOptions(trpc.documentTags.get.queryKey()),
   );
 
-  const deleteTagMutation = useMutation(
-    trpc.documentTags.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documentTags.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const createTagMutation = useMutation({
+    mutationFn: createDocumentTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documentTags.get.queryKey(),
+      });
+    },
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: deleteDocumentTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documentTags.get.queryKey(),
+      });
+    },
+  });
 
   const transformedTags = data
     ?.map((tag) => ({

@@ -31,6 +31,7 @@ import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { AppDetailSheet } from "@/components/sheets/app-detail-sheet";
 import { useOnboardingStep } from "@/hooks/use-onboarding-step";
 import { useOnboardingTracking } from "@/hooks/use-onboarding-tracking";
+import { institutionsQueryOptions } from "@/lib/rust-api/institutions-client";
 import { useTRPC } from "@/trpc/client";
 import { ChatDemoWithRail } from "./chat-demo-with-rail";
 import {
@@ -296,10 +297,16 @@ export function OnboardingPage({
         countryCode: countryCode === defaultCountryCode ? null : countryCode,
       });
       queryClient.prefetchQuery(
-        trpc.institutions.get.queryOptions({
-          q: "",
-          countryCode,
-        }),
+        institutionsQueryOptions(
+          trpc.institutions.get.queryKey({
+            q: "",
+            countryCode,
+          }),
+          {
+            q: "",
+            countryCode,
+          },
+        ),
       );
     },
     [defaultCountryCode, setConnectionParams, queryClient, trpc],

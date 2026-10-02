@@ -3,6 +3,10 @@
 import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { VaultSelectTags } from "@/components/vault/vault-select-tags";
+import {
+  createDocumentTagAssignmentFromRust,
+  deleteDocumentTagAssignmentFromRust,
+} from "@/lib/rust-api/document-tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Tag = NonNullable<
@@ -18,41 +22,39 @@ export function DocumentTags({ id, tags }: Props) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const createDocumentTagAssignmentMutation = useMutation(
-    trpc.documentTagAssignments.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.getById.queryKey(),
-        });
+  const createDocumentTagAssignmentMutation = useMutation({
+    mutationFn: createDocumentTagAssignmentFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documentTags.get.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.documentTags.get.queryKey(),
+      });
+    },
+  });
 
-  const deleteDocumentTagAssignmentMutation = useMutation(
-    trpc.documentTagAssignments.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.getById.queryKey(),
-        });
+  const deleteDocumentTagAssignmentMutation = useMutation({
+    mutationFn: deleteDocumentTagAssignmentFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documentTags.get.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.documentTags.get.queryKey(),
+      });
+    },
+  });
 
   if (!tags) return null;
 

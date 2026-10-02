@@ -3,7 +3,9 @@ import { Icons } from "@midday/ui/icons";
 import type { Metadata } from "next";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { notFound, redirect } from "next/navigation";
-import { getQueryClient, trpc } from "@/trpc/server";
+import { getQueryClient } from "@/trpc/server";
+import { shortLinkServerQueryOptions } from "@/lib/rust-api/short-links-server";
+import { trpc } from "@/trpc/server";
 import { formatSize } from "@/utils/format";
 
 type Props = {
@@ -23,7 +25,10 @@ export default async function Page({ params }: Props) {
   const queryClient = getQueryClient();
 
   const shortLink = await queryClient.fetchQuery(
-    trpc.shortLinks.get.queryOptions({ shortId }),
+    shortLinkServerQueryOptions(
+      trpc.shortLinks.get.queryKey({ shortId }),
+      shortId,
+    ),
   );
 
   if (!shortLink?.url) {

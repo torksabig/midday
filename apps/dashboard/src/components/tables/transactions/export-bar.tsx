@@ -24,6 +24,7 @@ import { useSuccessSound } from "@/hooks/use-success-sound";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
 import { useExportStore } from "@/store/export";
 import { useTransactionsStore } from "@/store/transactions";
+import { appsQueryOptions } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 
 const PROVIDER_NAMES: Record<string, string> = {
@@ -74,7 +75,7 @@ export function ExportBar() {
   const hasManualSelection = selectedCount > 0;
 
   // Fetch connected accounting providers
-  const { data: connectedApps } = useQuery(trpc.apps.get.queryOptions());
+  const { data: connectedApps } = useQuery(appsQueryOptions(trpc.apps.get.queryKey()));
 
   // Find all connected accounting providers
   const connectedProviders = useMemo(() => {

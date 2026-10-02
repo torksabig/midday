@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePlaidLink } from "react-plaid-link";
 import { useDebounceValue, useScript } from "usehooks-ts";
 import { useConnectParams } from "@/hooks/use-connect-params";
+import { institutionsQueryOptions } from "@/lib/rust-api/institutions-client";
 import { useTRPC } from "@/trpc/client";
 import { BankLogo } from "./bank-logo";
 import { ConnectBankProvider } from "./connect-bank-provider";
@@ -197,14 +198,16 @@ export function BankSearchContent({
   const [debouncedQuery] = useDebounceValue(query ?? "", 200);
 
   const { data, isLoading } = useQuery({
-    ...trpc.institutions.get.queryOptions(
+    ...institutionsQueryOptions(
+      trpc.institutions.get.queryKey({
+        q: debouncedQuery,
+        countryCode,
+      }),
       {
         q: debouncedQuery,
         countryCode,
       },
-      {
-        enabled,
-      },
+      { enabled },
     ),
     placeholderData: keepPreviousData,
   });

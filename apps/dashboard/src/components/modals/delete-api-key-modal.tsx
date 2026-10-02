@@ -12,6 +12,9 @@ import { SubmitButton } from "@midday/ui/submit-button";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTokenModalStore } from "@/store/token-modal";
+import {
+  deleteApiKeyFromRust,
+} from "@/lib/rust-api/api-keys-client";
 import { useTRPC } from "@/trpc/client";
 
 export function DeleteApiKeyModal() {
@@ -20,15 +23,16 @@ export function DeleteApiKeyModal() {
   const queryClient = useQueryClient();
   const { track } = useOpenPanel();
 
-  const deleteApiKeyMutation = useMutation(
-    trpc.apiKeys.delete.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.ApiKeyDeleted.name);
-        setData(undefined);
-        queryClient.invalidateQueries(trpc.apiKeys.get.queryOptions());
-      },
-    }),
-  );
+  const deleteApiKeyMutation = useMutation({
+    mutationFn: deleteApiKeyFromRust,
+    onSuccess: () => {
+      track(LogEvents.ApiKeyDeleted.name);
+      setData(undefined);
+      queryClient.invalidateQueries({
+        queryKey: trpc.apiKeys.get.queryKey(),
+      });
+    },
+  });
 
   return (
     <Dialog open={type === "delete"} onOpenChange={() => setData(undefined)}>

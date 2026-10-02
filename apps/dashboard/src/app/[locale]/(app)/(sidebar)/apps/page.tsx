@@ -5,6 +5,7 @@ import { Apps } from "@/components/apps";
 import { AppsSkeleton } from "@/components/apps.skeleton";
 import { AppsHeader } from "@/components/apps-header";
 import { ErrorFallback } from "@/components/error-fallback";
+import { appsServerQueryOptions } from "@/lib/rust-api/apps-server";
 import {
   batchPrefetch,
   getQueryClient,
@@ -20,13 +21,13 @@ export default async function Page() {
   const _queryClient = getQueryClient();
 
   batchPrefetch([
-    trpc.apps.get.queryOptions(),
+    appsServerQueryOptions(trpc.apps.get.queryKey()),
     trpc.oauthApplications.list.queryOptions(),
     trpc.oauthApplications.authorized.queryOptions(),
     trpc.inboxAccounts.get.queryOptions(),
     trpc.invoicePayments.stripeStatus.queryOptions(),
     trpc.connectors.list.queryOptions(),
-  ]);
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
     <HydrateClient>

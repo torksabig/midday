@@ -7,6 +7,7 @@ import { OAuthApplicationCreateSheet } from "@/components/sheets/oauth-applicati
 import { OAuthApplicationEditSheet } from "@/components/sheets/oauth-application-edit-sheet";
 import { DataTable } from "@/components/tables/api-keys";
 import { OAuthDataTable } from "@/components/tables/oauth-applications";
+import { apiKeysServerQueryOptions } from "@/lib/rust-api/api-keys-server";
 import { batchPrefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -15,9 +16,9 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   batchPrefetch([
-    trpc.apiKeys.get.queryOptions(),
+    apiKeysServerQueryOptions(trpc.apiKeys.get.queryKey()),
     trpc.oauthApplications.list.queryOptions(),
-  ]);
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
     <>

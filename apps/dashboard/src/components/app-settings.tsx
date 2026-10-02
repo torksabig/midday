@@ -1,6 +1,7 @@
 import { Label } from "@midday/ui/label";
 import { Switch } from "@midday/ui/switch";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { updateAppSettingsFromRust } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 
 type AppSettingsItem = {
@@ -22,15 +23,14 @@ function AppSettingsItem({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const updateAppSettingsMutation = useMutation(
-    trpc.apps.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.apps.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const updateAppSettingsMutation = useMutation({
+    mutationFn: updateAppSettingsFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.apps.get.queryKey(),
+      });
+    },
+  });
 
   switch (setting.type) {
     case "switch":

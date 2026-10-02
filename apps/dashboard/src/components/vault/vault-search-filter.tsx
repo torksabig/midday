@@ -23,6 +23,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { FilterList } from "@/components/filter-list";
 import { useDocumentFilterParams } from "@/hooks/use-document-filter-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { documentTagsQueryOptions } from "@/lib/rust-api/document-tags-client";
 import { useTRPC } from "@/trpc/client";
 
 export function VaultSearchFilter() {
@@ -38,7 +39,7 @@ export function VaultSearchFilter() {
   const shouldFetch = isOpen;
 
   const { data: tagsData } = useQuery({
-    ...trpc.documentTags.get.queryOptions(),
+    ...documentTagsQueryOptions(trpc.documentTags.get.queryKey()),
     enabled: shouldFetch || Boolean(filter.tags?.length),
   });
 
