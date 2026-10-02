@@ -1,4 +1,4 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TeamListItem } from "@/lib/rust-api/team";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,8 +27,8 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 
-const teamNameFilterFn: FilterFn<RouterOutputs["team"]["list"][number]> = (
-  row: Row<RouterOutputs["team"]["list"][number]>,
+const teamNameFilterFn: FilterFn<TeamListItem> = (
+  row: Row<TeamListItem>,
   _: string,
   filterValue: string,
 ) => {
@@ -37,7 +37,7 @@ const teamNameFilterFn: FilterFn<RouterOutputs["team"]["list"][number]> = (
   return teamName?.includes(filterValue.toLowerCase()) ?? false;
 };
 
-export const columns: ColumnDef<RouterOutputs["team"]["list"][number]>[] = [
+export const columns: ColumnDef<TeamListItem>[] = [
   {
     id: "team",
     accessorKey: "team.name",

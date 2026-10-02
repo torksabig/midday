@@ -2,6 +2,7 @@
 
 import { Spinner } from "@midday/ui/spinner";
 import { useQuery } from "@tanstack/react-query";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { AssignedUser } from "./assigned-user";
 
@@ -17,7 +18,9 @@ type Props = {
 
 export function SelectUser({ onSelect }: Props) {
   const trpc = useTRPC();
-  const { data: users, isLoading } = useQuery(trpc.team.members.queryOptions());
+  const { data: users, isLoading } = useQuery(
+    teamMembersQueryOptions(trpc.team.members.queryKey()),
+  );
 
   if (isLoading) {
     return (

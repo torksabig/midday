@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 type TeamMember = {
@@ -43,7 +44,7 @@ export function TransactionTableProvider({
   const trpc = useTRPC();
 
   const { data: teamMembers, isLoading: isLoadingMembers } = useQuery(
-    trpc.team.members.queryOptions(),
+    teamMembersQueryOptions(trpc.team.members.queryKey()),
   );
 
   const { data: tags, isLoading: isLoadingTags } = useQuery(

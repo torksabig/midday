@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AssignedUser } from "@/components/assigned-user";
 import { useTransactionTableContextOptional } from "@/components/tables/transactions/transaction-table-context";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 type User = {
@@ -25,7 +26,7 @@ export function InlineAssignUser({ selectedId, onSelect }: Props) {
   // Use shared context when available (inside transaction table), fallback to direct query
   const tableContext = useTransactionTableContextOptional();
   const { data: fallbackUsers } = useQuery({
-    ...trpc.team.members.queryOptions(),
+    ...teamMembersQueryOptions(trpc.team.members.queryKey()),
     // Skip query if we have context data (already fetched by provider)
     enabled: !tableContext,
   });

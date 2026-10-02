@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { OAuthConsentScreen } from "@/components/oauth/oauth-consent-screen";
 import { OAuthErrorMessage } from "@/components/oauth/oauth-error-message";
 import { loadOAuthParams } from "@/hooks/use-oauth-params";
-import { teamCurrentServerQueryOptions } from "@/lib/rust-api/team-server";
+import { teamCurrentServerQueryOptions, teamListServerQueryOptions } from "@/lib/rust-api/team-server";
 import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 import { categorizeOAuthError, validateOAuthParams } from "@/utils/oauth-utils";
@@ -81,7 +81,9 @@ export default async function Page(props: Props) {
           state: state || undefined,
         }),
       ),
-      queryClient.prefetchQuery(trpc.team.list.queryOptions()),
+      queryClient.prefetchQuery(
+        teamListServerQueryOptions(trpc.team.list.queryKey()),
+      ),
       queryClient.prefetchQuery(teamCurrentServerQueryOptions()),
     ]);
 

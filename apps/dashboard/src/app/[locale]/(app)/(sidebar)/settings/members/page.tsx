@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TeamMembers } from "@/components/team-members";
+import { teamMembersServerQueryOptions } from "@/lib/rust-api/team-server";
 import { prefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -7,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default function Members() {
-  prefetch(trpc.team.members.queryOptions());
+  prefetch(teamMembersServerQueryOptions(trpc.team.members.queryKey()));
   prefetch(trpc.team.teamInvites.queryOptions());
 
   return <TeamMembers />;

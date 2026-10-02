@@ -2,6 +2,7 @@ import { getCountryCode, getCurrency } from "@midday/location";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { OnboardingPage } from "@/components/onboarding/onboarding-page";
+import { teamListServerQueryOptions } from "@/lib/rust-api/team-server";
 import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
@@ -20,7 +21,9 @@ export default async function Page() {
     redirect("/login");
   }
 
-  const teams = await queryClient.fetchQuery(trpc.team.list.queryOptions());
+  const teams = await queryClient.fetchQuery(
+    teamListServerQueryOptions(trpc.team.list.queryKey()),
+  );
   const hasOtherTeams = (teams?.length ?? 0) > 1;
 
   const currency = getCurrency();

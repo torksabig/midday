@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { InviteTeamMembersModal } from "@/components/modals/invite-team-members-modal";
 import { useUserQuery } from "@/hooks/use-user";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "./columns";
 
@@ -24,9 +25,9 @@ export function DataTable() {
   const trpc = useTRPC();
   const [isOpen, onOpenChange] = useState(false);
   const { data: user } = useUserQuery();
-  const { data } = useSuspenseQuery({
-    ...trpc.team.members.queryOptions(),
-  });
+  const { data } = useSuspenseQuery(
+    teamMembersQueryOptions(trpc.team.members.queryKey()),
+  );
 
   const table = useReactTable({
     getRowId: (row) => row.id,

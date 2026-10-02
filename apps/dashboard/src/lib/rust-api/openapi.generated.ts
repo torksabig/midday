@@ -356,6 +356,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateTeam"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/team/current": {
         parameters: {
             query?: never;
@@ -364,6 +380,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getCurrentTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTeamList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTeamMembers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -383,6 +431,22 @@ export interface paths {
         put?: never;
         post: operations["createTransactionTag"];
         delete: operations["deleteTransactionTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateUser"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -776,6 +840,42 @@ export interface components {
             name: string;
             teamId: string;
         };
+        TeamListItem: {
+            canceledAt?: string | null;
+            createdAt?: string | null;
+            id?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
+            plan?: string | null;
+            role?: string | null;
+            updatedAt?: string | null;
+        };
+        TeamMember: {
+            id: string;
+            role?: string | null;
+            teamId?: string | null;
+            user?: null | components["schemas"]["TeamMemberUser"];
+        };
+        TeamMemberUser: {
+            avatarUrl?: string | null;
+            email?: string | null;
+            fullName?: string | null;
+            id: string;
+        };
+        /** @description Snake_case response matching the existing façade contract. */
+        TeamUpdateResponse: {
+            base_currency?: string | null;
+            country_code?: string | null;
+            email?: string | null;
+            /** Format: double */
+            fiscal_year_start_month?: number | null;
+            id: string;
+            inbox_id?: string | null;
+            logo_url?: string | null;
+            name?: string | null;
+            plan?: string | null;
+            subscription_status?: string | null;
+        };
         TransactionTagBody: {
             tagId: string;
             transactionId: string;
@@ -820,10 +920,51 @@ export interface components {
         UpdateTagBody: {
             name: string;
         };
+        /** @description Dashboard / tRPC `team.update` body (camelCase). */
+        UpdateTeamBody: {
+            baseCurrency?: string | null;
+            companyType?: string | null;
+            countryCode?: string | null;
+            email?: string | null;
+            exportSettings?: null | components["schemas"]["Value"];
+            /** Format: double */
+            fiscalYearStartMonth?: number | null;
+            heardAbout?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
+        };
+        /** @description Dashboard / tRPC `user.update` body (camelCase). */
+        UpdateUserBody: {
+            avatarUrl?: string | null;
+            dateFormat?: string | null;
+            email?: string | null;
+            fullName?: string | null;
+            locale?: string | null;
+            /** Format: double */
+            timeFormat?: number | null;
+            timezone?: string | null;
+            timezoneAutoSync?: boolean | null;
+            weekStartsOnMonday?: boolean | null;
+        };
         UpsertNotificationSettingBody: {
             channel: string;
             enabled: boolean;
             notificationType: string;
+        };
+        /** @description Snake_case response matching the existing façade contract. */
+        UserUpdateResponse: {
+            avatar_url?: string | null;
+            date_format?: string | null;
+            email?: string | null;
+            full_name?: string | null;
+            id: string;
+            locale?: string | null;
+            team_id?: string | null;
+            /** Format: double */
+            time_format?: number | null;
+            timezone?: string | null;
+            timezone_auto_sync?: boolean | null;
+            week_starts_on_monday?: boolean | null;
         };
         Value: unknown;
     };
@@ -1883,6 +2024,51 @@ export interface operations {
             };
         };
     };
+    updateTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTeamBody"];
+            };
+        };
+        responses: {
+            /** @description Updated team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamUpdateResponse"];
+                };
+            };
+            /** @description Team update requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Team not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getCurrentTeam: {
         parameters: {
             query?: never;
@@ -1899,6 +2085,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardTeam"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTeamList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Teams for the authenticated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamListItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTeamMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current team members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMember"][];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
@@ -1979,6 +2219,51 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserBody"];
+            };
+        };
+        responses: {
+            /** @description Updated user preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserUpdateResponse"];
+                };
+            };
+            /** @description User update requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

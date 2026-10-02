@@ -8,8 +8,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { forwardRef, useRef, useState } from "react";
 import { useUpload } from "@/hooks/use-upload";
+import { updateUserFromRust } from "@/lib/rust-api/user-client";
 import { viewerQueryKey } from "@/lib/rust-api/viewer";
-import { useTRPC } from "@/trpc/client";
 
 type Props = {
   userId: string;
@@ -26,18 +26,16 @@ export const AvatarUpload = forwardRef<HTMLInputElement, Props>(
   ) => {
     const [avatar, setAvatar] = useState(initialAvatarUrl);
     const inputRef = useRef<HTMLInputElement>(null);
-    const trpc = useTRPC();
     const queryClient = useQueryClient();
 
-    const updateUserMutation = useMutation(
-      trpc.user.update.mutationOptions({
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: viewerQueryKey,
-          });
-        },
-      }),
-    );
+    const updateUserMutation = useMutation({
+      mutationFn: updateUserFromRust,
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: viewerQueryKey,
+        });
+      },
+    });
 
     const { isLoading, uploadFile } = useUpload();
 

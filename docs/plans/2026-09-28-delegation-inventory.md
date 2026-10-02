@@ -10,17 +10,17 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, and transaction-tag assignment create/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, and transaction-tag assignment create/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
-| `user.update` | yes | **write** · preference fields PATCH (AP-21); no Supabase admin / email |
+| `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
 | `user.delete` | no | write · Supabase admin + Resend |
 | `user.invites` | yes | read · pending team invites by email (Phase 10) |
-| `team.current` | direct Rust | read · identity/team shell; dashboard calls `GET /api/v1/team/current` with the Supabase session JWT; team update/list/member flows stay on the temporary path |
-| `team.members` | yes | read · AP-13 |
-| `team.list` | yes | read · AP-13 |
+| `team.current` | direct Rust | read · identity/team shell; dashboard calls `GET /api/v1/team/current` with the Supabase session JWT |
+| `team.members` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/members` directly |
+| `team.list` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/list` directly |
 | `team.teamInvites` | yes | read · AP-13 |
-| `team.update` | yes | **write** · name/currency/settings PATCH (AP-22) |
+| `team.update` | direct Rust | **write** · name/currency/settings PUT `/api/v1/team` (AP-22); dashboard calls Rust directly |
 | `team.connectionStatus` | yes | read · bank + inbox status summary (AP-26) |
 | `team.availablePlans` | yes | read · starter/pro flags (AP-50) |
 | `team.acceptInvite` | yes | **write** · join team from invite (AP-41) |
@@ -511,7 +511,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-0 DONE** (`bankAccounts.balances` + `bankConnections.get`/`reconnect`; `delete` stays tRPC) → **DC-1** team/settings shell → **DC-2+** transactions / inbox / documents / customers / invoices. Façade Stage 3 SQL complete (AP-WORKER-1..10). Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-0 DONE**, **DC-1 DONE** (team members/list/update + user.update) → **DC-2** transactions reads → **DC-3+** writes / inbox / documents / customers / invoices. Façade Stage 3 SQL complete (AP-WORKER-1..10). Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

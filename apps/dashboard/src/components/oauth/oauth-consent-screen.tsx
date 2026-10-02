@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useOAuthParams } from "@/hooks/use-oauth-params";
 import { useTeamQuery } from "@/hooks/use-team";
+import { teamListQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { getKnownClient } from "@/utils/known-oauth-clients";
 import { getScopeDescription } from "@/utils/scopes";
@@ -68,7 +69,9 @@ export function OAuthConsentScreen() {
     [applicationInfo?.name],
   );
 
-  const { data: teams } = useSuspenseQuery(trpc.team.list.queryOptions());
+  const { data: teams } = useSuspenseQuery(
+    teamListQueryOptions(trpc.team.list.queryKey()),
+  );
 
   const authorizeMutation = useMutation(
     trpc.oauthApplications.authorize.mutationOptions({

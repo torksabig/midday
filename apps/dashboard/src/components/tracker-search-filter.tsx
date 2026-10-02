@@ -23,6 +23,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTrackerFilterParams } from "@/hooks/use-tracker-filter-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { FilterList } from "./filter-list";
 
@@ -65,7 +66,7 @@ export function TrackerSearchFilter() {
   });
 
   const { data: membersData } = useQuery({
-    ...trpc.team.members.queryOptions(),
+    ...teamMembersQueryOptions(trpc.team.members.queryKey()),
     enabled: shouldFetch || Boolean(filter.customers?.length),
   });
 

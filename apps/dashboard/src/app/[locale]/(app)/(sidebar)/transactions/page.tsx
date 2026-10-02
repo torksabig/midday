@@ -15,6 +15,7 @@ import { loadSortParams } from "@/hooks/use-sort-params";
 import { loadTransactionFilterParams } from "@/hooks/use-transaction-filter-params";
 import { loadTransactionTab } from "@/hooks/use-transaction-tab";
 import { tagsServerQueryOptions } from "@/lib/rust-api/tags-server";
+import { teamMembersServerQueryOptions } from "@/lib/rust-api/team-server";
 import {
   batchPrefetch,
   getQueryClient,
@@ -75,7 +76,7 @@ export default async function Transactions(props: Props) {
     }),
     trpc.transactions.getReviewCount.queryOptions(),
     // Shared data used by table rows (assign user)
-    trpc.team.members.queryOptions(),
+    teamMembersServerQueryOptions(trpc.team.members.queryKey()),
     // Apps for export bar (accounting providers)
     trpc.apps.get.queryOptions(),
   ]);

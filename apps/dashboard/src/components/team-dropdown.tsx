@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import { revalidateAfterTeamChange } from "@/actions/revalidate-action";
 import { useUserQuery } from "@/hooks/use-user";
+import { teamListQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -64,7 +65,7 @@ export function TeamDropdown({ isExpanded = false }: Props) {
   );
 
   const { data: teams, isLoading: isTeamsLoading } = useQuery(
-    trpc.team.list.queryOptions(),
+    teamListQueryOptions(trpc.team.list.queryKey()),
   );
 
   useEffect(() => {

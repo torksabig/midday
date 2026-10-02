@@ -1,8 +1,15 @@
 import "server-only";
 
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getServerRequestContext } from "@/trpc/request-context";
-import { fetchCurrentTeam, teamCurrentQueryKey } from "./team";
+import {
+  fetchCurrentTeam,
+  fetchTeamList,
+  fetchTeamMembers,
+  type TeamListItem,
+  type TeamMember,
+  teamCurrentQueryKey,
+} from "./team";
 
 function getRustApiUrl() {
   const url =
@@ -22,5 +29,25 @@ export function teamCurrentServerQueryOptions() {
       return fetchCurrentTeam(getRustApiUrl(), session?.access_token ?? null);
     },
     staleTime: 6 * 60 * 60 * 1000,
+  });
+}
+
+export function teamMembersServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<TeamMember[]> => {
+      const { session } = await getServerRequestContext();
+      return fetchTeamMembers(getRustApiUrl(), session?.access_token ?? null);
+    },
+  });
+}
+
+export function teamListServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<TeamListItem[]> => {
+      const { session } = await getServerRequestContext();
+      return fetchTeamList(getRustApiUrl(), session?.access_token ?? null);
+    },
   });
 }

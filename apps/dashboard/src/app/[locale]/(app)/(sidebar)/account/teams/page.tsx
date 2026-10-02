@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ErrorFallback } from "@/components/error-fallback";
 import { TeamsTable } from "@/components/tables/teams";
 import { TeamsSkeleton } from "@/components/tables/teams/skeleton";
+import { teamListServerQueryOptions } from "@/lib/rust-api/team-server";
 import { prefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function Teams() {
-  prefetch(trpc.team.list.queryOptions());
+  prefetch(teamListServerQueryOptions(trpc.team.list.queryKey()));
   prefetch(trpc.user.invites.queryOptions());
 
   return (

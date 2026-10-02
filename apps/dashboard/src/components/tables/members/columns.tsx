@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { LogEvents } from "@midday/events/events";
 import {
   AlertDialog,
@@ -29,14 +28,13 @@ import {
 import { useToast } from "@midday/ui/use-toast";
 import type { ColumnDef, FilterFn, Row } from "@tanstack/react-table";
 import { Loader2, MoreHorizontal } from "lucide-react";
+import type { TeamMember } from "@/lib/rust-api/team";
 import { useI18n } from "@/locales/client";
 import "@tanstack/react-table";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTRPC } from "@/trpc/client";
-
-type TeamMember = RouterOutputs["team"]["members"][number];
 
 const userFilterFn: FilterFn<TeamMember> = (
   row: Row<TeamMember>,

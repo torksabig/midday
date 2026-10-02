@@ -1,11 +1,17 @@
 "use client";
 
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
   type DashboardTeam,
   fetchCurrentTeam,
+  fetchTeamList,
+  fetchTeamMembers,
+  type TeamListItem,
+  type TeamMember,
   teamCurrentQueryKey,
+  type UpdateTeamInput,
+  updateTeam,
 } from "./team";
 
 function getRustApiUrl() {
@@ -18,8 +24,15 @@ function getRustApiUrl() {
 }
 
 async function fetchBrowserCurrentTeam(): Promise<DashboardTeam> {
-  const accessToken = await getAccessToken();
-  return fetchCurrentTeam(getRustApiUrl(), accessToken);
+  return fetchCurrentTeam(getRustApiUrl(), await getAccessToken());
+}
+
+async function fetchBrowserTeamMembers(): Promise<TeamMember[]> {
+  return fetchTeamMembers(getRustApiUrl(), await getAccessToken());
+}
+
+async function fetchBrowserTeamList(): Promise<TeamListItem[]> {
+  return fetchTeamList(getRustApiUrl(), await getAccessToken());
 }
 
 export function teamCurrentQueryOptions() {
@@ -28,4 +41,22 @@ export function teamCurrentQueryOptions() {
     queryFn: fetchBrowserCurrentTeam,
     staleTime: 6 * 60 * 60 * 1000,
   });
+}
+
+export function teamMembersQueryOptions(queryKey: QueryKey) {
+  return queryOptions<TeamMember[]>({
+    queryKey,
+    queryFn: fetchBrowserTeamMembers,
+  });
+}
+
+export function teamListQueryOptions(queryKey: QueryKey) {
+  return queryOptions<TeamListItem[]>({
+    queryKey,
+    queryFn: fetchBrowserTeamList,
+  });
+}
+
+export async function updateTeamFromRust(input: UpdateTeamInput) {
+  return updateTeam(getRustApiUrl(), await getAccessToken(), input);
 }

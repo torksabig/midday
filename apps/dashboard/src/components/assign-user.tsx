@@ -7,6 +7,7 @@ import {
 } from "@midday/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { teamMembersQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { AssignedUser } from "./assigned-user";
 
@@ -25,7 +26,9 @@ export function AssignUser({ selectedId, onSelect }: Props) {
   const [value, setValue] = useState<string>();
   const trpc = useTRPC();
 
-  const { data: users } = useQuery(trpc.team.members.queryOptions());
+  const { data: users } = useQuery(
+    teamMembersQueryOptions(trpc.team.members.queryKey()),
+  );
 
   useEffect(() => {
     setValue(selectedId);

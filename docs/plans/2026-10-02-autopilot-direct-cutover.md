@@ -85,7 +85,7 @@ Incomplete OpenAPI-only or client-only work is **not** DONE; finish wiring or le
 | ID | Status | Procedures / scope | Notes |
 |----|--------|--------------------|-------|
 | **DC-0** | **DONE** | Finish balances + `bankConnections.get` / `reconnect` | Done 2026-10-02. **Leave `bankConnections.delete` on tRPC.** |
-| **DC-1** | PENDING | Team/settings shell: `team.members`, `team.list`, `team.update`, `user.update` (+ related settings reads already on Rust if any remain, e.g. `user.invites`, `team.teamInvites`, `team.connectionStatus` as natural follow-ons in the same or next commit) | Routes already exist: `GET /team/members`, `GET /team/list`, `PUT /team`, `PUT /user`, etc. Add utoipa + dashboard clients. |
+| **DC-1** | **DONE** | Team/settings shell: `team.members`, `team.list`, `team.update`, `user.update` | Done 2026-10-02. Invites/connectionStatus remain for a follow-on if needed. |
 | **DC-2** | PENDING | Transactions reads: `transactions.get`, `transactions.getById`, `transactions.getReviewCount` | Routes: `GET /transactions`, `GET /transactions/{id}`, `GET /transactions/review-count`. Preserve infinite query keys. |
 | **DC-3** | PENDING | Transactions writes used by the list/detail UI: `transactions.update`, `transactions.updateMany` (then `create` / `deleteMany` / `moveToReview` as a follow-on sub-slice if still tRPC at call sites) | Jobs/enrich side effects stay Node if already gated that way — SQL-shaped body only. |
 | **DC-4** | PENDING | Inbox reads: `inbox.get`, `inbox.getById`, `inbox.search`, `inbox.getByStatus`, `inbox.checkAttachments` | Then inbox writes used by the screen (`update`, match/ignore/delete family) in DC-4b if needed. |
@@ -154,7 +154,7 @@ Stop the autopilot loop and report once (do not invent workarounds):
 
 ## Already direct Rust (dashboard) — do not re-cut
 
-overview; identity/`team.current`; invoice defaults; notifications + status; notification settings prefs/update; categories get/getById/create/update/delete; bank accounts get/create/update/delete/currencies/getTransactionCount (+ balances when DC-0 done); tags CRUD; transactionTags create/delete; bankConnections get/reconnect (when DC-0 done).
+overview; identity/`team.current` + `team.members`/`team.list`/`team.update`; `user.update`; invoice defaults; notifications + status; notification settings prefs/update; categories get/getById/create/update/delete; bank accounts get/create/update/delete/currencies/getTransactionCount (+ balances when DC-0 done); tags CRUD; transactionTags create/delete; bankConnections get/reconnect (when DC-0 done).
 
 Façade-delegated procedures that are **not** yet `direct Rust` remain eligible for later DC rows.
 
