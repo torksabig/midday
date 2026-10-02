@@ -20,6 +20,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/bank-accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getBankAccounts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/categories": {
     parameters: {
       query?: never;
@@ -264,6 +280,55 @@ export interface components {
       id: string;
       name?: string | null;
     };
+    MiddayBankAccount: {
+      account_id: string;
+      account_reference?: string | null;
+      /** Format: double */
+      available_balance?: number | null;
+      /** Format: double */
+      balance?: number | null;
+      bank_connection?: null | components["schemas"]["MiddayBankConnection"];
+      bank_connection_id?: string | null;
+      /** Format: double */
+      base_balance?: number | null;
+      base_currency?: string | null;
+      bic?: string | null;
+      created_at: string;
+      created_by: string;
+      /** Format: double */
+      credit_limit?: number | null;
+      currency?: string | null;
+      enabled: boolean;
+      error_details?: string | null;
+      /** Format: int32 */
+      error_retries?: number | null;
+      id: string;
+      manual?: boolean | null;
+      name?: string | null;
+      routing_number?: string | null;
+      sort_code?: string | null;
+      subtype?: string | null;
+      team_id: string;
+      type?: string | null;
+      wire_routing_number?: string | null;
+    };
+    MiddayBankConnection: {
+      created_at: string;
+      enrollment_id?: string | null;
+      error_details?: string | null;
+      /** Format: int32 */
+      error_retries?: number | null;
+      expires_at?: string | null;
+      id: string;
+      institution_id: string;
+      last_accessed?: string | null;
+      logo_url?: string | null;
+      name: string;
+      provider: string;
+      reference_id?: string | null;
+      status?: string | null;
+      team_id: string;
+    };
     MiddayCategory: {
       children: components["schemas"]["MiddayCategoryChild"][];
       color?: string | null;
@@ -412,6 +477,36 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AuthenticatedViewer"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getBankAccounts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        enabled: boolean | null;
+        manual: boolean | null;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team-scoped bank accounts */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MiddayBankAccount"][];
         };
       };
       /** @description Missing, invalid, or expired Supabase session JWT */

@@ -44,7 +44,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notificationSettings.bulkUpdate` | yes | **write** · bulk channel upserts (AP-28) |
 | `notificationSettings.*` (other) | no | — |
 | `transactionCategories.get` | direct Rust | read · parent/child category tree (AP-30); dashboard calls `GET /api/v1/categories` directly and preserves the old React Query cache key |
-| `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
+| `bankAccounts.get` | direct Rust | read · `enabled`/`manual` filters; dashboard calls `GET /api/v1/bank-accounts` directly and preserves the old React Query cache key |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
 | `bankAccounts.getTransactionCount` | yes | read · tx count for delete dialog (Phase 11) |

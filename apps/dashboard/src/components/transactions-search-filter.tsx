@@ -20,6 +20,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTransactionFilterParams } from "@/hooks/use-transaction-filter-params";
 import { useTransactionFilterParamsWithPersistence } from "@/hooks/use-transaction-filter-params-with-persistence";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAccountName } from "@/utils/format";
@@ -161,10 +162,13 @@ function useFilterData(isOpen: boolean, isFocused: boolean) {
     enabled: shouldFetch || Boolean(filter.tags?.length),
   });
 
+  const bankAccountsEnabledFilter =
+    shouldFetch || Boolean(filter.accounts?.length);
   const { data: bankAccountsData } = useQuery({
-    ...trpc.bankAccounts.get.queryOptions({
-      enabled: shouldFetch || Boolean(filter.accounts?.length),
-    }),
+    ...bankAccountsQueryOptions(
+      trpc.bankAccounts.get.queryKey({ enabled: bankAccountsEnabledFilter }),
+      { enabled: bankAccountsEnabledFilter },
+    ),
   });
 
   // We want to fetch the categories data on mount

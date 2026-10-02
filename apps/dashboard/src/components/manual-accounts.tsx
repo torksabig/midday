@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { BankAccount } from "./bank-account";
 
@@ -8,7 +9,7 @@ export function ManualAccounts() {
   const trpc = useTRPC();
 
   const { data } = useSuspenseQuery(
-    trpc.bankAccounts.get.queryOptions({
+    bankAccountsQueryOptions(trpc.bankAccounts.get.queryKey({ manual: true }), {
       manual: true,
     }),
   );

@@ -33,6 +33,7 @@ import { Controller, useWatch } from "react-hook-form";
 import { SelectAccount } from "@/components/select-account";
 import { SelectCurrency } from "@/components/select-currency";
 import { useUserQuery } from "@/hooks/use-user";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 import { mappableFields, useCsvContext } from "./context";
@@ -52,7 +53,9 @@ export function FieldMapping({ currencies }: { currencies: string[] }) {
   const { mutateAsync: generateCsvMapping } = useMutation(
     trpc.transactions.generateCsvMapping.mutationOptions(),
   );
-  const { data: bankAccounts } = useQuery(trpc.bankAccounts.get.queryOptions());
+  const { data: bankAccounts } = useQuery(
+    bankAccountsQueryOptions(trpc.bankAccounts.get.queryKey()),
+  );
   // Use ref to access latest bankAccounts without triggering effect
   const bankAccountsRef = useRef(bankAccounts);
 

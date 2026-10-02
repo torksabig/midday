@@ -45,6 +45,7 @@ import { useTeamQuery } from "@/hooks/use-team";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
@@ -110,9 +111,12 @@ export function TransactionCreateForm() {
   const { data: user } = useUserQuery();
   const { data: team } = useTeamQuery();
   const { data: accounts } = useQuery(
-    trpc.bankAccounts.get.queryOptions({
-      enabled: true,
-    }),
+    bankAccountsQueryOptions(
+      trpc.bankAccounts.get.queryKey({ enabled: true }),
+      {
+        enabled: true,
+      },
+    ),
   );
 
   const { data: categories } = useQuery(

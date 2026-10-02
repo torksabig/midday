@@ -30,6 +30,7 @@ import { TransactionAttachments } from "@/components/transaction-attachments";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
 import { useUserQuery } from "@/hooks/use-user";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
@@ -46,9 +47,12 @@ export function TransactionEditForm({ transaction }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { data: user } = useUserQuery();
   const { data: accounts } = useQuery(
-    trpc.bankAccounts.get.queryOptions({
-      enabled: true,
-    }),
+    bankAccountsQueryOptions(
+      trpc.bankAccounts.get.queryKey({ enabled: true }),
+      {
+        enabled: true,
+      },
+    ),
   );
 
   const { data: categories } = useQuery(

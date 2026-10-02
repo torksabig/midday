@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ConnectedAccounts } from "@/components/connected-accounts";
-import { prefetch, trpc } from "@/trpc/server";
+import { bankAccountsServerQueryOptions } from "@/lib/rust-api/bank-accounts-server";
+import { getQueryClient, prefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
   title: "Bank Connections | Midday",
@@ -8,7 +9,12 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   prefetch(trpc.bankConnections.get.queryOptions());
-  prefetch(trpc.bankAccounts.get.queryOptions({ manual: true }));
+  void getQueryClient().prefetchQuery(
+    bankAccountsServerQueryOptions(
+      trpc.bankAccounts.get.queryKey({ manual: true }),
+      { manual: true },
+    ),
+  );
 
   return (
     <div className="space-y-12">

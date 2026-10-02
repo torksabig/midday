@@ -6,6 +6,7 @@ import type { PopoverContent } from "@midday/ui/popover";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAccountName } from "@/utils/format";
 import { TransactionBankAccount } from "./transaction-bank-account";
@@ -27,6 +28,11 @@ type Props = {
   modal?: boolean;
 };
 
+type CreatedBankAccount = {
+  id: string;
+  name: string | null;
+};
+
 export function SelectAccount({
   placeholder,
   onChange,
@@ -38,26 +44,30 @@ export function SelectAccount({
   const queryClient = useQueryClient();
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
 
-  const { data, isLoading } = useQuery(trpc.bankAccounts.get.queryOptions());
+  const { data, isLoading } = useQuery(
+    bankAccountsQueryOptions(trpc.bankAccounts.get.queryKey()),
+  );
 
   const createBankAccountMutation = useMutation(
     trpc.bankAccounts.create.mutationOptions({
       onSuccess: (data) => {
+        const createdAccount = data as CreatedBankAccount | null | undefined;
+
         queryClient.invalidateQueries({
           queryKey: trpc.bankAccounts.get.queryKey(),
         });
 
-        if (data) {
+        if (createdAccount) {
           onChange({
-            id: data.id,
-            label: data.name ?? "",
+            id: createdAccount.id,
+            label: createdAccount.name ?? "",
             logo: null,
             currency: null,
           });
 
           setSelectedItem({
-            id: data.id,
-            label: data.name ?? "",
+            id: createdAccount.id,
+            label: createdAccount.name ?? "",
             logo: null,
             currency: null,
           });
