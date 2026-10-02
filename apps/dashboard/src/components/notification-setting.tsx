@@ -3,14 +3,20 @@
 import { Checkbox } from "@midday/ui/checkbox";
 import { Label } from "@midday/ui/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type NotificationChannel,
+  type NotificationPreference,
+  updateNotificationSetting,
+} from "@/lib/rust-api/notification-settings";
 import { useTRPC } from "@/trpc/client";
+import { getAccessToken } from "@/utils/session";
 
 type Props = {
   type: string;
   name: string;
   description: string;
   settings: {
-    channel: "in_app" | "email" | "push";
+    channel: NotificationChannel;
     enabled: boolean;
   }[];
 };
@@ -24,71 +30,76 @@ export function NotificationSetting({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const updateSetting = useMutation(
-    trpc.notificationSettings.update.mutationOptions({
-      onMutate: async (variables) => {
-        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-        await queryClient.cancelQueries({
-          queryKey: trpc.notificationSettings.getAll.queryKey(),
-        });
+  const updateSetting = useMutation({
+    mutationFn: async (variables: {
+      notificationType: string;
+      channel: NotificationChannel;
+      enabled: boolean;
+    }) =>
+      updateNotificationSetting(
+        getRustApiUrl(),
+        await getAccessToken(),
+        variables,
+      ),
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({
+        queryKey: trpc.notificationSettings.getAll.queryKey(),
+      });
 
-        // Snapshot the previous value
-        const previousData = queryClient.getQueryData(
-          trpc.notificationSettings.getAll.queryKey(),
-        );
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData<NotificationPreference[]>(
+        trpc.notificationSettings.getAll.queryKey(),
+      );
 
-        // Optimistically update the cache
+      // Optimistically update the cache
+      queryClient.setQueryData<NotificationPreference[]>(
+        trpc.notificationSettings.getAll.queryKey(),
+        (old) => {
+          if (!old) return old;
+
+          return old.map((notificationType) => {
+            if (notificationType.type !== variables.notificationType) {
+              return notificationType;
+            }
+
+            return {
+              ...notificationType,
+              settings: notificationType.settings.map((setting) => {
+                if (setting.channel !== variables.channel) {
+                  return setting;
+                }
+                return {
+                  ...setting,
+                  enabled: variables.enabled,
+                };
+              }),
+            };
+          });
+        },
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousData };
+    },
+    onError: (_, __, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousData) {
         queryClient.setQueryData(
           trpc.notificationSettings.getAll.queryKey(),
-          (old) => {
-            if (!old) return old;
-
-            return old.map((notificationType) => {
-              if (notificationType.type !== variables.notificationType) {
-                return notificationType;
-              }
-
-              return {
-                ...notificationType,
-                settings: notificationType.settings.map((setting) => {
-                  if (setting.channel !== variables.channel) {
-                    return setting;
-                  }
-                  return {
-                    ...setting,
-                    enabled: variables.enabled,
-                  };
-                }),
-              };
-            });
-          },
+          context.previousData,
         );
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      queryClient.invalidateQueries({
+        queryKey: trpc.notificationSettings.getAll.queryKey(),
+      });
+    },
+  });
 
-        // Return a context object with the snapshotted value
-        return { previousData };
-      },
-      onError: (_, __, context) => {
-        // If the mutation fails, use the context returned from onMutate to roll back
-        if (context?.previousData) {
-          queryClient.setQueryData(
-            trpc.notificationSettings.getAll.queryKey(),
-            context.previousData,
-          );
-        }
-      },
-      onSettled: () => {
-        // Always refetch after error or success to ensure we have the latest data
-        queryClient.invalidateQueries({
-          queryKey: trpc.notificationSettings.getAll.queryKey(),
-        });
-      },
-    }),
-  );
-
-  const onChange = (
-    channel: "in_app" | "email" | "push",
-    newEnabled: boolean,
-  ) => {
+  const onChange = (channel: NotificationChannel, newEnabled: boolean) => {
     updateSetting.mutate({
       notificationType: type,
       channel,
@@ -96,7 +107,7 @@ export function NotificationSetting({
     });
   };
 
-  const getSettingByChannel = (channel: "in_app" | "email" | "push") => {
+  const getSettingByChannel = (channel: NotificationChannel) => {
     return settings.find((s) => s.channel === channel);
   };
 
@@ -151,4 +162,12 @@ export function NotificationSetting({
       </div>
     </div>
   );
+}
+
+function getRustApiUrl() {
+  const url = process.env.NEXT_PUBLIC_RUST_API_URL;
+  if (!url) {
+    throw new Error("NEXT_PUBLIC_RUST_API_URL is not configured");
+  }
+  return url;
 }

@@ -9,12 +9,14 @@ import {
 import { Skeleton } from "@midday/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
+import { fetchNotificationPreferences } from "@/lib/rust-api/notification-settings";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import {
   getCategoryDisplayTitle,
   getNotificationDisplayInfoWithFallback,
 } from "@/utils/notification-definitions";
+import { getAccessToken } from "@/utils/session";
 import { NotificationSetting } from "./notification-setting";
 
 export function NotificationSettingsSkeleton() {
@@ -37,9 +39,11 @@ export function NotificationSettings() {
   const t = useI18n();
   const trpc = useTRPC();
 
-  const { data: notificationTypes, isLoading } = useQuery(
-    trpc.notificationSettings.getAll.queryOptions(),
-  );
+  const { data: notificationTypes, isLoading } = useQuery({
+    queryKey: trpc.notificationSettings.getAll.queryKey(),
+    queryFn: async () =>
+      fetchNotificationPreferences(getRustApiUrl(), await getAccessToken()),
+  });
 
   if (isLoading) {
     return <NotificationSettingsSkeleton />;
@@ -147,4 +151,12 @@ export function NotificationSettings() {
       </Accordion>
     </div>
   );
+}
+
+function getRustApiUrl() {
+  const url = process.env.NEXT_PUBLIC_RUST_API_URL;
+  if (!url) {
+    throw new Error("NEXT_PUBLIC_RUST_API_URL is not configured");
+  }
+  return url;
 }

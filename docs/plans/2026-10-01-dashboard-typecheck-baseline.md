@@ -20,3 +20,10 @@ For the notifications direct-Rust slice, this targeted check returned no errors:
 ```sh
 bun run --filter=@midday/dashboard typecheck 2>&1 | rg "src/hooks/use-notifications|src/lib/rust-api/notifications" || true
 ```
+
+For the notification settings direct-Rust slice on 2026-10-02, the full error
+count was `1269` and this targeted check returned no errors:
+
+```sh
+bun run --filter=@midday/dashboard typecheck 2>&1 | rg "notification-settings|notification-setting|NotificationSettings|NotificationSetting" || true
+```

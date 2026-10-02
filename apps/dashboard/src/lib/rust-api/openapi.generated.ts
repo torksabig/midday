@@ -4,509 +4,706 @@
  */
 
 export interface paths {
-    "/api/v1/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getAuthenticatedViewer"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/v1/auth/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["health"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["getAuthenticatedViewer"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/invoices/default-settings-data": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getInvoiceDefaultSettingsData"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["health"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/invoices/default-settings-data": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getNotificationsList"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["getInvoiceDefaultSettingsData"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notification-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/notifications/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateAllNotificationStatus"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["getNotificationSettings"];
+    put: operations["upsertNotificationSetting"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notification-settings/bulk": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/notifications/{id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updateNotificationStatus"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put: operations["bulkUpdateNotificationSettings"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notification-settings/preferences": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/overview/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getOverviewSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["getNotificationPreferences"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/team/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getCurrentTeam"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["getNotificationsList"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put: operations["updateAllNotificationStatus"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/{id}/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["updateNotificationStatus"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/overview/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getOverviewSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/team/current": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getCurrentTeam"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        AuthenticatedViewer: {
-            avatarUrl?: string | null;
-            dateFormat?: string | null;
-            email?: string | null;
-            fileKey?: string | null;
-            fullName?: string | null;
-            id: string;
-            locale?: string | null;
-            team?: null | components["schemas"]["DashboardTeam"];
-            teamId?: string | null;
-            /** Format: double */
-            timeFormat?: number | null;
-            timezone?: string | null;
-            timezoneAutoSync?: boolean | null;
-            user: components["schemas"]["LegacyUser"];
-            weekStartsOnMonday?: boolean | null;
-        };
-        DashboardTeam: {
-            baseCurrency?: string | null;
-            base_currency?: string | null;
-            canceledAt?: string | null;
-            countryCode?: string | null;
-            createdAt?: string | null;
-            email?: string | null;
-            exportSettings?: null | components["schemas"]["Value"];
-            /** Format: int32 */
-            fiscalYearStartMonth?: number | null;
-            id: string;
-            inboxId?: string | null;
-            locale?: string | null;
-            logoUrl?: string | null;
-            name?: string | null;
-            plan: string;
-            stripeAccountId?: string | null;
-            stripeConnectStatus?: string | null;
-            subscriptionStatus?: string | null;
-        };
-        Health: {
-            ok: boolean;
-        };
-        InvoiceDefaultSettingsData: {
-            nextInvoiceNumber: string;
-            team: components["schemas"]["InvoiceDefaultSettingsTeam"];
-            template?: null | components["schemas"]["Value"];
-            user: components["schemas"]["InvoiceDefaultSettingsUser"];
-        };
-        InvoiceDefaultSettingsTeam: {
-            baseCurrency?: string | null;
-            id: string;
-        };
-        InvoiceDefaultSettingsUser: {
-            dateFormat?: string | null;
-            id: string;
-            locale?: string | null;
-            timezone?: string | null;
-        };
-        LegacyUser: {
-            email?: string | null;
-            id: string;
-            name?: string | null;
-        };
-        NotificationActivity: {
-            createdAt: string;
-            groupId?: string | null;
-            id: string;
-            lastUsedAt?: string | null;
-            metadata: components["schemas"]["Value"];
-            /** Format: int32 */
-            priority: number;
-            source: string;
-            status: string;
-            teamId: string;
-            type: string;
-            userId?: string | null;
-        };
-        NotificationsListMeta: {
-            cursor?: string | null;
-            hasNextPage: boolean;
-            hasPreviousPage: boolean;
-        };
-        NotificationsListResponse: {
-            data: components["schemas"]["NotificationActivity"][];
-            meta: components["schemas"]["NotificationsListMeta"];
-        };
-        OverviewCashBalance: {
-            /** Format: int64 */
-            account_count: number;
-            currency: string;
-            /** Format: double */
-            total_balance: number;
-        };
-        OverviewInboxPending: {
-            /** Format: int64 */
-            count: number;
-        };
-        OverviewOpenInvoices: {
-            /** Format: int64 */
-            count: number;
-            currency: string;
-            /** Format: double */
-            total_amount: number;
-        };
-        OverviewSummary: {
-            cash_balance: components["schemas"]["OverviewCashBalance"];
-            inbox_pending: components["schemas"]["OverviewInboxPending"];
-            open_invoices: components["schemas"]["OverviewOpenInvoices"];
-            /** Format: int64 */
-            runway: number;
-            transactions_to_review: components["schemas"]["OverviewTransactionsToReview"];
-            unbilled_time: components["schemas"]["OverviewUnbilledTime"];
-        };
-        OverviewTransactionsToReview: {
-            /** Format: int64 */
-            count: number;
-        };
-        OverviewUnbilledTime: {
-            currency: string;
-            /** Format: int64 */
-            project_count: number;
-            /** Format: double */
-            total_amount: number;
-            /** Format: int64 */
-            total_duration: number;
-        };
-        UpdateNotificationStatusBody: {
-            status: string;
-        };
-        Value: unknown;
+  schemas: {
+    AuthenticatedViewer: {
+      avatarUrl?: string | null;
+      dateFormat?: string | null;
+      email?: string | null;
+      fileKey?: string | null;
+      fullName?: string | null;
+      id: string;
+      locale?: string | null;
+      team?: null | components["schemas"]["DashboardTeam"];
+      teamId?: string | null;
+      /** Format: double */
+      timeFormat?: number | null;
+      timezone?: string | null;
+      timezoneAutoSync?: boolean | null;
+      user: components["schemas"]["LegacyUser"];
+      weekStartsOnMonday?: boolean | null;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    BulkUpdateNotificationSettingsBody: {
+      updates: components["schemas"]["UpsertNotificationSettingBody"][];
+    };
+    DashboardTeam: {
+      baseCurrency?: string | null;
+      base_currency?: string | null;
+      canceledAt?: string | null;
+      countryCode?: string | null;
+      createdAt?: string | null;
+      email?: string | null;
+      exportSettings?: null | components["schemas"]["Value"];
+      /** Format: int32 */
+      fiscalYearStartMonth?: number | null;
+      id: string;
+      inboxId?: string | null;
+      locale?: string | null;
+      logoUrl?: string | null;
+      name?: string | null;
+      plan: string;
+      stripeAccountId?: string | null;
+      stripeConnectStatus?: string | null;
+      subscriptionStatus?: string | null;
+    };
+    Health: {
+      ok: boolean;
+    };
+    InvoiceDefaultSettingsData: {
+      nextInvoiceNumber: string;
+      team: components["schemas"]["InvoiceDefaultSettingsTeam"];
+      template?: null | components["schemas"]["Value"];
+      user: components["schemas"]["InvoiceDefaultSettingsUser"];
+    };
+    InvoiceDefaultSettingsTeam: {
+      baseCurrency?: string | null;
+      id: string;
+    };
+    InvoiceDefaultSettingsUser: {
+      dateFormat?: string | null;
+      id: string;
+      locale?: string | null;
+      timezone?: string | null;
+    };
+    LegacyUser: {
+      email?: string | null;
+      id: string;
+      name?: string | null;
+    };
+    NotificationActivity: {
+      createdAt: string;
+      groupId?: string | null;
+      id: string;
+      lastUsedAt?: string | null;
+      metadata: components["schemas"]["Value"];
+      /** Format: int32 */
+      priority: number;
+      source: string;
+      status: string;
+      teamId: string;
+      type: string;
+      userId?: string | null;
+    };
+    NotificationPreference: {
+      category: string;
+      channels: string[];
+      /** Format: int32 */
+      order: number;
+      settings: components["schemas"]["NotificationPreferenceChannelSetting"][];
+      type: string;
+    };
+    NotificationPreferenceChannelSetting: {
+      channel: string;
+      enabled: boolean;
+    };
+    NotificationSetting: {
+      channel: string;
+      createdAt: string;
+      enabled: boolean;
+      id: string;
+      notificationType: string;
+      teamId: string;
+      updatedAt: string;
+      userId: string;
+    };
+    NotificationsListMeta: {
+      cursor?: string | null;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+    NotificationsListResponse: {
+      data: components["schemas"]["NotificationActivity"][];
+      meta: components["schemas"]["NotificationsListMeta"];
+    };
+    OverviewCashBalance: {
+      /** Format: int64 */
+      account_count: number;
+      currency: string;
+      /** Format: double */
+      total_balance: number;
+    };
+    OverviewInboxPending: {
+      /** Format: int64 */
+      count: number;
+    };
+    OverviewOpenInvoices: {
+      /** Format: int64 */
+      count: number;
+      currency: string;
+      /** Format: double */
+      total_amount: number;
+    };
+    OverviewSummary: {
+      cash_balance: components["schemas"]["OverviewCashBalance"];
+      inbox_pending: components["schemas"]["OverviewInboxPending"];
+      open_invoices: components["schemas"]["OverviewOpenInvoices"];
+      /** Format: int64 */
+      runway: number;
+      transactions_to_review: components["schemas"]["OverviewTransactionsToReview"];
+      unbilled_time: components["schemas"]["OverviewUnbilledTime"];
+    };
+    OverviewTransactionsToReview: {
+      /** Format: int64 */
+      count: number;
+    };
+    OverviewUnbilledTime: {
+      currency: string;
+      /** Format: int64 */
+      project_count: number;
+      /** Format: double */
+      total_amount: number;
+      /** Format: int64 */
+      total_duration: number;
+    };
+    UpdateNotificationStatusBody: {
+      status: string;
+    };
+    UpsertNotificationSettingBody: {
+      channel: string;
+      enabled: boolean;
+      notificationType: string;
+    };
+    Value: unknown;
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getAuthenticatedViewer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dashboard-compatible authenticated user and active team */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthenticatedViewer"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  getAuthenticatedViewer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    health: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Dashboard-compatible authenticated user and active team */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description API is available */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Health"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["AuthenticatedViewer"];
         };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
-    getInvoiceDefaultSettingsData: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Raw invoice default settings data for dashboard normalization */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  health: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    getNotificationsList: {
-        parameters: {
-            query?: {
-                cursor?: string;
-                pageSize?: number;
-                status?: string[];
-                user_id?: string;
-                userId?: string;
-                priority?: number;
-                maxPriority?: number;
-                createdAfter?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description API is available */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Team-scoped notification activity feed */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationsListResponse"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          "application/json": components["schemas"]["Health"];
         };
+      };
     };
-    updateAllNotificationStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateNotificationStatusBody"];
-            };
-        };
-        responses: {
-            /** @description Updated notification activities */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationActivity"][];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  getInvoiceDefaultSettingsData: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    updateNotificationStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Activity id */
-                id: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Raw invoice default settings data for dashboard normalization */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateNotificationStatusBody"];
-            };
+        content: {
+          "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
         };
-        responses: {
-            /** @description Updated notification activity */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationActivity"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Notification not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
+        content?: never;
+      };
     };
-    getOverviewSummary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Team-scoped overview metrics */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OverviewSummary"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  getNotificationSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        notificationType: string | null;
+        channel: string | null;
+      };
+      cookie?: never;
     };
-    getCurrentTeam: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description User/team notification settings */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Dashboard-compatible active team */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardTeam"];
-                };
-            };
-            /** @description Missing, invalid, or expired Supabase session JWT */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+        content: {
+          "application/json": components["schemas"]["NotificationSetting"][];
         };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
     };
+  };
+  upsertNotificationSetting: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpsertNotificationSettingBody"];
+      };
+    };
+    responses: {
+      /** @description Upserted notification setting */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSetting"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  bulkUpdateNotificationSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkUpdateNotificationSettingsBody"];
+      };
+    };
+    responses: {
+      /** @description Upserted notification settings */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSetting"][];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getNotificationPreferences: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Notification settings catalog merged with user preferences */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationPreference"][];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getNotificationsList: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        pageSize?: number;
+        status?: string[];
+        user_id?: string;
+        userId?: string;
+        priority?: number;
+        maxPriority?: number;
+        createdAfter?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team-scoped notification activity feed */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationsListResponse"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateAllNotificationStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateNotificationStatusBody"];
+      };
+    };
+    responses: {
+      /** @description Updated notification activities */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationActivity"][];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateNotificationStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Activity id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateNotificationStatusBody"];
+      };
+    };
+    responses: {
+      /** @description Updated notification activity */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationActivity"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Notification not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getOverviewSummary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team-scoped overview metrics */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OverviewSummary"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getCurrentTeam: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Dashboard-compatible active team */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DashboardTeam"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
 }
