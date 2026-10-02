@@ -20,6 +20,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTransactionFilterParams } from "@/hooks/use-transaction-filter-params";
 import { useTransactionFilterParamsWithPersistence } from "@/hooks/use-transaction-filter-params-with-persistence";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
+import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAccountName } from "@/utils/format";
 import { AmountRange } from "./amount-range";
@@ -38,6 +39,7 @@ type StatusFilter =
 type AttachmentFilter = "include" | "exclude";
 type RecurringFilter = "all" | "weekly" | "monthly" | "annually";
 type ManualFilter = "include" | "exclude";
+type FilterTag = { id: string; name: string };
 
 interface BaseFilterItem {
   name: string;
@@ -167,11 +169,13 @@ function useFilterData(isOpen: boolean, isFocused: boolean) {
 
   // We want to fetch the categories data on mount
   const { data: categoriesData } = useQuery({
-    ...trpc.transactionCategories.get.queryOptions(),
+    ...transactionCategoriesQueryOptions(
+      trpc.transactionCategories.get.queryKey(),
+    ),
   });
 
   return {
-    tags: tagsData?.map((tag) => ({
+    tags: (tagsData as FilterTag[] | undefined)?.map((tag) => ({
       id: tag.id,
       name: tag.name,
     })),

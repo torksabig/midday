@@ -45,6 +45,7 @@ import { useTeamQuery } from "@/hooks/use-team";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -115,7 +116,9 @@ export function TransactionCreateForm() {
   );
 
   const { data: categories } = useQuery(
-    trpc.transactionCategories.get.queryOptions(),
+    transactionCategoriesQueryOptions(
+      trpc.transactionCategories.get.queryKey(),
+    ),
   );
 
   const createTransactionMutation = useMutation(

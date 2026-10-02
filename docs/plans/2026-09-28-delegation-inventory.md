@@ -43,6 +43,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notificationSettings.update` | direct Rust | **write** · single channel upsert (AP-28); dashboard settings screen calls `PUT /api/v1/notification-settings` directly |
 | `notificationSettings.bulkUpdate` | yes | **write** · bulk channel upserts (AP-28) |
 | `notificationSettings.*` (other) | no | — |
+| `transactionCategories.get` | direct Rust | read · parent/child category tree (AP-30); dashboard calls `GET /api/v1/categories` directly and preserves the old React Query cache key |
 | `bankAccounts.get` | yes | read · `enabled`/`manual` filters |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
 | `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |

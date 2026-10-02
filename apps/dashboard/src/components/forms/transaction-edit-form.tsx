@@ -30,6 +30,7 @@ import { TransactionAttachments } from "@/components/transaction-attachments";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
 import { useUserQuery } from "@/hooks/use-user";
+import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
 type Transaction = RouterOutputs["transactions"]["getById"];
@@ -51,7 +52,9 @@ export function TransactionEditForm({ transaction }: Props) {
   );
 
   const { data: categories } = useQuery(
-    trpc.transactionCategories.get.queryOptions(),
+    transactionCategoriesQueryOptions(
+      trpc.transactionCategories.get.queryKey(),
+    ),
   );
 
   const { updateCategory } = useUpdateTransactionCategory();

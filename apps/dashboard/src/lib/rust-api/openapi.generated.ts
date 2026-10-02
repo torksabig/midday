@@ -20,6 +20,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["getTransactionCategories"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/health": {
     parameters: {
       query?: never;
@@ -248,6 +264,35 @@ export interface components {
       id: string;
       name?: string | null;
     };
+    MiddayCategory: {
+      children: components["schemas"]["MiddayCategoryChild"][];
+      color?: string | null;
+      description?: string | null;
+      excluded?: boolean | null;
+      id: string;
+      name: string;
+      parent_id?: string | null;
+      slug?: string | null;
+      system?: boolean | null;
+      /** Format: double */
+      tax_rate?: number | null;
+      tax_reporting_code?: string | null;
+      tax_type?: string | null;
+    };
+    MiddayCategoryChild: {
+      color?: string | null;
+      description?: string | null;
+      excluded?: boolean | null;
+      id: string;
+      name: string;
+      parent_id?: string | null;
+      slug?: string | null;
+      system?: boolean | null;
+      /** Format: double */
+      tax_rate?: number | null;
+      tax_reporting_code?: string | null;
+      tax_type?: string | null;
+    };
     NotificationActivity: {
       createdAt: string;
       groupId?: string | null;
@@ -367,6 +412,33 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["AuthenticatedViewer"];
+        };
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  getTransactionCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team-scoped transaction category tree */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MiddayCategory"][];
         };
       };
       /** @description Missing, invalid, or expired Supabase session JWT */

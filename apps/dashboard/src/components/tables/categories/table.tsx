@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-table";
 import React from "react";
 import { useCategoryParams } from "@/hooks/use-category-params";
+import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import {
   type CategoriesTableMeta,
@@ -35,12 +36,13 @@ export function DataTable() {
   >(new Set());
 
   const trpc = useTRPC();
+  const categoriesQueryOptions = transactionCategoriesQueryOptions(
+    trpc.transactionCategories.get.queryKey(),
+  );
   const queryClient = useQueryClient();
   const { setParams } = useCategoryParams();
 
-  const { data } = useSuspenseQuery(
-    trpc.transactionCategories.get.queryOptions(),
-  );
+  const { data } = useSuspenseQuery(categoriesQueryOptions);
 
   const deleteCategoryMutation = useMutation(
     trpc.transactionCategories.delete.mutationOptions({

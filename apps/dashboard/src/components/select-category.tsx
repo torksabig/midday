@@ -1,6 +1,7 @@
 import { ComboboxDropdown } from "@midday/ui/combobox-dropdown";
 import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { getColorFromName } from "@/utils/categories";
 import { CategoryColor } from "./category";
@@ -18,6 +19,13 @@ type Props = {
   onChange: (selected: Selected) => void;
   headless?: boolean;
   hideLoading?: boolean;
+};
+
+type CreatedCategory = {
+  id: string;
+  name: string;
+  color?: string | null;
+  slug?: string | null;
 };
 
 function transformCategory(category: {
@@ -83,7 +91,9 @@ export function SelectCategory({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery(
-    trpc.transactionCategories.get.queryOptions(),
+    transactionCategoriesQueryOptions(
+      trpc.transactionCategories.get.queryKey(),
+    ),
   );
 
   // Transform and flatten categories to include children
@@ -97,12 +107,13 @@ export function SelectCategory({
           queryKey: trpc.transactionCategories.get.queryKey(),
         });
 
-        if (data) {
+        const created = data as CreatedCategory | null | undefined;
+        if (created) {
           onChange({
-            id: data.id,
-            name: data.name,
-            color: data.color,
-            slug: data.slug!,
+            id: created.id,
+            name: created.name,
+            color: created.color,
+            slug: created.slug!,
           });
         }
       },

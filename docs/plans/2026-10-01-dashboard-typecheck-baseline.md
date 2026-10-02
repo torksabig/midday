@@ -27,3 +27,10 @@ count was `1269` and this targeted check returned no errors:
 ```sh
 bun run --filter=@midday/dashboard typecheck 2>&1 | rg "notification-settings|notification-setting|NotificationSettings|NotificationSetting" || true
 ```
+
+For the transaction categories direct-Rust slice on 2026-10-02, the full error
+count was `1263` and this targeted check returned no errors:
+
+```sh
+bun run --filter=@midday/dashboard typecheck 2>&1 | rg "transaction-categories|select-category|select-parent-category|categories/table|transaction-create-form|transaction-edit-form|transactions-search-filter|transactions/categories/page" || true
+```
