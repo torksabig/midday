@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { components } from "./openapi.generated";
 import {
   buildDocumentsListQuery,
+  normalizeDocumentCheckAttachments,
   normalizeDocumentListItem,
   normalizeDocumentsList,
   normalizeRelatedDocument,
@@ -118,5 +119,23 @@ test("normalizes document detail and related items", () => {
     tag: "ops",
     title: "Related",
     summary: "Similar",
+  });
+});
+
+test("normalizes document check-attachments payload", () => {
+  expect(
+    normalizeDocumentCheckAttachments({
+      hasAttachments: true,
+      attachments: [
+        { id: "att-1", transactionId: "tx-1", name: "receipt.pdf" },
+      ],
+      documentName: "vault/doc.pdf",
+    }),
+  ).toEqual({
+    hasAttachments: true,
+    attachments: [
+      { id: "att-1", transactionId: "tx-1", name: "receipt.pdf" },
+    ],
+    documentName: "vault/doc.pdf",
   });
 });

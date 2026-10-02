@@ -10,9 +10,16 @@ import {
   type Customer,
   type CustomersList,
   type CustomersListParams,
+  cancelCustomerEnrichment,
+  clearCustomerEnrichment,
+  deleteCustomer,
   fetchCustomerById,
   fetchCustomerInvoiceSummary,
   fetchCustomersList,
+  toggleCustomerPortal,
+  type ToggleCustomerPortalInput,
+  upsertCustomer,
+  type UpsertCustomerInput,
 } from "./customers";
 
 function getRustApiUrl() {
@@ -76,4 +83,33 @@ export function customerInvoiceSummaryQueryOptions(
       fetchCustomerInvoiceSummary(getRustApiUrl(), await getAccessToken(), id),
     enabled: options.enabled,
   });
+}
+
+export async function upsertCustomerFromRust(input: UpsertCustomerInput) {
+  return upsertCustomer(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteCustomerFromRust(input: { id: string } | string) {
+  const id = typeof input === "string" ? input : input.id;
+  return deleteCustomer(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function toggleCustomerPortalFromRust(
+  input: ToggleCustomerPortalInput,
+) {
+  return toggleCustomerPortal(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function cancelCustomerEnrichmentFromRust(
+  input: { id: string } | string,
+) {
+  const id = typeof input === "string" ? input : input.id;
+  return cancelCustomerEnrichment(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function clearCustomerEnrichmentFromRust(
+  input: { id: string } | string,
+) {
+  const id = typeof input === "string" ? input : input.id;
+  return clearCustomerEnrichment(getRustApiUrl(), await getAccessToken(), id);
 }

@@ -285,7 +285,23 @@ export interface paths {
         };
         get: operations["getCustomers"];
         put?: never;
-        post?: never;
+        post: operations["upsertCustomer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/toggle-portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["toggleCustomerPortal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -302,6 +318,38 @@ export interface paths {
         get: operations["getCustomerById"];
         put?: never;
         post?: never;
+        delete: operations["deleteCustomer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{id}/cancel-enrichment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelCustomerEnrichment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/customers/{id}/clear-enrichment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["clearCustomerEnrichment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -396,6 +444,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getDocumentById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/{id}/check-attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["checkDocumentAttachments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -676,6 +740,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["draftInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["duplicateInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/metrics/inactive-clients-count": {
         parameters: {
             query?: never;
@@ -780,9 +876,9 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getInvoiceById"];
-        put?: never;
+        put: operations["updateInvoice"];
         post?: never;
-        delete?: never;
+        delete: operations["deleteInvoice"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1332,6 +1428,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/delete-many": {
         parameters: {
             query?: never;
@@ -1667,6 +1779,29 @@ export interface components {
         CreateTagBody: {
             name: string;
         };
+        CreateTransactionAttachmentBody: {
+            name: string;
+            path: string[];
+            /** Format: double */
+            size: number;
+            type: string;
+        };
+        CreateTransactionBody: {
+            /** Format: double */
+            amount: number;
+            assignedId?: string | null;
+            attachments?: components["schemas"]["CreateTransactionAttachmentBody"][] | null;
+            bankAccountId: string;
+            categorySlug?: string | null;
+            currency: string;
+            date: string;
+            name: string;
+            note?: string | null;
+        };
+        CustomerTagInputSchema: {
+            id: string;
+            name?: string | null;
+        };
         CustomersListMeta: {
             cursor?: string | null;
             has_next_page: boolean;
@@ -1754,6 +1889,10 @@ export interface components {
         DocumentsListResponse: {
             data: components["schemas"]["DocumentListRow"][];
             meta: components["schemas"]["DocumentsListMeta"];
+        };
+        DuplicateInvoiceBody: {
+            id: string;
+            invoiceNumber: string;
         };
         GlobalSearchRow: {
             created_at: string;
@@ -2201,6 +2340,10 @@ export interface components {
             plan?: string | null;
             subscription_status?: string | null;
         };
+        TogglePortalBody: {
+            customerId: string;
+            enabled: boolean;
+        };
         TopRevenueClientResponse: {
             currency: string;
             customer_id: string;
@@ -2462,6 +2605,25 @@ export interface components {
             timezone?: string | null;
             timezoneAutoSync?: boolean | null;
             weekStartsOnMonday?: boolean | null;
+        };
+        UpsertCustomerBody: {
+            addressLine1?: string | null;
+            addressLine2?: string | null;
+            billingEmail?: string | null;
+            city?: string | null;
+            contact?: string | null;
+            country?: string | null;
+            countryCode?: string | null;
+            email: string;
+            id?: string | null;
+            name: string;
+            note?: string | null;
+            phone?: string | null;
+            state?: string | null;
+            tags?: components["schemas"]["CustomerTagInputSchema"][] | null;
+            vatNumber?: string | null;
+            website?: string | null;
+            zip?: string | null;
         };
         UpsertNotificationSettingBody: {
             channel: string;
@@ -3349,6 +3511,75 @@ export interface operations {
             };
         };
     };
+    upsertCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertCustomerBody"];
+            };
+        };
+        responses: {
+            /** @description Upserted customer detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    toggleCustomerPortal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TogglePortalBody"];
+            };
+        };
+        responses: {
+            /** @description Updated portal flags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getCustomerById: {
         parameters: {
             query?: never;
@@ -3379,6 +3610,103 @@ export interface operations {
             };
             /** @description Customer not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted customer detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cancelCustomerEnrichment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrichment cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    clearCustomerEnrichment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Customer id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrichment fields cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3646,6 +3974,36 @@ export interface operations {
             };
             /** @description Document not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkDocumentAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Document id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document attachment linkage check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4319,6 +4677,75 @@ export interface operations {
             };
         };
     };
+    draftInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Draft invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    duplicateInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateInvoiceBody"];
+            };
+        };
+        responses: {
+            /** @description Duplicated draft invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Source invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInvoiceInactiveClientsCount: {
         parameters: {
             query?: never;
@@ -4496,6 +4923,84 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Updated invoice detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteInvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted invoice id */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5921,6 +6426,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TxListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTransactionBody"];
+            };
+        };
+        responses: {
+            /** @description Created transaction detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */

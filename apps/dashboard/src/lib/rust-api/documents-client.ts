@@ -7,10 +7,12 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type DocumentCheckAttachments,
   type DocumentDetail,
   type DocumentsList,
   type DocumentsListParams,
   fetchDocumentById,
+  fetchDocumentCheckAttachments,
   fetchDocumentsList,
   fetchRelatedDocuments,
   type RelatedDocument,
@@ -75,6 +77,23 @@ export function relatedDocumentsQueryOptions(
         await getAccessToken(),
         id,
         pageSize,
+      ),
+    enabled: options.enabled,
+  });
+}
+
+export function documentCheckAttachmentsQueryOptions(
+  queryKey: QueryKey,
+  id: string,
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions<DocumentCheckAttachments>({
+    queryKey,
+    queryFn: async () =>
+      fetchDocumentCheckAttachments(
+        getRustApiUrl(),
+        await getAccessToken(),
+        id,
       ),
     enabled: options.enabled,
   });

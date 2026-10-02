@@ -15,6 +15,7 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { documentCheckAttachmentsQueryOptions } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -37,8 +38,9 @@ export function DeleteVaultFileDialog({
 
   // Check if document has transaction attachments
   const { data: attachmentData } = useQuery(
-    trpc.documents.checkAttachments.queryOptions(
-      { id },
+    documentCheckAttachmentsQueryOptions(
+      trpc.documents.checkAttachments.queryKey({ id }),
+      id,
       {
         enabled: isOpen, // Only run when dialog is open
       },

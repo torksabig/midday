@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  createTransaction,
+  type CreateTransactionInput,
   deleteTransactionsMany,
   type DeleteTransactionsManyInput,
   fetchSearchTransactionMatch,
@@ -95,6 +97,10 @@ export async function moveTransactionToReviewFromRust(
   input: Parameters<typeof moveTransactionToReview>[2],
 ) {
   return moveTransactionToReview(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function createTransactionFromRust(input: CreateTransactionInput) {
+  return createTransaction(getRustApiUrl(), await getAccessToken(), input);
 }
 
 export function similarTransactionsQueryOptions(

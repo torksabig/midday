@@ -47,6 +47,7 @@ import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
 import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
+import { createTransactionFromRust } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -125,15 +126,14 @@ export function TransactionCreateForm() {
     ),
   );
 
-  const createTransactionMutation = useMutation(
-    trpc.transactions.create.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.TransactionCreated.name);
-        invalidateTransactionQueries();
-        setParams(null);
-      },
-    }),
-  );
+  const createTransactionMutation = useMutation({
+    mutationFn: createTransactionFromRust,
+    onSuccess: () => {
+      track(LogEvents.TransactionCreated.name);
+      invalidateTransactionQueries();
+      setParams(null);
+    },
+  });
 
   const form = useZodForm(formSchema, {
     defaultValues: {

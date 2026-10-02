@@ -163,3 +163,175 @@ export async function fetchCustomerInvoiceSummary(
 
   return normalizeCustomerInvoiceSummary(await response.json());
 }
+
+function omitUndefined(
+  input: Record<string, unknown>,
+  skipKeys: string[] = [],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (skipKeys.includes(key) || value === undefined) continue;
+    body[key] = value;
+  }
+  return body;
+}
+
+export type UpsertCustomerInput = {
+  id?: string;
+  name: string;
+  email: string;
+  billingEmail?: string | null;
+  country?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  note?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  contact?: string | null;
+  vatNumber?: string | null;
+  countryCode?: string | null;
+  tags?: Array<{ id: string; name?: string | null }>;
+};
+
+export type ToggleCustomerPortalInput = {
+  customerId: string;
+  enabled: boolean;
+};
+
+export async function upsertCustomer(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpsertCustomerInput,
+): Promise<Customer> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/customers`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(omitUndefined(input as Record<string, unknown>)),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeCustomerDetail(await response.json());
+}
+
+export async function deleteCustomer(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<Customer> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/customers/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeCustomerDetail(await response.json());
+}
+
+export async function toggleCustomerPortal(
+  baseUrl: string,
+  accessToken: string | null,
+  input: ToggleCustomerPortalInput,
+): Promise<Record<string, unknown>> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/customers/toggle-portal`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      customerId: input.customerId,
+      enabled: input.enabled,
+    }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as Record<string, unknown>;
+}
+
+export async function cancelCustomerEnrichment(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<{ cancelled: boolean }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/customers/${encodeURIComponent(id)}/cancel-enrichment`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as { cancelled: boolean };
+}
+
+export async function clearCustomerEnrichment(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<{ cleared: boolean }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/customers/${encodeURIComponent(id)}/clear-enrichment`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as { cleared: boolean };
+}

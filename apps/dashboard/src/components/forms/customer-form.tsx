@@ -32,6 +32,7 @@ import { z } from "zod/v3";
 import { useCustomerParams } from "@/hooks/use-customer-params";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { upsertCustomerFromRust } from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { CountrySelector } from "../country-selector";
 import type { AddressDetails } from "../search-address-input";
@@ -115,40 +116,39 @@ export function CustomerForm({ data }: Props) {
   const { setParams: setInvoiceParams, invoiceType } = useInvoiceParams();
   const fromInvoice = invoiceType === "create" || invoiceType === "edit";
 
-  const upsertCustomerMutation = useMutation(
-    trpc.customers.upsert.mutationOptions({
-      onSuccess: (data) => {
-        if (!isEdit) {
-          track(LogEvents.CustomerCreated.name);
-        }
+  const upsertCustomerMutation = useMutation({
+    mutationFn: upsertCustomerFromRust,
+    onSuccess: (data) => {
+      if (!isEdit) {
+        track(LogEvents.CustomerCreated.name);
+      }
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.customers.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.customers.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.customers.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.customers.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.customers.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.customers.getById.queryKey(),
+      });
 
-        // Invalidate global search
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
+      // Invalidate global search
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
 
-        // Close the customer form
-        setCustomerParams(null);
+      // Close the customer form
+      setCustomerParams(null);
 
-        // If the customer is created from an invoice, set the customer as the selected customer
-        if (data && fromInvoice) {
-          setInvoiceParams({ selectedCustomerId: data.id });
-        }
-      },
-    }),
-  );
+      // If the customer is created from an invoice, set the customer as the selected customer
+      if (data && fromInvoice) {
+        setInvoiceParams({ selectedCustomerId: data.id });
+      }
+    },
+  });
 
   const form = useZodForm(formSchema, {
     defaultValues: {

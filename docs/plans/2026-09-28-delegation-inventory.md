@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update + user.invites, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers) plus update/match/confirmMatch/declineMatch/unmatch + blocklist get/create/delete, documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, search.global, and team invites/connectionStatus + accept/decline/deleteInvite + updateMember/deleteMember. Hybrid stays on tRPC: `inbox.delete`/`deleteMany` (storage remove), `team.invite` (Trigger email), gated decrypt, `bankConnections.delete` (Trigger teardown). |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update + user.invites, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview/create + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers) plus update/match/confirmMatch/declineMatch/unmatch + blocklist get/create/delete, documents get/getById/getRelatedDocuments/checkAttachments, customers get/getById/getInvoiceSummary plus upsert/delete/togglePortal/cancelEnrichment/clearEnrichment, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount plus draft/update/delete/duplicate, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, search.global, and team invites/connectionStatus + accept/decline/deleteInvite + updateMember/deleteMember. Hybrid stays on tRPC: `inbox.delete`/`deleteMany` (storage remove), `team.invite` (Trigger email), `customers.enrich` (Trigger job), `invoice.create` (send/schedule Trigger), `documents.delete` (vault storage), `documents.reprocessDocument` (process-document job), gated decrypt, `bankConnections.delete` (Trigger teardown). |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -94,7 +94,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.getReviewCount` | direct Rust | read · ready-for-export count; dashboard calls `GET /api/v1/transactions/review-count` directly |
 | `transactions.update` | direct Rust | **write** · partial PATCH-style PUT on Midday Postgres; dashboard calls `PUT /api/v1/transactions/{id}` directly |
 | `transactions.updateMany` | direct Rust | **write** · bulk PATCH + tag insert; dashboard calls `POST /api/v1/transactions/update-many` directly |
-| `transactions.create` | yes | **write** · manual insert; enrich/match jobs stay Node (AP-54); still tRPC at create-form call site |
+| `transactions.create` | direct Rust | **write** · manual insert; enrich/match jobs deferred (were Node AP-54); dashboard create form calls `POST /api/v1/transactions/create` directly |
 | `transactions.moveToReview` | direct Rust | **write** · un-export + sync delete (AP-48); dashboard calls `POST /api/v1/transactions/{id}/move-to-review` directly |
 | `transactions.getSimilarTransactions` | direct Rust | read · pg_trgm candidates (AP-49); dashboard calls `GET /api/v1/transactions/similar` directly |
 | `transactions.searchTransactionMatch` | direct Rust | read · FTS/pg_trgm match candidates (AP-53); dashboard calls `GET /api/v1/transactions/search-match` directly (snake_case fields preserved) |
@@ -121,9 +121,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/documents` directly and preserves tRPC infinite query keys |
 | `documents.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/documents/{id}` directly (`-` + `filePath` for path-only opens) |
 | `documents.getRelatedDocuments` | direct Rust | read · `match_similar_documents_by_title()`; dashboard calls `GET /api/v1/documents/{id}/related` directly |
-| `documents.checkAttachments` | yes | read · path token attachment check (AP-25) |
-| `documents.delete` | yes | **write** · DB + attachment cleanup (AP-26); storage remove in Node |
-| `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) |
+| `documents.checkAttachments` | direct Rust | read · path token attachment check (AP-25); dashboard calls `GET /api/v1/documents/{id}/check-attachments` directly |
+| `documents.delete` | yes | **write** · DB + attachment cleanup (AP-26); **hybrid — storage remove stays on tRPC** |
+| `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) — **hybrid, keep on tRPC** |
 | `documents.processDocument` | yes | **write** · unsupported bulk status SQL; process-document jobs stay Node (AP-60) |
 | `documents.*` (other) | no | signed URLs (storage only, no SQL) |
 | `documentTags.get` | direct Rust | read · vault tag list (Phase 10); dashboard calls `GET /api/v1/document-tags` directly |
@@ -133,15 +133,15 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documentTagAssignments.delete` | direct Rust | **write** · unassign tag (AP-23); dashboard calls `DELETE /api/v1/document-tag-assignments` directly |
 | `customers.get` | direct Rust | read · list (Phase 4); dashboard infinite/list queries call `GET /api/v1/customers` directly and preserve tRPC query keys |
 | `customers.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/customers/{id}` directly |
-| `customers.delete` | yes | **write** · fetch-then-delete (AP-24) |
-| `customers.upsert` | yes | **write** · DB upsert + tags (AP-28); enrichment job stays in Node |
+| `customers.delete` | direct Rust | **write** · fetch-then-delete (AP-24); dashboard calls `DELETE /api/v1/customers/{id}` directly |
+| `customers.upsert` | direct Rust | **write** · DB upsert + tags (AP-28); auto enrich-customer Trigger deferred (was Node); dashboard calls `POST /api/v1/customers` directly |
 | `customers.getInvoiceSummary` | direct Rust | read · FX rollup per customer (AP-48); dashboard calls `GET /api/v1/customers/{id}/invoice-summary` directly |
-| `customers.cancelEnrichment` | yes | **write** · clear enrichment_status (AP-48) |
-| `customers.clearEnrichment` | yes | **write** · null enrichment fields (AP-48) |
-| `customers.togglePortal` | yes | **write** · portal_enabled + portal_id (AP-49) |
+| `customers.cancelEnrichment` | direct Rust | **write** · clear enrichment_status (AP-48); dashboard calls `POST /api/v1/customers/{id}/cancel-enrichment` |
+| `customers.clearEnrichment` | direct Rust | **write** · null enrichment fields (AP-48); dashboard calls `POST /api/v1/customers/{id}/clear-enrichment` |
+| `customers.togglePortal` | direct Rust | **write** · portal_enabled + portal_id (AP-49); dashboard calls `POST /api/v1/customers/toggle-portal` |
 | `customers.getByPortalId` | yes | public read · portal customer + summary (AP-50) |
 | `customers.getPortalInvoices` | yes | public read · portal invoice list (AP-50) |
-| `customers.enrich` | yes | **write** · set enrichment pending; enrich job stays Node (AP-59) |
+| `customers.enrich` | yes | **write** · set enrichment pending; enrich job stays Node (AP-59) — **hybrid, keep on tRPC** |
 | `customers.*` (other) | no | — |
 | `invoice.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/invoices` directly and preserves tRPC infinite query keys |
 | `invoice.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/invoices/{id}` directly |
@@ -155,13 +155,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.averageInvoiceSize` | yes | read · 30d by currency (Phase 10) |
 | `invoice.topRevenueClient` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/top-revenue-client` directly |
 | `invoice.newCustomersCount` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/new-customers-count` directly |
-| `invoice.update` | yes | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); no activity feed for paid/canceled |
-| `invoice.draft` | yes | **write** · upsert draft row (AP-29); `getNextInvoiceNumber` stays in Node |
-| `invoice.delete` | yes | **write** · draft/canceled only (AP-32) |
-| `invoice.duplicate` | yes | **write** · copy as draft; number gen stays Node (AP-33) |
+| `invoice.update` | direct Rust | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); dashboard calls `PUT /api/v1/invoices/{id}` directly |
+| `invoice.draft` | direct Rust | **write** · upsert draft row (AP-29); dashboard calls `POST /api/v1/invoices/draft` (form supplies invoiceNumber) |
+| `invoice.delete` | direct Rust | **write** · draft/canceled only (AP-32); dashboard calls `DELETE /api/v1/invoices/{id}` |
+| `invoice.duplicate` | direct Rust | **write** · copy as draft; next number from Rust default-settings then `POST /api/v1/invoices/duplicate` |
 | `invoice.updateSchedule` | yes | **write** · DB after Trigger job create in Node (AP-33) |
 | `invoice.cancelSchedule` | yes | **write** · DB after Trigger cancel in Node (AP-33) |
-| `invoice.create` | yes | **write** · status/schedule DB after Trigger in Node (AP-55) |
+| `invoice.create` | yes | **write** · status/schedule DB after Trigger in Node (AP-55) — **hybrid, keep on tRPC** (send/PDF/schedule) |
 | `invoice.createFromTracker` | yes | **write** · tracker compose Node + draft insert (AP-55) |
 | `invoice.defaultSettings` | yes | read · Postgres bundle; geo/uuid/date compose stays Node (AP-58) |
 | `invoice.remind` | yes | **write** · reminderSentAt SQL; send-reminder job stays Node (AP-59) |

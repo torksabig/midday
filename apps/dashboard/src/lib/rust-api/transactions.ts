@@ -433,6 +433,28 @@ export type MoveTransactionToReviewInput =
   | string
   | { transactionId: string };
 
+export type CreateTransactionAttachmentInput = {
+  type: string;
+  name: string;
+  size: number;
+  path: string[];
+};
+
+export type CreateTransactionInput = {
+  name: string;
+  amount: number;
+  currency: string;
+  date: string;
+  bankAccountId: string;
+  assignedId?: string | null;
+  categorySlug?: string | null;
+  note?: string | null;
+  attachments?: CreateTransactionAttachmentInput[];
+  // UI-only field stripped before POST
+  transactionType?: string;
+  internal?: boolean;
+};
+
 function omitUndefined(
   input: Record<string, unknown>,
   skipKeys: string[] = [],
@@ -689,4 +711,38 @@ export async function fetchSearchTransactionMatch(
   const payload = await response.json();
   // Keep snake_case — matches Drizzle/`searchTransactionMatch` and inbox UI.
   return (Array.isArray(payload) ? payload : []) as SearchTransactionMatchRow[];
+}
+
+export async function createTransaction(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreateTransactionInput,
+): Promise<TransactionDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const body = omitUndefined(input as Record<string, unknown>, [
+    "transactionType",
+    "internal",
+  ]);
+
+  const response = await fetch(`${baseUrl}/api/v1/transactions/create`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeTransactionDetail(
+    (await response.json()) as RawTxDetailItem,
+  );
 }

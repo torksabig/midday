@@ -239,3 +239,74 @@ export async function fetchRelatedDocuments(
   const payload = (await response.json()) as RawRelatedDocumentItem[];
   return payload.map(normalizeRelatedDocument);
 }
+
+export type DocumentCheckAttachments = {
+  hasAttachments: boolean;
+  attachments: Array<{
+    id: string;
+    transactionId?: string | null;
+    name?: string | null;
+  }>;
+  documentName?: string | null;
+};
+
+export function normalizeDocumentCheckAttachments(
+  payload: unknown,
+): DocumentCheckAttachments {
+  const row = deepCamelCaseKeys(payload) as Record<string, unknown>;
+  const attachments = Array.isArray(row.attachments)
+    ? (row.attachments as Array<Record<string, unknown>>).map((a) => ({
+        id: String(a.id),
+        transactionId: (a.transactionId as string | null | undefined) ?? null,
+        name: (a.name as string | null | undefined) ?? null,
+      }))
+    : [];
+
+  return {
+    hasAttachments: Boolean(row.hasAttachments),
+    attachments,
+    ...(row.documentName != null
+      ? { documentName: row.documentName as string | null }
+      : {}),
+  };
+}
+
+function deepCamelCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(deepCamelCaseKeys);
+  }
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+        key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()),
+        deepCamelCaseKeys(nested),
+      ]),
+    );
+  }
+  return value;
+}
+
+export async function fetchDocumentCheckAttachments(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<DocumentCheckAttachments> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/documents/${encodeURIComponent(id)}/check-attachments`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeDocumentCheckAttachments(await response.json());
+}

@@ -48,8 +48,11 @@ import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
 import {
+  cancelCustomerEnrichmentFromRust,
+  clearCustomerEnrichmentFromRust,
   customerByIdQueryOptions,
   customerInvoiceSummaryQueryOptions,
+  toggleCustomerPortalFromRust,
 } from "@/lib/rust-api/customers-client";
 import { invoicesInfiniteQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
@@ -113,23 +116,22 @@ export function CustomerDetails() {
   const isOpen = customerId !== null;
 
   // Toggle portal mutation
-  const togglePortalMutation = useMutation(
-    trpc.customers.togglePortal.mutationOptions({
-      onSuccess: () => {
-        // Invalidate customer query to refresh portal data
-        queryClient.invalidateQueries({
-          queryKey: trpc.customers.getById.queryKey({ id: customerId! }),
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Failed to update customer portal",
-          description: "Please try again.",
-          duration: 2500,
-        });
-      },
-    }),
-  );
+  const togglePortalMutation = useMutation({
+    mutationFn: toggleCustomerPortalFromRust,
+    onSuccess: () => {
+      // Invalidate customer query to refresh portal data
+      queryClient.invalidateQueries({
+        queryKey: trpc.customers.getById.queryKey({ id: customerId! }),
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to update customer portal",
+        description: "Please try again.",
+        duration: 2500,
+      });
+    },
+  });
 
   const {
     data: customer,
@@ -180,7 +182,7 @@ export function CustomerDetails() {
 
   // Mutation for cancelling enrichment
   const cancelEnrichmentMutation = useMutation({
-    ...trpc.customers.cancelEnrichment.mutationOptions(),
+    mutationFn: cancelCustomerEnrichmentFromRust,
     onSuccess: () => {
       refetch();
     },
@@ -188,7 +190,7 @@ export function CustomerDetails() {
 
   // Mutation for clearing enrichment data
   const clearEnrichmentMutation = useMutation({
-    ...trpc.customers.clearEnrichment.mutationOptions(),
+    mutationFn: clearCustomerEnrichmentFromRust,
     onSuccess: () => {
       refetch();
     },

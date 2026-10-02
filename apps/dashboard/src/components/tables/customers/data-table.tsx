@@ -26,7 +26,7 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
-import { customersInfiniteQueryOptions } from "@/lib/rust-api/customers-client";
+import { customersInfiniteQueryOptions, deleteCustomerFromRust } from "@/lib/rust-api/customers-client";
 import { useCustomersStore } from "@/store/customers";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS, SUMMARY_GRID_HEIGHTS } from "@/utils/table-configs";
@@ -87,14 +87,13 @@ export function DataTable({ initialSettings }: Props) {
       ),
     );
 
-  const deleteCustomerMutation = useMutation(
-    trpc.customers.delete.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.CustomerDeleted.name);
-        refetch();
-      },
-    }),
-  );
+  const deleteCustomerMutation = useMutation({
+    mutationFn: deleteCustomerFromRust,
+    onSuccess: () => {
+      track(LogEvents.CustomerDeleted.name);
+      refetch();
+    },
+  });
 
   const enrichCustomerMutation = useMutation(
     trpc.customers.enrich.mutationOptions({

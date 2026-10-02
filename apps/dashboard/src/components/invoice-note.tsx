@@ -4,6 +4,7 @@ import { Textarea } from "@midday/ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
+import { updateInvoiceFromRust } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -17,15 +18,14 @@ export function InvoiceNote({ id, defaultValue }: Props) {
   const [value, setValue] = useState(defaultValue);
   const [debouncedValue] = useDebounceValue(value, 500);
 
-  const updateInvoiceMutation = useMutation(
-    trpc.invoice.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey({ id }),
-        });
-      },
-    }),
-  );
+  const updateInvoiceMutation = useMutation({
+    mutationFn: updateInvoiceFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey({ id }),
+      });
+    },
+  });
 
   const handleUpdate = useCallback(() => {
     if (debouncedValue !== defaultValue) {

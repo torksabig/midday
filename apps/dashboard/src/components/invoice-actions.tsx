@@ -34,6 +34,10 @@ import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import {
+  deleteInvoiceFromRust,
+  updateInvoiceFromRust,
+} from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -79,58 +83,56 @@ export function InvoiceActions({
       : null,
   );
 
-  const updateInvoiceMutation = useMutation(
-    trpc.invoice.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const updateInvoiceMutation = useMutation({
+    mutationFn: updateInvoiceFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
+    },
+  });
 
-  const deleteInvoiceMutation = useMutation(
-    trpc.invoice.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: deleteInvoiceFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        // Widget uses regular query
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
+      // Widget uses regular query
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: invoiceDefaultSettingsQueryKey,
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: invoiceDefaultSettingsQueryKey,
+      });
+    },
+  });
 
   const sendReminderMutation = useMutation(
     trpc.invoice.remind.mutationOptions({

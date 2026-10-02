@@ -1,4 +1,5 @@
 import type { RouterOutputs } from "@api/trpc/routers/_app";
+import { fetchInvoiceDefaultSettings } from "./invoice-default-settings";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
@@ -375,4 +376,157 @@ export async function fetchInvoiceSummary(
   return normalizeInvoiceSummary(
     (await response.json()) as RawInvoiceSummaryResponse,
   );
+}
+
+function omitUndefined(
+  input: Record<string, unknown>,
+  skipKeys: string[] = [],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (skipKeys.includes(key) || value === undefined) continue;
+    body[key] = value;
+  }
+  return body;
+}
+
+export type DraftInvoiceInput = Record<string, unknown>;
+
+export type UpdateInvoiceInput = {
+  id: string;
+  status?: string;
+  paidAt?: string | null;
+  internalNote?: string | null;
+  scheduledAt?: string | null;
+  scheduledJobId?: string | null;
+  reminderSentAt?: string | null;
+};
+
+export type DuplicateInvoiceInput = {
+  id: string;
+  invoiceNumber?: string;
+};
+
+export async function draftInvoice(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DraftInvoiceInput,
+): Promise<Invoice> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/invoices/draft`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInvoiceDetail(await response.json());
+}
+
+export async function updateInvoice(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpdateInvoiceInput,
+): Promise<Invoice> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const { id, ...fields } = input;
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(omitUndefined(fields as Record<string, unknown>)),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInvoiceDetail(await response.json());
+}
+
+export async function deleteInvoice(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<{ id: string }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as { id: string };
+}
+
+export async function duplicateInvoice(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DuplicateInvoiceInput,
+): Promise<Invoice> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  let invoiceNumber = input.invoiceNumber;
+  if (!invoiceNumber) {
+    const settings = await fetchInvoiceDefaultSettings(baseUrl, accessToken);
+    invoiceNumber = settings.invoiceNumber;
+  }
+
+  if (!invoiceNumber) {
+    throw new RustApiError(400, "Missing next invoice number for duplicate");
+  }
+
+  const response = await fetch(`${baseUrl}/api/v1/invoices/duplicate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: input.id,
+      invoiceNumber,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInvoiceDetail(await response.json());
 }

@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type DraftInvoiceInput,
+  type DuplicateInvoiceInput,
   type Invoice,
   type InvoicePaymentStatus,
   type InvoiceSummary,
@@ -15,6 +17,10 @@ import {
   type InvoicesListParams,
   type MostActiveClient,
   type TopRevenueClient,
+  type UpdateInvoiceInput,
+  deleteInvoice,
+  draftInvoice,
+  duplicateInvoice,
   fetchInvoiceById,
   fetchInvoiceInactiveClientsCount,
   fetchInvoiceMostActiveClient,
@@ -23,6 +29,7 @@ import {
   fetchInvoiceSummary,
   fetchInvoiceTopRevenueClient,
   fetchInvoicesList,
+  updateInvoice,
 } from "./invoices";
 
 function getRustApiUrl() {
@@ -113,4 +120,21 @@ export function invoiceNewCustomersCountQueryOptions(queryKey: QueryKey) {
     queryFn: async () =>
       fetchInvoiceNewCustomersCount(getRustApiUrl(), await getAccessToken()),
   });
+}
+
+export async function draftInvoiceFromRust(input: DraftInvoiceInput) {
+  return draftInvoice(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function updateInvoiceFromRust(input: UpdateInvoiceInput) {
+  return updateInvoice(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteInvoiceFromRust(input: { id: string } | string) {
+  const id = typeof input === "string" ? input : input.id;
+  return deleteInvoice(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function duplicateInvoiceFromRust(input: DuplicateInvoiceInput) {
+  return duplicateInvoice(getRustApiUrl(), await getAccessToken(), input);
 }

@@ -14,6 +14,7 @@ import { useDropzone } from "react-dropzone";
 import { useUpload } from "@/hooks/use-upload";
 import { useUserQuery } from "@/hooks/use-user";
 import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
+import { updateInvoiceFromRust } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 import { type Attachment, AttachmentItem } from "./attachment-item";
@@ -98,15 +99,14 @@ export function TransactionAttachments({
     }),
   );
 
-  const updateInvoiceMutation = useMutation(
-    trpc.invoice.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const updateInvoiceMutation = useMutation({
+    mutationFn: updateInvoiceFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
+    },
+  });
 
   // Polling query for tax information
   const { data: pollingTransaction } = useQuery({

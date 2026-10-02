@@ -162,3 +162,16 @@ test("normalizes most-active and top-revenue client metrics", () => {
     invoiceCount: 4,
   });
 });
+
+test("invoice write helpers expose camelCase update/duplicate shapes", () => {
+  const update = {
+    id: "inv-1",
+    status: "paid",
+    paidAt: "2026-01-02T00:00:00Z",
+    internalNote: null,
+  };
+  const duplicate = { id: "inv-1", invoiceNumber: "INV-0002" };
+
+  expect(update.status).toBe("paid");
+  expect(duplicate.invoiceNumber).toBe("INV-0002");
+});

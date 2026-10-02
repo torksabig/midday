@@ -23,6 +23,10 @@ import { useDebounceValue } from "usehooks-ts";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import {
+  draftInvoiceFromRust,
+  updateInvoiceFromRust,
+} from "@/lib/rust-api/invoices-client";
 import { useInvoiceEditorStore } from "@/store/invoice-editor";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
@@ -62,23 +66,22 @@ export function Form() {
     mutationKey: trpc.invoiceTemplate.upsert.mutationKey(),
   });
 
-  const draftInvoiceMutation = useMutation(
-    trpc.invoice.draft.mutationOptions({
-      onSuccess: (data) => {
-        if (!invoiceId && data?.id) {
-          setParams({ invoiceType: "edit", invoiceId: data.id });
-        }
+  const draftInvoiceMutation = useMutation({
+    mutationFn: draftInvoiceFromRust,
+    onSuccess: (data) => {
+      if (!invoiceId && data?.id) {
+        setParams({ invoiceType: "edit", invoiceId: data.id });
+      }
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
+    },
+  });
 
   const createInvoiceMutation = useMutation(
     trpc.invoice.create.mutationOptions({
@@ -172,17 +175,16 @@ export function Form() {
   );
 
   // Mutation to update invoice status (used for scheduling future-dated recurring invoices)
-  const updateInvoiceMutation = useMutation(
-    trpc.invoice.update.mutationOptions({
-      onError: () => {
-        toast({
-          title: "Scheduling Failed",
-          description:
-            "The recurring series was created, but the invoice could not be scheduled. Please try again.",
-        });
-      },
-    }),
-  );
+  const updateInvoiceMutation = useMutation({
+    mutationFn: updateInvoiceFromRust,
+    onError: () => {
+      toast({
+        title: "Scheduling Failed",
+        description:
+          "The recurring series was created, but the invoice could not be scheduled. Please try again.",
+      });
+    },
+  });
 
   // Only watch the fields that are used in the upsert action
   const formValues = useWatch({

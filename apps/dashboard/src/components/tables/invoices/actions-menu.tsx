@@ -35,6 +35,11 @@ import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import {
+  deleteInvoiceFromRust,
+  duplicateInvoiceFromRust,
+  updateInvoiceFromRust,
+} from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import type { Invoice } from "./columns";
@@ -71,87 +76,84 @@ export function ActionsMenu({ row }: Props) {
     row.invoiceRecurringId &&
     (row.recurring?.status === "active" || row.recurring?.status === "paused");
 
-  const deleteInvoiceMutation = useMutation(
-    trpc.invoice.delete.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.InvoiceDeleted.name);
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: deleteInvoiceFromRust,
+    onSuccess: () => {
+      track(LogEvents.InvoiceDeleted.name);
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        // Widget uses regular query
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
+      // Widget uses regular query
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: invoiceDefaultSettingsQueryKey,
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: invoiceDefaultSettingsQueryKey,
+      });
+    },
+  });
 
-  const updateInvoiceMutation = useMutation(
-    trpc.invoice.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const updateInvoiceMutation = useMutation({
+    mutationFn: updateInvoiceFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        // Widget uses regular query
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
+      // Widget uses regular query
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
+    },
+  });
 
-  const duplicateInvoiceMutation = useMutation(
-    trpc.invoice.duplicate.mutationOptions({
-      onSuccess: (data) => {
-        track(LogEvents.InvoiceDuplicated.name);
-        const duplicated = data as { id?: string } | null | undefined;
-        if (duplicated?.id) {
-          setParams({
-            invoiceId: duplicated.id,
-            invoiceType: "edit",
-          });
-        }
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
+  const duplicateInvoiceMutation = useMutation({
+    mutationFn: duplicateInvoiceFromRust,
+    onSuccess: (data) => {
+      track(LogEvents.InvoiceDuplicated.name);
+      const duplicated = data as { id?: string } | null | undefined;
+      if (duplicated?.id) {
+        setParams({
+          invoiceId: duplicated.id,
+          invoiceType: "edit",
         });
+      }
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
+    },
+  });
 
   const cancelScheduleMutation = useMutation(
     trpc.invoice.cancelSchedule.mutationOptions({

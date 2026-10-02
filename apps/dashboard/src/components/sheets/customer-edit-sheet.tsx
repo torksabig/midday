@@ -21,7 +21,10 @@ import { Icons } from "@midday/ui/icons";
 import { Sheet, SheetContent, SheetHeader } from "@midday/ui/sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCustomerParams } from "@/hooks/use-customer-params";
-import { customerByIdQueryOptions } from "@/lib/rust-api/customers-client";
+import {
+  customerByIdQueryOptions,
+  deleteCustomerFromRust,
+} from "@/lib/rust-api/customers-client";
 import { useTRPC } from "@/trpc/client";
 import { CustomerForm } from "../forms/customer-form";
 
@@ -52,16 +55,15 @@ export function CustomerEditSheet() {
     },
   });
 
-  const deleteCustomerMutation = useMutation(
-    trpc.customers.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.customers.get.infiniteQueryKey(),
-        });
-        setParams(null);
-      },
-    }),
-  );
+  const deleteCustomerMutation = useMutation({
+    mutationFn: deleteCustomerFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.customers.get.infiniteQueryKey(),
+      });
+      setParams(null);
+    },
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={() => setParams(null)}>

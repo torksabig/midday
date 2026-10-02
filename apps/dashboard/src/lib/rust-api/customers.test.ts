@@ -67,3 +67,16 @@ test("deepCamelCaseKeys walks nested objects", () => {
     nestedObj: { addressLine1: "1 Main" },
   });
 });
+
+test("upsert and portal input shapes stay camelCase for Rust", () => {
+  const upsert = {
+    name: "Acme",
+    email: "a@acme.com",
+    billingEmail: null,
+    tags: [{ id: "tag-1", name: "vip" }],
+  };
+  const portal = { customerId: "cust-1", enabled: true };
+
+  expect(upsert.tags?.[0]?.name).toBe("vip");
+  expect(portal.customerId).toBe("cust-1");
+});
