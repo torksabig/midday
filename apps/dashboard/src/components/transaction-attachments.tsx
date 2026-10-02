@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useUpload } from "@/hooks/use-upload";
 import { useUserQuery } from "@/hooks/use-user";
+import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 import { type Attachment, AttachmentItem } from "./attachment-item";
@@ -109,8 +110,11 @@ export function TransactionAttachments({
 
   // Polling query for tax information
   const { data: pollingTransaction } = useQuery({
-    ...trpc.transactions.getById.queryOptions({ id }),
-    enabled: pollingForTax,
+    ...transactionByIdQueryOptions(
+      trpc.transactions.getById.queryKey({ id }),
+      id,
+      { enabled: pollingForTax },
+    ),
     refetchInterval: pollingForTax ? 1000 : false,
   });
 
@@ -258,7 +262,10 @@ export function TransactionAttachments({
       try {
         // Fetch transaction to get the date
         const transactionData = await queryClient.fetchQuery(
-          trpc.transactions.getById.queryOptions({ id }),
+          transactionByIdQueryOptions(
+            trpc.transactions.getById.queryKey({ id }),
+            id,
+          ),
         );
 
         if (!transactionData?.date) {

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSortParams } from "@/hooks/use-sort-params";
+import { transactionsInfiniteQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 
 /**
@@ -11,18 +12,18 @@ export function useReviewTransactions() {
   const trpc = useTRPC();
   const { params } = useSortParams();
 
+  const filter = {
+    // Review is a strict queue and does not apply user filters.
+    sort: params.sort,
+    fulfilled: true,
+    exported: false,
+    pageSize: 10000,
+  };
+
   const query = useInfiniteQuery(
-    trpc.transactions.get.infiniteQueryOptions(
-      {
-        // Review is a strict queue and does not apply user filters.
-        sort: params.sort,
-        fulfilled: true,
-        exported: false,
-        pageSize: 10000,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+    transactionsInfiniteQueryOptions(
+      trpc.transactions.get.infiniteQueryKey(filter),
+      filter,
     ),
   );
 

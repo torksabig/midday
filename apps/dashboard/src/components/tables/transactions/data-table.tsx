@@ -35,6 +35,7 @@ import { useTransactionTab } from "@/hooks/use-transaction-tab";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
 import { useUploadProcessingToast } from "@/hooks/use-upload-processing-toast";
 import { useUserQuery } from "@/hooks/use-user";
+import { transactionsInfiniteQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useExportStore } from "@/store/export";
 import {
   type TransactionTab,
@@ -142,11 +143,9 @@ export function DataTable({ initialSettings, initialTab }: Props) {
     };
   }, [filter, deferredSearch, params.sort, isReviewTab, hasFilters]);
 
-  const infiniteQueryOptions = trpc.transactions.get.infiniteQueryOptions(
+  const infiniteQueryOptions = transactionsInfiniteQueryOptions(
+    trpc.transactions.get.infiniteQueryKey(queryFilter),
     queryFilter,
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
   );
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =

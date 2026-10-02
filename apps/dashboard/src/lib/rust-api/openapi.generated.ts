@@ -436,6 +436,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/review-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionsReviewCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/user": {
         parameters: {
             query?: never;
@@ -890,6 +938,130 @@ export interface components {
             tagId: string;
             teamId: string;
             transactionId: string;
+        };
+        TxDetailItem: {
+            account?: null | components["schemas"]["TxListAccount"];
+            /** Format: double */
+            amount: number;
+            assigned?: null | components["schemas"]["TxListAssigned"];
+            attachments: Record<string, never>[];
+            /** Format: double */
+            base_amount?: number | null;
+            base_currency?: string | null;
+            category?: null | components["schemas"]["TxListCategory"];
+            counterparty_name?: string | null;
+            created_at: string;
+            currency: string;
+            date: string;
+            description?: string | null;
+            enrichment_completed: boolean;
+            export_error_code?: string | null;
+            export_provider?: string | null;
+            exported_at?: string | null;
+            frequency?: string | null;
+            has_export_error: boolean;
+            has_pending_suggestion: boolean;
+            id: string;
+            internal: boolean;
+            is_exported: boolean;
+            is_fulfilled: boolean;
+            manual: boolean;
+            method: string;
+            name: string;
+            note?: string | null;
+            recurring?: boolean | null;
+            status: string;
+            suggestion: components["schemas"]["TxDetailSuggestion"];
+            tags: Record<string, never>[];
+            /** Format: double */
+            tax_amount?: number | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_type?: string | null;
+        };
+        TxDetailSuggestion: {
+            /** Format: double */
+            confidence_score?: number | null;
+            /** Format: double */
+            document_amount?: number | null;
+            document_currency?: string | null;
+            document_name?: string | null;
+            document_path?: string | null;
+            inbox_id?: string | null;
+            suggestion_id?: string | null;
+        };
+        TxListAccount: {
+            connection?: null | components["schemas"]["TxListAccountConnection"];
+            currency: string;
+            id: string;
+            name: string;
+        };
+        TxListAccountConnection: {
+            id: string;
+            logo_url?: string | null;
+            name?: string | null;
+        };
+        TxListAssigned: {
+            avatar_url?: string | null;
+            full_name?: string | null;
+            id: string;
+        };
+        TxListCategory: {
+            color?: string | null;
+            id: string;
+            name: string;
+            slug: string;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_type?: string | null;
+        };
+        TxListItem: {
+            account?: null | components["schemas"]["TxListAccount"];
+            /** Format: double */
+            amount: number;
+            assigned?: null | components["schemas"]["TxListAssigned"];
+            attachments: Record<string, never>[];
+            /** Format: double */
+            base_amount?: number | null;
+            base_currency?: string | null;
+            category?: null | components["schemas"]["TxListCategory"];
+            counterparty_name?: string | null;
+            created_at: string;
+            currency: string;
+            date: string;
+            description?: string | null;
+            enrichment_completed: boolean;
+            export_error_code?: string | null;
+            export_provider?: string | null;
+            exported_at?: string | null;
+            frequency?: string | null;
+            has_export_error: boolean;
+            has_pending_suggestion: boolean;
+            id: string;
+            internal: boolean;
+            is_exported: boolean;
+            is_fulfilled: boolean;
+            manual: boolean;
+            method: string;
+            name: string;
+            note?: string | null;
+            recurring?: boolean | null;
+            status: string;
+            tags: Record<string, never>[];
+            /** Format: double */
+            tax_amount?: number | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_type?: string | null;
+        };
+        TxListMeta: {
+            cursor?: string | null;
+            has_next_page: boolean;
+            has_previous_page: boolean;
+        };
+        TxListResponse: {
+            data: components["schemas"]["TxListItem"][];
+            meta: components["schemas"]["TxListMeta"];
         };
         UpdateBankAccountBody: {
             /** Format: double */
@@ -2219,6 +2391,117 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTransactions: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string;
+                pageSize?: number;
+                sort?: string[];
+                statuses?: string[];
+                start?: string;
+                end?: string;
+                categories?: string[];
+                accounts?: string[];
+                tags?: string[];
+                exported?: boolean;
+                fulfilled?: boolean;
+                assignees?: string[];
+                attachments?: string;
+                recurring?: string[];
+                amountRange?: number[];
+                amount?: string[];
+                type?: string;
+                manual?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated team transactions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TxListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTransactionsReviewCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ready-for-export review count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTransactionById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transaction detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TxDetailItem"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transaction not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

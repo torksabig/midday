@@ -17,6 +17,10 @@ import { loadTransactionTab } from "@/hooks/use-transaction-tab";
 import { tagsServerQueryOptions } from "@/lib/rust-api/tags-server";
 import { teamMembersServerQueryOptions } from "@/lib/rust-api/team-server";
 import {
+  transactionsReviewCountServerQueryOptions,
+  transactionsServerInfiniteQueryOptions,
+} from "@/lib/rust-api/transactions-server";
+import {
   batchPrefetch,
   getQueryClient,
   HydrateClient,
@@ -68,18 +72,22 @@ export default async function Transactions(props: Props) {
 
   batchPrefetch([
     // Transaction data for both tabs
-    trpc.transactions.get.infiniteQueryOptions(allTabFilter, {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    }),
-    trpc.transactions.get.infiniteQueryOptions(reviewTabFilter, {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    }),
-    trpc.transactions.getReviewCount.queryOptions(),
+    transactionsServerInfiniteQueryOptions(
+      trpc.transactions.get.infiniteQueryKey(allTabFilter),
+      allTabFilter,
+    ),
+    transactionsServerInfiniteQueryOptions(
+      trpc.transactions.get.infiniteQueryKey(reviewTabFilter),
+      reviewTabFilter,
+    ),
+    transactionsReviewCountServerQueryOptions(
+      trpc.transactions.getReviewCount.queryKey(),
+    ),
     // Shared data used by table rows (assign user)
     teamMembersServerQueryOptions(trpc.team.members.queryKey()),
     // Apps for export bar (accounting providers)
     trpc.apps.get.queryOptions(),
-  ]);
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
     <HydrateClient>

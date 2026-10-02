@@ -4,6 +4,7 @@ import { ScrollArea } from "@midday/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@midday/ui/sheet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
+import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionEditForm } from "../forms/transaction-edit-form";
 
@@ -15,8 +16,11 @@ export function TransactionEditSheet() {
   const isOpen = Boolean(editTransaction);
 
   const { data: transaction } = useQuery({
-    ...trpc.transactions.getById.queryOptions({ id: editTransaction! }),
-    enabled: isOpen && Boolean(editTransaction),
+    ...transactionByIdQueryOptions(
+      trpc.transactions.getById.queryKey({ id: editTransaction! }),
+      editTransaction!,
+      { enabled: isOpen && Boolean(editTransaction) },
+    ),
     placeholderData: () => {
       const pages = queryClient
         .getQueriesData({ queryKey: trpc.transactions.get.infiniteQueryKey() })

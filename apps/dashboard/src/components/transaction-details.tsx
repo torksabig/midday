@@ -32,6 +32,7 @@ import {
   createTransactionTagFromRust,
   deleteTransactionTagFromRust,
 } from "@/lib/rust-api/transaction-tags-client";
+import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { AssignUser } from "./assign-user";
 import { FormatAmount } from "./format-amount";
@@ -60,9 +61,14 @@ export function TransactionDetails() {
   });
 
   const { data, isLoading } = useQuery({
-    ...trpc.transactions.getById.queryOptions({ id: transactionId! }),
-    enabled: Boolean(transactionId),
-    staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+    ...transactionByIdQueryOptions(
+      trpc.transactions.getById.queryKey({ id: transactionId! }),
+      transactionId!,
+      {
+        enabled: Boolean(transactionId),
+        staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+      },
+    ),
     // Use placeholderData instead of initialData to show cached list data while fetching
     // This ensures React Query always fetches fresh data (including suggestion details)
     // while still providing immediate UI feedback from the list cache
@@ -376,9 +382,16 @@ export function TransactionDetails() {
           </Label>
 
           <SelectCategory
-            id={transactionId}
-            // @ts-expect-error
-            selected={data?.category ?? undefined}
+            selected={
+              data?.category
+                ? {
+                    id: data.category.id,
+                    name: data.category.name,
+                    color: data.category.color,
+                    slug: data.category.slug,
+                  }
+                : undefined
+            }
             onChange={async (category) => {
               if (category && data?.id && data?.name) {
                 await updateCategory(data.id, data.name, {
