@@ -6,7 +6,10 @@ import type { PopoverContent } from "@midday/ui/popover";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
+import {
+  bankAccountsQueryOptions,
+  createBankAccountFromRust,
+} from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAccountName } from "@/utils/format";
 import { TransactionBankAccount } from "./transaction-bank-account";
@@ -48,33 +51,32 @@ export function SelectAccount({
     bankAccountsQueryOptions(trpc.bankAccounts.get.queryKey()),
   );
 
-  const createBankAccountMutation = useMutation(
-    trpc.bankAccounts.create.mutationOptions({
-      onSuccess: (data) => {
-        const createdAccount = data as CreatedBankAccount | null | undefined;
+  const createBankAccountMutation = useMutation({
+    mutationFn: createBankAccountFromRust,
+    onSuccess: (data) => {
+      const createdAccount = data as CreatedBankAccount | null | undefined;
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankAccounts.get.queryKey(),
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankAccounts.get.queryKey(),
+      });
+
+      if (createdAccount) {
+        onChange({
+          id: createdAccount.id,
+          label: createdAccount.name ?? "",
+          logo: null,
+          currency: null,
         });
 
-        if (createdAccount) {
-          onChange({
-            id: createdAccount.id,
-            label: createdAccount.name ?? "",
-            logo: null,
-            currency: null,
-          });
-
-          setSelectedItem({
-            id: createdAccount.id,
-            label: createdAccount.name ?? "",
-            logo: null,
-            currency: null,
-          });
-        }
-      },
-    }),
-  );
+        setSelectedItem({
+          id: createdAccount.id,
+          label: createdAccount.name ?? "",
+          logo: null,
+          currency: null,
+        });
+      }
+    },
+  });
 
   useEffect(() => {
     if (value && data) {

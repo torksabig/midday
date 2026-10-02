@@ -21,7 +21,10 @@ import { Icons } from "@midday/ui/icons";
 import { Sheet, SheetContent, SheetHeader } from "@midday/ui/sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCategoryParams } from "@/hooks/use-category-params";
-import { deleteTransactionCategoryFromRust } from "@/lib/rust-api/transaction-categories-client";
+import {
+  deleteTransactionCategoryFromRust,
+  transactionCategoryByIdQueryOptions,
+} from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { CategoryEditForm } from "../forms/category-edit-form";
 
@@ -32,25 +35,20 @@ export function CategoryEditSheet() {
 
   const isOpen = Boolean(categoryId);
 
-  const { data: category } = useQuery(
-    trpc.transactionCategories.getById.queryOptions(
-      { id: categoryId! },
-      {
-        enabled: isOpen,
-        placeholderData: () => {
-          const pages = queryClient
-            .getQueriesData({
-              queryKey: trpc.transactionCategories.get.queryKey(),
-            })
-            // @ts-expect-error
-            .flatMap(([, data]) => data?.pages ?? [])
-            .flatMap((page) => page.data ?? []);
-
-          return pages.find((d) => d.id === categoryId);
-        },
-      },
+  const { data: category } = useQuery({
+    ...transactionCategoryByIdQueryOptions(
+      trpc.transactionCategories.getById.queryKey({ id: categoryId! }),
+      categoryId!,
+      { enabled: isOpen },
     ),
-  );
+    placeholderData: () => {
+      const cached = queryClient.getQueryData(
+        trpc.transactionCategories.get.queryKey(),
+      ) as Array<{ id: string }> | undefined;
+
+      return cached?.find((d) => d.id === categoryId);
+    },
+  });
 
   const deleteCategoryMutation = useMutation({
     mutationFn: deleteTransactionCategoryFromRust,

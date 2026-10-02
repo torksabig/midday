@@ -11,6 +11,7 @@ import {
 } from "@midday/ui/dropdown-menu";
 import { Icons } from "@midday/ui/icons";
 import { useQuery } from "@tanstack/react-query";
+import { bankAccountCurrenciesQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 
 interface MetricsSettingsProps {
@@ -26,7 +27,7 @@ export function MetricsSettings({
 }: MetricsSettingsProps) {
   const trpc = useTRPC();
   const { data: currencies } = useQuery(
-    trpc.bankAccounts.currencies.queryOptions(),
+    bankAccountCurrenciesQueryOptions(trpc.bankAccounts.currencies.queryKey()),
   );
 
   // Get unique currencies from bank accounts

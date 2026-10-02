@@ -4,8 +4,18 @@ import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
   type BankAccount,
+  type BankAccountCurrency,
   type BankAccountsListParams,
+  type BankAccountTransactionCount,
+  type CreateBankAccountInput,
+  createBankAccount,
+  type DeleteBankAccountInput,
+  deleteBankAccount,
+  fetchBankAccountCurrencies,
   fetchBankAccounts,
+  fetchBankAccountTransactionCount,
+  type UpdateBankAccountInput,
+  updateBankAccount,
 } from "./bank-accounts";
 
 function getRustApiUrl() {
@@ -23,6 +33,22 @@ async function fetchBrowserBankAccounts(
   return fetchBankAccounts(getRustApiUrl(), await getAccessToken(), params);
 }
 
+async function fetchBrowserBankAccountCurrencies(): Promise<
+  BankAccountCurrency[]
+> {
+  return fetchBankAccountCurrencies(getRustApiUrl(), await getAccessToken());
+}
+
+async function fetchBrowserBankAccountTransactionCount(
+  id: string,
+): Promise<BankAccountTransactionCount> {
+  return fetchBankAccountTransactionCount(
+    getRustApiUrl(),
+    await getAccessToken(),
+    id,
+  );
+}
+
 export function bankAccountsQueryOptions(
   queryKey: QueryKey,
   params: BankAccountsListParams = {},
@@ -31,4 +57,35 @@ export function bankAccountsQueryOptions(
     queryKey,
     queryFn: () => fetchBrowserBankAccounts(params),
   });
+}
+
+export function bankAccountCurrenciesQueryOptions(queryKey: QueryKey) {
+  return queryOptions<BankAccountCurrency[]>({
+    queryKey,
+    queryFn: fetchBrowserBankAccountCurrencies,
+  });
+}
+
+export function bankAccountTransactionCountQueryOptions(
+  queryKey: QueryKey,
+  id: string,
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions<BankAccountTransactionCount>({
+    queryKey,
+    queryFn: () => fetchBrowserBankAccountTransactionCount(id),
+    enabled: options.enabled,
+  });
+}
+
+export async function createBankAccountFromRust(input: CreateBankAccountInput) {
+  return createBankAccount(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function updateBankAccountFromRust(input: UpdateBankAccountInput) {
+  return updateBankAccount(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteBankAccountFromRust(input: DeleteBankAccountInput) {
+  return deleteBankAccount(getRustApiUrl(), await getAccessToken(), input);
 }

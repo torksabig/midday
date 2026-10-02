@@ -26,6 +26,7 @@ import type { DateRange } from "react-day-picker";
 import { useMetricsFilter } from "@/hooks/use-metrics-filter";
 import { useTeamQuery } from "@/hooks/use-team";
 import { useUserQuery } from "@/hooks/use-user";
+import { bankAccountCurrenciesQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import type { PeriodOption } from "@/utils/metrics-date-utils";
 
@@ -62,7 +63,7 @@ export function MetricsFilter() {
   } = useMetricsFilter();
 
   const { data: currencies } = useQuery(
-    trpc.bankAccounts.currencies.queryOptions(),
+    bankAccountCurrenciesQueryOptions(trpc.bankAccounts.currencies.queryKey()),
   );
 
   const baseCurrency = team?.baseCurrency;

@@ -4,13 +4,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 **Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
 
-**Direct dashboard adjustment (2026-10-01):** 91 reads remain temporary façade delegations; `overview.summary`, `user.me`, `team.current`, `invoice.defaultSettings`, and `notifications.list` are now direct-Rust dashboard reads. The total remains 96 Rust-backed reads.
+**Direct dashboard adjustment (2026-10-02):** Direct-Rust dashboard traffic now includes category getById + writes, bank-account create/update/delete/currencies/transaction-count, and transaction-tag assignment writes, in addition to the earlier identity/overview/notifications/tags/categories-list/bank-accounts-list cutovers. Façade delegation counts for dual/replacement mode are unchanged.
 
 **Counts:** **96 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~37.5%). **111** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `transactions.create`, `transactions.import` SQL prep, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.confirmMatch`, `inbox.declineMatch`, `inbox.unmatchTransaction`, `inbox.create`, `customers.cancelEnrichment`, `customers.clearEnrichment`, `customers.enrich` SQL, `transactions.moveToReview`, `customers.togglePortal`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `invoice.create`, `invoice.createFromTracker`, `invoice.remind` SQL, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `user.switchTeam`, `team.update`, `team.acceptInvite`, `team.declineInvite`, `team.deleteInvite`, `team.deleteMember`, `team.updateMember`, `team.leave`, `team.invite` SQL, `team.create` SQL, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `documents.reprocessDocument` SQL, `documents.processDocument` SQL, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `oauthApplications.revokeAccess`, `oauthApplications.authorize` SQL, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apps.removeWhatsAppConnection`, `apps.createPlatformLinkToken`, `apiKeys.delete`, `reports.create`, `shortLinks.createForUrl`, `shortLinks.createForDocument`, `accounting.disconnect`, `accounting.export` app lookup, `bankAccounts.create`, `bankAccounts.update`, `bankAccounts.delete`, `institutions.updateUsage`, `transactionAttachments.createMany`, `transactionAttachments.delete`, `bankConnections.reconnect`, `bankConnections.delete`, `invoiceRecurring.pause`, `invoiceRecurring.resume`, `invoiceRecurring.delete`, `invoiceRecurring.create`, `invoiceRecurring.update`, `inboxAccounts.delete`, `inboxAccounts.sync` SQL, `team.delete` SQL, `oauthApplications.updateApprovalStatus` SQL). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **5 reads** | `overview.summary`, dashboard `user.me`, dashboard `team.current`, dashboard `invoice.defaultSettings`, and dashboard `notifications.list` are now browser/server-rendered dashboard traffic directly to Rust; they are excluded from the temporary tRPC façade for dashboard usage. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/currencies/transaction-count, tags list/create/update/delete, and transaction-tag assignment create/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) stays on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | yes | **write** · preference fields PATCH (AP-21); no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -43,14 +43,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notificationSettings.update` | direct Rust | **write** · single channel upsert (AP-28); dashboard settings screen calls `PUT /api/v1/notification-settings` directly |
 | `notificationSettings.bulkUpdate` | yes | **write** · bulk channel upserts (AP-28) |
 | `notificationSettings.*` (other) | no | — |
-| `transactionCategories.get` | direct Rust | read · parent/child category tree (AP-30); dashboard calls `GET /api/v1/categories` directly and preserves the old React Query cache key |
 | `bankAccounts.get` | direct Rust | read · `enabled`/`manual` filters; dashboard calls `GET /api/v1/bank-accounts` directly and preserves the old React Query cache key |
 | `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
-| `bankAccounts.currencies` | yes | read · `get_bank_account_currencies()` (Phase 10) |
-| `bankAccounts.getTransactionCount` | yes | read · tx count for delete dialog (Phase 11) |
-| `bankAccounts.create` | yes | **write** · manual account insert (AP-44) |
-| `bankAccounts.update` | yes | **write** · partial update (AP-44) |
-| `bankAccounts.delete` | yes | **write** · team-scoped delete (AP-44) |
+| `bankAccounts.currencies` | direct Rust | read · `get_bank_account_currencies()` (Phase 10); dashboard metrics call `GET /api/v1/bank-accounts/currencies` directly |
+| `bankAccounts.getTransactionCount` | direct Rust | read · tx count for delete dialog (Phase 11); dashboard calls `GET /api/v1/bank-accounts/:id/transaction-count` directly |
+| `bankAccounts.create` | direct Rust | **write** · manual account insert (AP-44); dashboard calls `POST /api/v1/bank-accounts` directly |
+| `bankAccounts.update` | direct Rust | **write** · partial update (AP-44); dashboard calls `PUT /api/v1/bank-accounts/:id` directly |
+| `bankAccounts.delete` | direct Rust | **write** · team-scoped delete (AP-44); dashboard calls `DELETE /api/v1/bank-accounts/:id` directly |
 | `bankAccounts.*` (other) | no | getDetails (decrypt), payment info (decrypt) |
 | `bankConnections.get` | yes | read · list + nested accounts (Phase 6 slice 1) |
 | `bankConnections.reconnect` | yes | **write** · update reference + status (AP-46) |
@@ -82,14 +81,14 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inboxAccounts.delete` | yes | **write** · DB delete; Trigger `schedules.del` stays Node (AP-58) |
 | `inboxAccounts.sync` | yes | **write** · account row read SQL; Trigger sync stays Node (AP-60) |
 | `inboxAccounts.*` (other) | no | connect, OAuth exchange |
-| `transactionCategories.get` | yes | read · full tree |
-| `transactionCategories.getById` | yes | read · detail + children (AP-24) |
+| `transactionCategories.get` | direct Rust | read · parent/child category tree (AP-30); dashboard calls `GET /api/v1/categories` directly and preserves the old React Query cache key |
+| `transactionCategories.getById` | direct Rust | read · detail + children (AP-24); dashboard calls `GET /api/v1/categories/:id` directly |
 | `transactionCategories.create` | direct Rust | **write** · insert + activity (AP-30); dashboard calls `POST /api/v1/categories` directly; embedding stays in Node if needed |
 | `transactionCategories.update` | direct Rust | **write** · partial update (AP-30); dashboard calls `PUT /api/v1/categories/:id` directly and maps `parentId: null` to `clearParent` |
 | `transactionCategories.delete` | direct Rust | **write** · non-system only (AP-30); dashboard calls `DELETE /api/v1/categories/:id` directly |
 | `transactionCategories.*` (other) | no | — |
-| `transactionTags.create` | yes | **write** · link tag to tx (AP-24) |
-| `transactionTags.delete` | yes | **write** · unlink tag (AP-24) |
+| `transactionTags.create` | direct Rust | **write** · link tag to tx (AP-24); dashboard calls `POST /api/v1/transaction-tags` directly |
+| `transactionTags.delete` | direct Rust | **write** · unlink tag (AP-24); dashboard calls `DELETE /api/v1/transaction-tags` directly |
 | `transactions.get` | yes | read · list filters (Phase 2e matrix) |
 | `transactions.getById` | yes | read |
 | `transactions.getReviewCount` | yes | read |

@@ -3,6 +3,7 @@ import { RustApiError } from "./overview";
 
 type RawCategory = components["schemas"]["MiddayCategory"];
 type RawCategoryChild = components["schemas"]["MiddayCategoryChild"];
+type RawCategoryDetail = components["schemas"]["CategoryDetailResponse"];
 type CategoryMutationResponse =
   components["schemas"]["CategoryMutationResponse"];
 
@@ -23,6 +24,11 @@ export type TransactionCategoryChild = {
 };
 
 export type TransactionCategory = TransactionCategoryChild & {
+  children: TransactionCategoryChild[];
+};
+
+export type TransactionCategoryDetail = TransactionCategoryChild & {
+  createdAt: string | null;
   children: TransactionCategoryChild[];
 };
 
@@ -69,6 +75,44 @@ function normalizeCategory(category: RawCategory): TransactionCategory {
   };
 }
 
+function normalizeDetailChild(
+  category: RawCategoryDetail["children"][number],
+): TransactionCategoryChild {
+  return {
+    id: category.id,
+    name: category.name,
+    color: category.color ?? null,
+    slug: category.slug ?? null,
+    description: category.description ?? null,
+    system: category.system ?? null,
+    taxRate: category.taxRate ?? null,
+    taxType: category.taxType ?? null,
+    taxReportingCode: category.taxReportingCode ?? null,
+    excluded: category.excluded ?? null,
+    parentId: category.parentId ?? null,
+  };
+}
+
+function normalizeCategoryDetail(
+  category: RawCategoryDetail,
+): TransactionCategoryDetail {
+  return {
+    id: category.id,
+    name: category.name,
+    color: category.color ?? null,
+    slug: category.slug ?? null,
+    description: category.description ?? null,
+    system: category.system ?? null,
+    taxRate: category.taxRate ?? null,
+    taxType: category.taxType ?? null,
+    taxReportingCode: category.taxReportingCode ?? null,
+    excluded: category.excluded ?? null,
+    parentId: category.parentId ?? null,
+    createdAt: category.createdAt ?? null,
+    children: category.children.map(normalizeDetailChild),
+  };
+}
+
 function normalizeMutationCategory(
   category: CategoryMutationResponse,
 ): TransactionCategoryChild {
@@ -107,6 +151,31 @@ export async function fetchTransactionCategories(
 
   const payload = (await response.json()) as RawCategory[];
   return payload.map(normalizeCategory);
+}
+
+export async function fetchTransactionCategoryById(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<TransactionCategoryDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/categories/${encodeURIComponent(id)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeCategoryDetail((await response.json()) as RawCategoryDetail);
 }
 
 async function sendCategoryMutation(

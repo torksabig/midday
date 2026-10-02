@@ -28,6 +28,10 @@ import { format, parseISO } from "date-fns";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
+import {
+  createTransactionTagFromRust,
+  deleteTransactionTagFromRust,
+} from "@/lib/rust-api/transaction-tags-client";
 import { useTRPC } from "@/trpc/client";
 import { AssignUser } from "./assign-user";
 import { FormatAmount } from "./format-amount";
@@ -196,33 +200,31 @@ export function TransactionDetails() {
     }),
   );
 
-  const createTransactionTagMutation = useMutation(
-    trpc.transactionTags.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
+  const createTransactionTagMutation = useMutation({
+    mutationFn: createTransactionTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+    },
+  });
 
-  const deleteTransactionTagMutation = useMutation(
-    trpc.transactionTags.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
+  const deleteTransactionTagMutation = useMutation({
+    mutationFn: deleteTransactionTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   const updateTransactionsMutation = useMutation(
     trpc.transactions.updateMany.mutationOptions({

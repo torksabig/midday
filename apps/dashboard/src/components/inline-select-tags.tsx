@@ -19,6 +19,10 @@ import {
   createTagFromRust,
   tagsQueryOptions,
 } from "@/lib/rust-api/tags-client";
+import {
+  createTransactionTagFromRust,
+  deleteTransactionTagFromRust,
+} from "@/lib/rust-api/transaction-tags-client";
 import { useTRPC } from "@/trpc/client";
 
 type Tag = {
@@ -46,31 +50,29 @@ export function InlineSelectTags({ transactionId, tags = [] }: Props) {
 
   const allTags = tableContext?.tags ?? fallbackTags;
 
-  const createTransactionTagMutation = useMutation(
-    trpc.transactionTags.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey(),
-        });
-      },
-    }),
-  );
+  const createTransactionTagMutation = useMutation({
+    mutationFn: createTransactionTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey(),
+      });
+    },
+  });
 
-  const deleteTransactionTagMutation = useMutation(
-    trpc.transactionTags.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey(),
-        });
-      },
-    }),
-  );
+  const deleteTransactionTagMutation = useMutation({
+    mutationFn: deleteTransactionTagFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey(),
+      });
+    },
+  });
 
   const createTagMutation = useMutation({
     mutationFn: createTagFromRust,

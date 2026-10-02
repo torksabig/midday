@@ -4,1262 +4,1772 @@
  */
 
 export interface paths {
-  "/api/v1/auth/me": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAuthenticatedViewer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getAuthenticatedViewer"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/bank-accounts": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankAccounts"];
+        put?: never;
+        post: operations["createBankAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getBankAccounts"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/categories": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/bank-accounts/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankAccountBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getTransactionCategories"];
-    put?: never;
-    post: operations["createTransactionCategory"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/categories/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/bank-accounts/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankAccountCurrencies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put: operations["updateTransactionCategory"];
-    post?: never;
-    delete: operations["deleteTransactionCategory"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/health": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/bank-accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateBankAccount"];
+        post?: never;
+        delete: operations["deleteBankAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["health"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/invoices/default-settings-data": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/bank-accounts/{id}/transaction-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankAccountTransactionCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getInvoiceDefaultSettingsData"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notification-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionCategories"];
+        put?: never;
+        post: operations["createTransactionCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getNotificationSettings"];
-    put: operations["upsertNotificationSetting"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notification-settings/bulk": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionCategory"];
+        put: operations["updateTransactionCategory"];
+        post?: never;
+        delete: operations["deleteTransactionCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put: operations["bulkUpdateNotificationSettings"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notification-settings/preferences": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getNotificationPreferences"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notifications": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/invoices/default-settings-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceDefaultSettingsData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getNotificationsList"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notifications/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notification-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotificationSettings"];
+        put: operations["upsertNotificationSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put: operations["updateAllNotificationStatus"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/notifications/{id}/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notification-settings/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["bulkUpdateNotificationSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put: operations["updateNotificationStatus"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/overview/summary": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notification-settings/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotificationPreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getOverviewSummary"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/tags": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotificationsList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getTags"];
-    put?: never;
-    post: operations["createTag"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/tags/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notifications/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateAllNotificationStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put: operations["updateTag"];
-    post?: never;
-    delete: operations["deleteTag"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/team/current": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/notifications/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateNotificationStatus"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get: operations["getCurrentTeam"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/api/v1/overview/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOverviewSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTags"];
+        put?: never;
+        post: operations["createTag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateTag"];
+        post?: never;
+        delete: operations["deleteTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCurrentTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transaction-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTransactionTag"];
+        delete: operations["deleteTransactionTag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    AuthenticatedViewer: {
-      avatarUrl?: string | null;
-      dateFormat?: string | null;
-      email?: string | null;
-      fileKey?: string | null;
-      fullName?: string | null;
-      id: string;
-      locale?: string | null;
-      team?: null | components["schemas"]["DashboardTeam"];
-      teamId?: string | null;
-      /** Format: double */
-      timeFormat?: number | null;
-      timezone?: string | null;
-      timezoneAutoSync?: boolean | null;
-      user: components["schemas"]["LegacyUser"];
-      weekStartsOnMonday?: boolean | null;
+    schemas: {
+        AuthenticatedViewer: {
+            avatarUrl?: string | null;
+            dateFormat?: string | null;
+            email?: string | null;
+            fileKey?: string | null;
+            fullName?: string | null;
+            id: string;
+            locale?: string | null;
+            team?: null | components["schemas"]["DashboardTeam"];
+            teamId?: string | null;
+            /** Format: double */
+            timeFormat?: number | null;
+            timezone?: string | null;
+            timezoneAutoSync?: boolean | null;
+            user: components["schemas"]["LegacyUser"];
+            weekStartsOnMonday?: boolean | null;
+        };
+        BankAccountBalanceRow: {
+            /** Format: double */
+            balance: number;
+            currency: string;
+            id: string;
+            logo_url: string;
+            name: string;
+        };
+        BankAccountCurrencyRow: {
+            currency: string;
+        };
+        BankAccountMutationResponse: {
+            accountId?: string | null;
+            /** Format: double */
+            balance?: number | null;
+            bankConnectionId?: string | null;
+            /** Format: double */
+            baseBalance?: number | null;
+            baseCurrency?: string | null;
+            createdAt: string;
+            createdBy: string;
+            currency?: string | null;
+            enabled?: boolean | null;
+            /** Format: int32 */
+            errorRetries?: number | null;
+            id: string;
+            manual?: boolean | null;
+            name?: string | null;
+            teamId: string;
+            type?: string | null;
+        };
+        BankAccountTransactionCountResponse: {
+            /** Format: int64 */
+            count: number;
+        };
+        BulkUpdateNotificationSettingsBody: {
+            updates: components["schemas"]["UpsertNotificationSettingBody"][];
+        };
+        CategoryDetailChild: {
+            color?: string | null;
+            description?: string | null;
+            excluded?: boolean | null;
+            id: string;
+            name: string;
+            parentId?: string | null;
+            slug?: string | null;
+            system?: boolean | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxReportingCode?: string | null;
+            taxType?: string | null;
+        };
+        CategoryDetailResponse: {
+            children: components["schemas"]["CategoryDetailChild"][];
+            color?: string | null;
+            createdAt?: string | null;
+            description?: string | null;
+            excluded?: boolean | null;
+            id: string;
+            name: string;
+            parentId?: string | null;
+            slug?: string | null;
+            system?: boolean | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxReportingCode?: string | null;
+            taxType?: string | null;
+        };
+        CategoryMutationResponse: {
+            color?: string | null;
+            createdAt: string;
+            description?: string | null;
+            excluded?: boolean | null;
+            id: string;
+            name: string;
+            parentId?: string | null;
+            slug?: string | null;
+            system?: boolean | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxReportingCode?: string | null;
+            taxType?: string | null;
+            teamId: string;
+        };
+        CreateBankAccountBody: {
+            currency?: string | null;
+            manual?: boolean | null;
+            name: string;
+        };
+        CreateCategoryBody: {
+            color?: string | null;
+            description?: string | null;
+            name: string;
+            parentId?: string | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxReportingCode?: string | null;
+            taxType?: string | null;
+        };
+        CreateTagBody: {
+            name: string;
+        };
+        DashboardTeam: {
+            baseCurrency?: string | null;
+            base_currency?: string | null;
+            canceledAt?: string | null;
+            countryCode?: string | null;
+            createdAt?: string | null;
+            email?: string | null;
+            exportSettings?: null | components["schemas"]["Value"];
+            /** Format: int32 */
+            fiscalYearStartMonth?: number | null;
+            id: string;
+            inboxId?: string | null;
+            locale?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
+            plan: string;
+            stripeAccountId?: string | null;
+            stripeConnectStatus?: string | null;
+            subscriptionStatus?: string | null;
+        };
+        Health: {
+            ok: boolean;
+        };
+        InvoiceDefaultSettingsData: {
+            nextInvoiceNumber: string;
+            team: components["schemas"]["InvoiceDefaultSettingsTeam"];
+            template?: null | components["schemas"]["Value"];
+            user: components["schemas"]["InvoiceDefaultSettingsUser"];
+        };
+        InvoiceDefaultSettingsTeam: {
+            baseCurrency?: string | null;
+            id: string;
+        };
+        InvoiceDefaultSettingsUser: {
+            dateFormat?: string | null;
+            id: string;
+            locale?: string | null;
+            timezone?: string | null;
+        };
+        LegacyUser: {
+            email?: string | null;
+            id: string;
+            name?: string | null;
+        };
+        MiddayBankAccount: {
+            account_id: string;
+            account_reference?: string | null;
+            /** Format: double */
+            available_balance?: number | null;
+            /** Format: double */
+            balance?: number | null;
+            bank_connection?: null | components["schemas"]["MiddayBankConnection"];
+            bank_connection_id?: string | null;
+            /** Format: double */
+            base_balance?: number | null;
+            base_currency?: string | null;
+            bic?: string | null;
+            created_at: string;
+            created_by: string;
+            /** Format: double */
+            credit_limit?: number | null;
+            currency?: string | null;
+            enabled: boolean;
+            error_details?: string | null;
+            /** Format: int32 */
+            error_retries?: number | null;
+            id: string;
+            manual?: boolean | null;
+            name?: string | null;
+            routing_number?: string | null;
+            sort_code?: string | null;
+            subtype?: string | null;
+            team_id: string;
+            type?: string | null;
+            wire_routing_number?: string | null;
+        };
+        MiddayBankConnection: {
+            created_at: string;
+            enrollment_id?: string | null;
+            error_details?: string | null;
+            /** Format: int32 */
+            error_retries?: number | null;
+            expires_at?: string | null;
+            id: string;
+            institution_id: string;
+            last_accessed?: string | null;
+            logo_url?: string | null;
+            name: string;
+            provider: string;
+            reference_id?: string | null;
+            status?: string | null;
+            team_id: string;
+        };
+        MiddayCategory: {
+            children: components["schemas"]["MiddayCategoryChild"][];
+            color?: string | null;
+            description?: string | null;
+            excluded?: boolean | null;
+            id: string;
+            name: string;
+            parent_id?: string | null;
+            slug?: string | null;
+            system?: boolean | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_reporting_code?: string | null;
+            tax_type?: string | null;
+        };
+        MiddayCategoryChild: {
+            color?: string | null;
+            description?: string | null;
+            excluded?: boolean | null;
+            id: string;
+            name: string;
+            parent_id?: string | null;
+            slug?: string | null;
+            system?: boolean | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_reporting_code?: string | null;
+            tax_type?: string | null;
+        };
+        NotificationActivity: {
+            createdAt: string;
+            groupId?: string | null;
+            id: string;
+            lastUsedAt?: string | null;
+            metadata: components["schemas"]["Value"];
+            /** Format: int32 */
+            priority: number;
+            source: string;
+            status: string;
+            teamId: string;
+            type: string;
+            userId?: string | null;
+        };
+        NotificationPreference: {
+            category: string;
+            channels: string[];
+            /** Format: int32 */
+            order: number;
+            settings: components["schemas"]["NotificationPreferenceChannelSetting"][];
+            type: string;
+        };
+        NotificationPreferenceChannelSetting: {
+            channel: string;
+            enabled: boolean;
+        };
+        NotificationSetting: {
+            channel: string;
+            createdAt: string;
+            enabled: boolean;
+            id: string;
+            notificationType: string;
+            teamId: string;
+            updatedAt: string;
+            userId: string;
+        };
+        NotificationsListMeta: {
+            cursor?: string | null;
+            hasNextPage: boolean;
+            hasPreviousPage: boolean;
+        };
+        NotificationsListResponse: {
+            data: components["schemas"]["NotificationActivity"][];
+            meta: components["schemas"]["NotificationsListMeta"];
+        };
+        OverviewCashBalance: {
+            /** Format: int64 */
+            account_count: number;
+            currency: string;
+            /** Format: double */
+            total_balance: number;
+        };
+        OverviewInboxPending: {
+            /** Format: int64 */
+            count: number;
+        };
+        OverviewOpenInvoices: {
+            /** Format: int64 */
+            count: number;
+            currency: string;
+            /** Format: double */
+            total_amount: number;
+        };
+        OverviewSummary: {
+            cash_balance: components["schemas"]["OverviewCashBalance"];
+            inbox_pending: components["schemas"]["OverviewInboxPending"];
+            open_invoices: components["schemas"]["OverviewOpenInvoices"];
+            /** Format: int64 */
+            runway: number;
+            transactions_to_review: components["schemas"]["OverviewTransactionsToReview"];
+            unbilled_time: components["schemas"]["OverviewUnbilledTime"];
+        };
+        OverviewTransactionsToReview: {
+            /** Format: int64 */
+            count: number;
+        };
+        OverviewUnbilledTime: {
+            currency: string;
+            /** Format: int64 */
+            project_count: number;
+            /** Format: double */
+            total_amount: number;
+            /** Format: int64 */
+            total_duration: number;
+        };
+        TagMutationResponse: {
+            id: string;
+            name: string;
+        };
+        TagRow: {
+            createdAt: string;
+            id: string;
+            name: string;
+            teamId: string;
+        };
+        TransactionTagBody: {
+            tagId: string;
+            transactionId: string;
+        };
+        TransactionTagDeleteResponse: {
+            /** Format: int64 */
+            rowCount: number;
+        };
+        TransactionTagRow: {
+            createdAt: string;
+            id: string;
+            tagId: string;
+            teamId: string;
+            transactionId: string;
+        };
+        UpdateBankAccountBody: {
+            /** Format: double */
+            balance?: number | null;
+            /** Format: double */
+            baseBalance?: number | null;
+            baseCurrency?: string | null;
+            currency?: string | null;
+            enabled?: boolean | null;
+            name?: string | null;
+            type?: string | null;
+        };
+        UpdateCategoryBody: {
+            clearParent?: boolean | null;
+            color?: string | null;
+            description?: string | null;
+            excluded?: boolean | null;
+            name?: string | null;
+            parentId?: string | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxReportingCode?: string | null;
+            taxType?: string | null;
+        };
+        UpdateNotificationStatusBody: {
+            status: string;
+        };
+        UpdateTagBody: {
+            name: string;
+        };
+        UpsertNotificationSettingBody: {
+            channel: string;
+            enabled: boolean;
+            notificationType: string;
+        };
+        Value: unknown;
     };
-    BulkUpdateNotificationSettingsBody: {
-      updates: components["schemas"]["UpsertNotificationSettingBody"][];
-    };
-    CategoryMutationResponse: {
-      color?: string | null;
-      createdAt: string;
-      description?: string | null;
-      excluded?: boolean | null;
-      id: string;
-      name: string;
-      parentId?: string | null;
-      slug?: string | null;
-      system?: boolean | null;
-      /** Format: double */
-      taxRate?: number | null;
-      taxReportingCode?: string | null;
-      taxType?: string | null;
-      teamId: string;
-    };
-    CreateCategoryBody: {
-      color?: string | null;
-      description?: string | null;
-      name: string;
-      parentId?: string | null;
-      /** Format: double */
-      taxRate?: number | null;
-      taxReportingCode?: string | null;
-      taxType?: string | null;
-    };
-    CreateTagBody: {
-      name: string;
-    };
-    DashboardTeam: {
-      baseCurrency?: string | null;
-      base_currency?: string | null;
-      canceledAt?: string | null;
-      countryCode?: string | null;
-      createdAt?: string | null;
-      email?: string | null;
-      exportSettings?: null | components["schemas"]["Value"];
-      /** Format: int32 */
-      fiscalYearStartMonth?: number | null;
-      id: string;
-      inboxId?: string | null;
-      locale?: string | null;
-      logoUrl?: string | null;
-      name?: string | null;
-      plan: string;
-      stripeAccountId?: string | null;
-      stripeConnectStatus?: string | null;
-      subscriptionStatus?: string | null;
-    };
-    Health: {
-      ok: boolean;
-    };
-    InvoiceDefaultSettingsData: {
-      nextInvoiceNumber: string;
-      team: components["schemas"]["InvoiceDefaultSettingsTeam"];
-      template?: null | components["schemas"]["Value"];
-      user: components["schemas"]["InvoiceDefaultSettingsUser"];
-    };
-    InvoiceDefaultSettingsTeam: {
-      baseCurrency?: string | null;
-      id: string;
-    };
-    InvoiceDefaultSettingsUser: {
-      dateFormat?: string | null;
-      id: string;
-      locale?: string | null;
-      timezone?: string | null;
-    };
-    LegacyUser: {
-      email?: string | null;
-      id: string;
-      name?: string | null;
-    };
-    MiddayBankAccount: {
-      account_id: string;
-      account_reference?: string | null;
-      /** Format: double */
-      available_balance?: number | null;
-      /** Format: double */
-      balance?: number | null;
-      bank_connection?: null | components["schemas"]["MiddayBankConnection"];
-      bank_connection_id?: string | null;
-      /** Format: double */
-      base_balance?: number | null;
-      base_currency?: string | null;
-      bic?: string | null;
-      created_at: string;
-      created_by: string;
-      /** Format: double */
-      credit_limit?: number | null;
-      currency?: string | null;
-      enabled: boolean;
-      error_details?: string | null;
-      /** Format: int32 */
-      error_retries?: number | null;
-      id: string;
-      manual?: boolean | null;
-      name?: string | null;
-      routing_number?: string | null;
-      sort_code?: string | null;
-      subtype?: string | null;
-      team_id: string;
-      type?: string | null;
-      wire_routing_number?: string | null;
-    };
-    MiddayBankConnection: {
-      created_at: string;
-      enrollment_id?: string | null;
-      error_details?: string | null;
-      /** Format: int32 */
-      error_retries?: number | null;
-      expires_at?: string | null;
-      id: string;
-      institution_id: string;
-      last_accessed?: string | null;
-      logo_url?: string | null;
-      name: string;
-      provider: string;
-      reference_id?: string | null;
-      status?: string | null;
-      team_id: string;
-    };
-    MiddayCategory: {
-      children: components["schemas"]["MiddayCategoryChild"][];
-      color?: string | null;
-      description?: string | null;
-      excluded?: boolean | null;
-      id: string;
-      name: string;
-      parent_id?: string | null;
-      slug?: string | null;
-      system?: boolean | null;
-      /** Format: double */
-      tax_rate?: number | null;
-      tax_reporting_code?: string | null;
-      tax_type?: string | null;
-    };
-    MiddayCategoryChild: {
-      color?: string | null;
-      description?: string | null;
-      excluded?: boolean | null;
-      id: string;
-      name: string;
-      parent_id?: string | null;
-      slug?: string | null;
-      system?: boolean | null;
-      /** Format: double */
-      tax_rate?: number | null;
-      tax_reporting_code?: string | null;
-      tax_type?: string | null;
-    };
-    NotificationActivity: {
-      createdAt: string;
-      groupId?: string | null;
-      id: string;
-      lastUsedAt?: string | null;
-      metadata: components["schemas"]["Value"];
-      /** Format: int32 */
-      priority: number;
-      source: string;
-      status: string;
-      teamId: string;
-      type: string;
-      userId?: string | null;
-    };
-    NotificationPreference: {
-      category: string;
-      channels: string[];
-      /** Format: int32 */
-      order: number;
-      settings: components["schemas"]["NotificationPreferenceChannelSetting"][];
-      type: string;
-    };
-    NotificationPreferenceChannelSetting: {
-      channel: string;
-      enabled: boolean;
-    };
-    NotificationSetting: {
-      channel: string;
-      createdAt: string;
-      enabled: boolean;
-      id: string;
-      notificationType: string;
-      teamId: string;
-      updatedAt: string;
-      userId: string;
-    };
-    NotificationsListMeta: {
-      cursor?: string | null;
-      hasNextPage: boolean;
-      hasPreviousPage: boolean;
-    };
-    NotificationsListResponse: {
-      data: components["schemas"]["NotificationActivity"][];
-      meta: components["schemas"]["NotificationsListMeta"];
-    };
-    OverviewCashBalance: {
-      /** Format: int64 */
-      account_count: number;
-      currency: string;
-      /** Format: double */
-      total_balance: number;
-    };
-    OverviewInboxPending: {
-      /** Format: int64 */
-      count: number;
-    };
-    OverviewOpenInvoices: {
-      /** Format: int64 */
-      count: number;
-      currency: string;
-      /** Format: double */
-      total_amount: number;
-    };
-    OverviewSummary: {
-      cash_balance: components["schemas"]["OverviewCashBalance"];
-      inbox_pending: components["schemas"]["OverviewInboxPending"];
-      open_invoices: components["schemas"]["OverviewOpenInvoices"];
-      /** Format: int64 */
-      runway: number;
-      transactions_to_review: components["schemas"]["OverviewTransactionsToReview"];
-      unbilled_time: components["schemas"]["OverviewUnbilledTime"];
-    };
-    OverviewTransactionsToReview: {
-      /** Format: int64 */
-      count: number;
-    };
-    OverviewUnbilledTime: {
-      currency: string;
-      /** Format: int64 */
-      project_count: number;
-      /** Format: double */
-      total_amount: number;
-      /** Format: int64 */
-      total_duration: number;
-    };
-    TagMutationResponse: {
-      id: string;
-      name: string;
-    };
-    TagRow: {
-      createdAt: string;
-      id: string;
-      name: string;
-      teamId: string;
-    };
-    UpdateCategoryBody: {
-      clearParent?: boolean | null;
-      color?: string | null;
-      description?: string | null;
-      excluded?: boolean | null;
-      name?: string | null;
-      parentId?: string | null;
-      /** Format: double */
-      taxRate?: number | null;
-      taxReportingCode?: string | null;
-      taxType?: string | null;
-    };
-    UpdateNotificationStatusBody: {
-      status: string;
-    };
-    UpdateTagBody: {
-      name: string;
-    };
-    UpsertNotificationSettingBody: {
-      channel: string;
-      enabled: boolean;
-      notificationType: string;
-    };
-    Value: unknown;
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  getAuthenticatedViewer: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    getAuthenticatedViewer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard-compatible authenticated user and active team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticatedViewer"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Dashboard-compatible authenticated user and active team */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getBankAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enabled: boolean | null;
+                manual: boolean | null;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AuthenticatedViewer"];
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped bank accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MiddayBankAccount"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  getBankAccounts: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        enabled: boolean | null;
-        manual: boolean | null;
-      };
-      cookie?: never;
+    createBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBankAccountBody"];
+            };
+        };
+        responses: {
+            /** @description Created bank account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountMutationResponse"];
+                };
+            };
+            /** @description Bank accounts require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Team-scoped bank accounts */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getBankAccountBalances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["MiddayBankAccount"][];
+        requestBody?: never;
+        responses: {
+            /** @description Team bank account balances */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountBalanceRow"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  getTransactionCategories: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    getBankAccountCurrencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct bank account currencies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountCurrencyRow"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Team-scoped transaction category tree */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    updateBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bank account id */
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["MiddayCategory"][];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBankAccountBody"];
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Updated bank account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountMutationResponse"];
+                };
+            };
+            /** @description Bank accounts require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bank account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  createTransactionCategory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    deleteBankAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bank account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted bank account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountMutationResponse"];
+                };
+            };
+            /** @description Bank accounts require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bank account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateCategoryBody"];
-      };
+    getBankAccountTransactionCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bank account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transaction count for bank account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountTransactionCountResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    responses: {
-      /** @description Created transaction category */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getTransactionCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CategoryMutationResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped transaction category tree */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MiddayCategory"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Category create requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  updateTransactionCategory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Category id */
-        id: string;
-      };
-      cookie?: never;
+    createTransactionCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryBody"];
+            };
+        };
+        responses: {
+            /** @description Created transaction category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryMutationResponse"];
+                };
+            };
+            /** @description Category create requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateCategoryBody"];
-      };
+    getTransactionCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Category id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transaction category detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDetailResponse"];
+                };
+            };
+            /** @description Category getById requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    responses: {
-      /** @description Updated transaction category */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    updateTransactionCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Category id */
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CategoryMutationResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCategoryBody"];
+            };
         };
-      };
-      /** @description Category update requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Updated transaction category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryMutationResponse"];
+                };
+            };
+            /** @description Category update requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Category not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  deleteTransactionCategory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Category id */
-        id: string;
-      };
-      cookie?: never;
+    deleteTransactionCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Category id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted transaction category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryMutationResponse"];
+                };
+            };
+            /** @description Category delete requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Category not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Deleted transaction category */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CategoryMutationResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description API is available */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
         };
-      };
-      /** @description Category delete requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Category not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  health: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    getInvoiceDefaultSettingsData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Raw invoice default settings data for dashboard normalization */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description API is available */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getNotificationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationType: string | null;
+                channel: string | null;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["Health"];
+        requestBody?: never;
+        responses: {
+            /** @description User/team notification settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSetting"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
     };
-  };
-  getInvoiceDefaultSettingsData: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    upsertNotificationSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertNotificationSettingBody"];
+            };
+        };
+        responses: {
+            /** @description Upserted notification setting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSetting"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Raw invoice default settings data for dashboard normalization */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    bulkUpdateNotificationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["InvoiceDefaultSettingsData"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkUpdateNotificationSettingsBody"];
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Upserted notification settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSetting"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  getNotificationSettings: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        notificationType: string | null;
-        channel: string | null;
-      };
-      cookie?: never;
+    getNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification settings catalog merged with user preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreference"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description User/team notification settings */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getNotificationsList: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+                status?: string[];
+                user_id?: string;
+                userId?: string;
+                priority?: number;
+                maxPriority?: number;
+                createdAfter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["NotificationSetting"][];
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped notification activity feed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  upsertNotificationSetting: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    updateAllNotificationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationStatusBody"];
+            };
+        };
+        responses: {
+            /** @description Updated notification activities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationActivity"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpsertNotificationSettingBody"];
-      };
+    updateNotificationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Activity id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationStatusBody"];
+            };
+        };
+        responses: {
+            /** @description Updated notification activity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationActivity"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    responses: {
-      /** @description Upserted notification setting */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getOverviewSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["NotificationSetting"];
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped overview metrics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewSummary"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  bulkUpdateNotificationSettings: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    getTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped transaction tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagRow"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BulkUpdateNotificationSettingsBody"];
-      };
+    createTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagBody"];
+            };
+        };
+        responses: {
+            /** @description Created transaction tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagMutationResponse"];
+                };
+            };
+            /** @description Tag create requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    responses: {
-      /** @description Upserted notification settings */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    updateTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tag id */
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["NotificationSetting"][];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagBody"];
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Updated transaction tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagMutationResponse"];
+                };
+            };
+            /** @description Tag update requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  getNotificationPreferences: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    deleteTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tag id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted transaction tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagMutationResponse"];
+                };
+            };
+            /** @description Tag delete requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tag not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Notification settings catalog merged with user preferences */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getCurrentTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["NotificationPreference"][];
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard-compatible active team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardTeam"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  getNotificationsList: {
-    parameters: {
-      query?: {
-        cursor?: string;
-        pageSize?: number;
-        status?: string[];
-        user_id?: string;
-        userId?: string;
-        priority?: number;
-        maxPriority?: number;
-        createdAfter?: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    createTransactionTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionTagBody"];
+            };
+        };
+        responses: {
+            /** @description Created transaction tag assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionTagRow"][];
+                };
+            };
+            /** @description Transaction tag create requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Team-scoped notification activity feed */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    deleteTransactionTag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["NotificationsListResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionTagBody"];
+            };
         };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Deleted transaction tag assignment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionTagDeleteResponse"];
+                };
+            };
+            /** @description Transaction tag delete requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  updateAllNotificationStatus: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateNotificationStatusBody"];
-      };
-    };
-    responses: {
-      /** @description Updated notification activities */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationActivity"][];
-        };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  updateNotificationStatus: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Activity id */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateNotificationStatusBody"];
-      };
-    };
-    responses: {
-      /** @description Updated notification activity */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationActivity"];
-        };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Notification not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  getOverviewSummary: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Team-scoped overview metrics */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["OverviewSummary"];
-        };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  getTags: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Team-scoped transaction tags */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TagRow"][];
-        };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  createTag: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateTagBody"];
-      };
-    };
-    responses: {
-      /** @description Created transaction tag */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TagMutationResponse"];
-        };
-      };
-      /** @description Tag create requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  updateTag: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Tag id */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateTagBody"];
-      };
-    };
-    responses: {
-      /** @description Updated transaction tag */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TagMutationResponse"];
-        };
-      };
-      /** @description Tag update requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Tag not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  deleteTag: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Tag id */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Deleted transaction tag */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["TagMutationResponse"];
-        };
-      };
-      /** @description Tag delete requires Midday Postgres */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Tag not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  getCurrentTeam: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Dashboard-compatible active team */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["DashboardTeam"];
-        };
-      };
-      /** @description Missing, invalid, or expired Supabase session JWT */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
 }

@@ -8,7 +8,9 @@ import {
   type DeleteTransactionCategoryInput,
   deleteTransactionCategory,
   fetchTransactionCategories,
+  fetchTransactionCategoryById,
   type TransactionCategory,
+  type TransactionCategoryDetail,
   type UpdateTransactionCategoryInput,
   updateTransactionCategory,
 } from "./transaction-categories";
@@ -28,10 +30,32 @@ async function fetchBrowserTransactionCategories(): Promise<
   return fetchTransactionCategories(getRustApiUrl(), await getAccessToken());
 }
 
+async function fetchBrowserTransactionCategoryById(
+  id: string,
+): Promise<TransactionCategoryDetail> {
+  return fetchTransactionCategoryById(
+    getRustApiUrl(),
+    await getAccessToken(),
+    id,
+  );
+}
+
 export function transactionCategoriesQueryOptions(queryKey: QueryKey) {
   return queryOptions({
     queryKey,
     queryFn: fetchBrowserTransactionCategories,
+  });
+}
+
+export function transactionCategoryByIdQueryOptions(
+  queryKey: QueryKey,
+  id: string,
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: () => fetchBrowserTransactionCategoryById(id),
+    enabled: options.enabled,
   });
 }
 

@@ -36,6 +36,11 @@ import {
 import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
+import {
+  bankAccountTransactionCountQueryOptions,
+  deleteBankAccountFromRust,
+  updateBankAccountFromRust,
+} from "@/lib/rust-api/bank-accounts-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 import { FormatAmount } from "./format-amount";
@@ -139,43 +144,44 @@ export function BankAccount({ data, provider }: Props) {
 
   const { data: transactionCountData, isFetching: isFetchingTransactionCount } =
     useQuery({
-      ...trpc.bankAccounts.getTransactionCount.queryOptions({ id }),
-      enabled: isDeleteOpen,
+      ...bankAccountTransactionCountQueryOptions(
+        trpc.bankAccounts.getTransactionCount.queryKey({ id }),
+        id,
+        { enabled: isDeleteOpen },
+      ),
     });
 
   const transactionCount = transactionCountData?.count ?? 0;
   const isLoadingTransactionCount =
     isFetchingTransactionCount && transactionCountData === undefined;
 
-  const deleteAccountMutation = useMutation(
-    trpc.bankAccounts.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankAccounts.get.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankConnections.get.queryKey(),
-        });
-        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
-        setDeleteValue("");
-        setDeleteOpen(false);
-      },
-    }),
-  );
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteBankAccountFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankAccounts.get.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankConnections.get.queryKey(),
+      });
+      queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
+      setDeleteValue("");
+      setDeleteOpen(false);
+    },
+  });
 
-  const updateAccountMutation = useMutation(
-    trpc.bankAccounts.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankAccounts.get.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankConnections.get.queryKey(),
-        });
-        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
-      },
-    }),
-  );
+  const updateAccountMutation = useMutation({
+    mutationFn: updateBankAccountFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankAccounts.get.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankConnections.get.queryKey(),
+      });
+      queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
+    },
+  });
 
   const hasRoutingInfo = routingNumber || wireRoutingNumber || sortCode;
   const hasIbanOrAccountNumber = details?.iban || details?.accountNumber;

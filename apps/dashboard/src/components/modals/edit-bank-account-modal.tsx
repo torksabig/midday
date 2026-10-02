@@ -27,6 +27,7 @@ import { SubmitButton } from "@midday/ui/submit-button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod/v3";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { updateBankAccountFromRust } from "@/lib/rust-api/bank-accounts-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 
@@ -69,21 +70,20 @@ export function EditBankAccountModal({
     },
   });
 
-  const updateAccountMutation = useMutation(
-    trpc.bankAccounts.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankConnections.get.queryKey(),
-        });
+  const updateAccountMutation = useMutation({
+    mutationFn: updateBankAccountFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankConnections.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankAccounts.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankAccounts.get.queryKey(),
+      });
 
-        onOpenChange(false);
-      },
-    }),
-  );
+      onOpenChange(false);
+    },
+  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     updateAccountMutation.mutate({
