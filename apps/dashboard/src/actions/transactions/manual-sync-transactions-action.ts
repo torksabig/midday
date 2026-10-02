@@ -5,6 +5,7 @@ import type { SyncConnectionPayload } from "@midday/jobs/schema";
 import { tasks } from "@trigger.dev/sdk";
 import { z } from "zod";
 import { authActionClient } from "@/actions/safe-action";
+import { bankConnectionsServerQueryOptions } from "@/lib/rust-api/bank-connections-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 export const manualSyncTransactionsAction = authActionClient
@@ -20,11 +21,11 @@ export const manualSyncTransactionsAction = authActionClient
       channel: LogEvents.TransactionsManualSync.channel,
     },
   })
-  .action(async ({ parsedInput: { connectionId }, ctx: { teamId } }) => {
+  .action(async ({ parsedInput: { connectionId } }) => {
     // Verify the connection belongs to the caller's team
     const queryClient = getQueryClient();
     const connections = await queryClient.fetchQuery(
-      trpc.bankConnections.get.queryOptions(),
+      bankConnectionsServerQueryOptions(trpc.bankConnections.get.queryKey()),
     );
 
     const ownsConnection = connections?.some(

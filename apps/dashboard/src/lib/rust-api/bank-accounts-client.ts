@@ -5,12 +5,14 @@ import { getAccessToken } from "@/utils/session";
 import {
   type BankAccount,
   type BankAccountCurrency,
+  type BankAccountBalance,
   type BankAccountsListParams,
   type BankAccountTransactionCount,
   type CreateBankAccountInput,
   createBankAccount,
   type DeleteBankAccountInput,
   deleteBankAccount,
+  fetchBankAccountBalances,
   fetchBankAccountCurrencies,
   fetchBankAccounts,
   fetchBankAccountTransactionCount,
@@ -39,6 +41,10 @@ async function fetchBrowserBankAccountCurrencies(): Promise<
   return fetchBankAccountCurrencies(getRustApiUrl(), await getAccessToken());
 }
 
+async function fetchBrowserBankAccountBalances(): Promise<BankAccountBalance[]> {
+  return fetchBankAccountBalances(getRustApiUrl(), await getAccessToken());
+}
+
 async function fetchBrowserBankAccountTransactionCount(
   id: string,
 ): Promise<BankAccountTransactionCount> {
@@ -63,6 +69,13 @@ export function bankAccountCurrenciesQueryOptions(queryKey: QueryKey) {
   return queryOptions<BankAccountCurrency[]>({
     queryKey,
     queryFn: fetchBrowserBankAccountCurrencies,
+  });
+}
+
+export function bankAccountBalancesQueryOptions(queryKey: QueryKey) {
+  return queryOptions<BankAccountBalance[]>({
+    queryKey,
+    queryFn: fetchBrowserBankAccountBalances,
   });
 }
 

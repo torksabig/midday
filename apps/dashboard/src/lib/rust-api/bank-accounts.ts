@@ -7,6 +7,7 @@ type RawBankAccountMutation =
   components["schemas"]["BankAccountMutationResponse"];
 type RawBankAccountCurrency =
   components["schemas"]["BankAccountCurrencyRow"];
+type RawBankAccountBalance = components["schemas"]["BankAccountBalanceRow"];
 type RawBankAccountTransactionCount =
   components["schemas"]["BankAccountTransactionCountResponse"];
 
@@ -102,6 +103,14 @@ export type DeleteBankAccountInput = {
 
 export type BankAccountCurrency = {
   currency: string;
+};
+
+export type BankAccountBalance = {
+  id: string;
+  currency: string;
+  balance: number;
+  name: string;
+  logo_url: string;
 };
 
 export type BankAccountTransactionCount = {
@@ -240,6 +249,34 @@ export async function fetchBankAccountCurrencies(
 
   const payload = (await response.json()) as RawBankAccountCurrency[];
   return payload.map((row) => ({ currency: row.currency }));
+}
+
+export async function fetchBankAccountBalances(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<BankAccountBalance[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/bank-accounts/balances`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawBankAccountBalance[];
+  return payload.map((row) => ({
+    id: row.id,
+    currency: row.currency,
+    balance: row.balance,
+    name: row.name,
+    logo_url: row.logo_url,
+  }));
 }
 
 export async function fetchBankAccountTransactionCount(

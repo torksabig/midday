@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { Button } from "@midday/ui/button";
 import { Icons } from "@midday/ui/icons";
 import {
@@ -14,6 +13,10 @@ import { differenceInDays, formatDistanceToNow } from "date-fns";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useReconnect } from "@/hooks/use-reconnect";
+import {
+  type BankConnectionListItem,
+  bankConnectionsQueryOptions,
+} from "@/lib/rust-api/bank-connections-client";
 import { useTRPC } from "@/trpc/client";
 import { connectionStatus } from "@/utils/connection-status";
 import { BankAccount } from "./bank-account";
@@ -38,9 +41,7 @@ function getProviderName(provider: string | null) {
   }
 }
 
-type BankConnection = NonNullable<
-  RouterOutputs["bankConnections"]["get"]
->[number];
+type BankConnection = BankConnectionListItem;
 
 function ConnectionState({
   connection,
@@ -268,7 +269,9 @@ export function BankConnection({ connection }: { connection: BankConnection }) {
 
 export function BankConnections() {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.bankConnections.get.queryOptions());
+  const { data } = useSuspenseQuery(
+    bankConnectionsQueryOptions(trpc.bankConnections.get.queryKey()),
+  );
 
   return (
     <div className="divide-y">

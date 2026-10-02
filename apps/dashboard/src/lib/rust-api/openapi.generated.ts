@@ -100,6 +100,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bank-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBankConnections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-connections/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconnectBankConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-connections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteBankConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/categories": {
         parameters: {
             query?: never;
@@ -396,6 +444,49 @@ export interface components {
             /** Format: int64 */
             count: number;
         };
+        BankConnectionAccount: {
+            account_id: string;
+            /** Format: double */
+            available_balance?: number | null;
+            /** Format: double */
+            balance?: number | null;
+            bic?: string | null;
+            /** Format: double */
+            credit_limit?: number | null;
+            currency?: string | null;
+            enabled: boolean;
+            /** Format: int32 */
+            error_retries?: number | null;
+            id: string;
+            manual?: boolean | null;
+            name?: string | null;
+            routing_number?: string | null;
+            sort_code?: string | null;
+            subtype?: string | null;
+            type?: string | null;
+            wire_routing_number?: string | null;
+        };
+        BankConnectionDeleteResponse: {
+            accessToken?: string | null;
+            provider?: string | null;
+            referenceId?: string | null;
+        };
+        BankConnectionListItem: {
+            bank_accounts: components["schemas"]["BankConnectionAccount"][];
+            enrollment_id?: string | null;
+            expires_at?: string | null;
+            id: string;
+            institution_id: string;
+            last_accessed?: string | null;
+            logo_url?: string | null;
+            name: string;
+            provider: string;
+            reference_id?: string | null;
+            status?: string | null;
+        };
+        BankConnectionReconnectResponse: {
+            id: string;
+        };
         BulkUpdateNotificationSettingsBody: {
             updates: components["schemas"]["UpsertNotificationSettingBody"][];
         };
@@ -669,6 +760,11 @@ export interface components {
             total_amount: number;
             /** Format: int64 */
             total_duration: number;
+        };
+        ReconnectBankConnectionBody: {
+            expiresAt?: string | null;
+            newReferenceId: string;
+            referenceId: string;
         };
         TagMutationResponse: {
             id: string;
@@ -1003,6 +1099,124 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getBankConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                enabled: boolean | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team bank connections with nested accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankConnectionListItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reconnectBankConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconnectBankConnectionBody"];
+            };
+        };
+        responses: {
+            /** @description Reconnected bank connection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankConnectionReconnectResponse"];
+                };
+            };
+            /** @description Bank connections require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bank connection not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteBankConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bank connection id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted bank connection credentials for provider teardown */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankConnectionDeleteResponse"];
+                };
+            };
+            /** @description Bank connections require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bank connection not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

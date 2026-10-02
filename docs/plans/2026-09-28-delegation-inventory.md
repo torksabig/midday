@@ -2,15 +2,15 @@
 
 Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-backend` + `MIDDAY_BACKEND_MODE` (`legacy` | `dual` | `replacement`) · Rust: `fintech/clone` Axum `:8787`
 
-**Autopilot:** Agents run slices from the queue below without per-step user approval — see [Autopilot migration continuation](./2026-09-28-autopilot-migration-continuation.md).
+**Autopilot:** Agents run direct-cutover slices without per-step user approval — see [2026-10-02-autopilot-direct-cutover.md](./2026-10-02-autopilot-direct-cutover.md) (supersedes the old façade autopilot doc).
 
-**Direct dashboard adjustment (2026-10-02):** Direct-Rust dashboard traffic now includes category getById + writes, bank-account create/update/delete/currencies/transaction-count, and transaction-tag assignment writes, in addition to the earlier identity/overview/notifications/tags/categories-list/bank-accounts-list cutovers. Façade delegation counts for dual/replacement mode are unchanged.
+**Direct dashboard adjustment (2026-10-02):** Direct-Rust dashboard traffic now includes category getById + writes, bank-account create/update/delete/balances/currencies/transaction-count, bank-connections get/reconnect, and transaction-tag assignment writes, in addition to the earlier identity/overview/notifications/tags/categories-list/bank-accounts-list cutovers. Façade delegation counts for dual/replacement mode are unchanged.
 
 **Counts:** **96 / ~256** read procedures delegate to Rust when mode is `dual` or `replacement` (~37.5%). **111** write procedures delegate (`transactions.update`, `transactions.updateMany`, `transactions.deleteMany`, `transactions.create`, `transactions.import` SQL prep, `inbox.update`, `inbox.matchTransaction`, `inbox.delete`, `inbox.deleteMany`, `inbox.confirmMatch`, `inbox.declineMatch`, `inbox.unmatchTransaction`, `inbox.create`, `customers.cancelEnrichment`, `customers.clearEnrichment`, `customers.enrich` SQL, `transactions.moveToReview`, `customers.togglePortal`, `inbox.blocklist.create`, `inbox.blocklist.delete`, `invoice.update`, `invoice.draft`, `invoice.delete`, `invoice.duplicate`, `invoice.updateSchedule`, `invoice.cancelSchedule`, `invoice.create`, `invoice.createFromTracker`, `invoice.remind` SQL, `notifications.updateStatus`, `notifications.updateAllStatus`, `user.update`, `user.switchTeam`, `team.update`, `team.acceptInvite`, `team.declineInvite`, `team.deleteInvite`, `team.deleteMember`, `team.updateMember`, `team.leave`, `team.invite` SQL, `team.create` SQL, `tags.create`, `tags.update`, `tags.delete`, `documentTags.create`, `documentTags.delete`, `documentTagAssignments.create`, `documentTagAssignments.delete`, `transactionTags.create`, `transactionTags.delete`, `customers.delete`, `customers.upsert`, `documents.delete`, `documents.reprocessDocument` SQL, `documents.processDocument` SQL, `trackerEntries.startTimer`, `trackerEntries.stopTimer`, `trackerEntries.upsert`, `trackerEntries.delete`, `notificationSettings.update`, `notificationSettings.bulkUpdate`, `transactionCategories.create`, `transactionCategories.update`, `transactionCategories.delete`, `oauthApplications.create`, `oauthApplications.update`, `oauthApplications.delete`, `oauthApplications.regenerateSecret`, `oauthApplications.revokeAccess`, `oauthApplications.authorize` SQL, `invoiceProducts.delete`, `invoiceProducts.incrementUsage`, `invoiceProducts.create`, `invoiceProducts.upsert`, `invoiceProducts.updateProduct`, `invoiceProducts.saveLineItemAsProduct`, `invoiceTemplate.create`, `invoiceTemplate.upsert`, `invoiceTemplate.setDefault`, `invoiceTemplate.delete`, `trackerProjects.upsert`, `trackerProjects.delete`, `apps.disconnect`, `apps.update`, `apps.updateSettings`, `apps.removeWhatsAppConnection`, `apps.createPlatformLinkToken`, `apiKeys.delete`, `reports.create`, `shortLinks.createForUrl`, `shortLinks.createForDocument`, `accounting.disconnect`, `accounting.export` app lookup, `bankAccounts.create`, `bankAccounts.update`, `bankAccounts.delete`, `institutions.updateUsage`, `transactionAttachments.createMany`, `transactionAttachments.delete`, `bankConnections.reconnect`, `bankConnections.delete`, `invoiceRecurring.pause`, `invoiceRecurring.resume`, `invoiceRecurring.delete`, `invoiceRecurring.create`, `invoiceRecurring.update`, `inboxAccounts.delete`, `inboxAccounts.sync` SQL, `team.delete` SQL, `oauthApplications.updateApprovalStatus` SQL). All other procedures still hit Drizzle/legacy in `apps/api`.
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/currencies/transaction-count, tags list/create/update/delete, and transaction-tag assignment create/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) stays on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, and transaction-tag assignment create/delete. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | yes | **write** · preference fields PATCH (AP-21); no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -44,15 +44,15 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notificationSettings.bulkUpdate` | yes | **write** · bulk channel upserts (AP-28) |
 | `notificationSettings.*` (other) | no | — |
 | `bankAccounts.get` | direct Rust | read · `enabled`/`manual` filters; dashboard calls `GET /api/v1/bank-accounts` directly and preserves the old React Query cache key |
-| `bankAccounts.balances` | yes | read · `get_team_bank_accounts_balances()` (Phase 10) |
+| `bankAccounts.balances` | direct Rust | read · `get_team_bank_accounts_balances()` (Phase 10); dashboard client calls `GET /api/v1/bank-accounts/balances` directly |
 | `bankAccounts.currencies` | direct Rust | read · `get_bank_account_currencies()` (Phase 10); dashboard metrics call `GET /api/v1/bank-accounts/currencies` directly |
 | `bankAccounts.getTransactionCount` | direct Rust | read · tx count for delete dialog (Phase 11); dashboard calls `GET /api/v1/bank-accounts/:id/transaction-count` directly |
 | `bankAccounts.create` | direct Rust | **write** · manual account insert (AP-44); dashboard calls `POST /api/v1/bank-accounts` directly |
 | `bankAccounts.update` | direct Rust | **write** · partial update (AP-44); dashboard calls `PUT /api/v1/bank-accounts/:id` directly |
 | `bankAccounts.delete` | direct Rust | **write** · team-scoped delete (AP-44); dashboard calls `DELETE /api/v1/bank-accounts/:id` directly |
 | `bankAccounts.*` (other) | no | getDetails (decrypt), payment info (decrypt) |
-| `bankConnections.get` | yes | read · list + nested accounts (Phase 6 slice 1) |
-| `bankConnections.reconnect` | yes | **write** · update reference + status (AP-46) |
+| `bankConnections.get` | direct Rust | read · list + nested accounts (Phase 6 slice 1); dashboard calls `GET /api/v1/bank-connections` directly |
+| `bankConnections.reconnect` | direct Rust | **write** · update reference + status (AP-46); Enable Banking session route calls Rust directly |
 | `bankConnections.delete` | yes | **write** · DB delete; Trigger delete-connection stays Node (AP-52) |
 | `bankConnections.*` (other) | no | create (encrypt), addAccounts (encrypt) |
 | `apps.get` | yes | read · team installed apps (AP-16); preserves `app_id` snake_case |
@@ -511,7 +511,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice:** Stage 3 SQL slices complete (AP-WORKER-1..10). Remains gated: live accounting provider HTTP, Resend/PDF/LLM, decrypt/encrypt, OAuth, Stripe/Polar, `dispatch-insights` fan-out, job bodies with no separable SQL. Signed URLs have no SQL. Stage 4 gated on explicit decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-0 DONE** (`bankAccounts.balances` + `bankConnections.get`/`reconnect`; `delete` stays tRPC) → **DC-1** team/settings shell → **DC-2+** transactions / inbox / documents / customers / invoices. Façade Stage 3 SQL complete (AP-WORKER-1..10). Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path
@@ -534,4 +534,4 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 - `documents.signedUrl(s)` — Supabase storage only (no SQL)
 - Stage 4 delete `apps/api` — blocked · user must say decommission
 
-**Autopilot AP-12–62 + AP-STAGE3 + AP-WORKER-1..10** (AP-15 remains BLOCKED). Stage 3 SQL slices complete. Stage 4 gated on explicit decommission.
+**Façade autopilot AP-12–62 + AP-STAGE3 + AP-WORKER-1..10** complete (AP-15 BLOCKED). **Active loop:** direct-cutover DC-* in [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). Stage 4 gated on explicit decommission.

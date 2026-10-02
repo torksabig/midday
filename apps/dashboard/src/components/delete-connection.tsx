@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,15 +24,12 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
+import type { BankConnectionListItem } from "@/lib/rust-api/bank-connections";
 import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 
-type BankConnection = NonNullable<
-  RouterOutputs["bankConnections"]["get"]
->[number];
-
 type Props = {
-  connection: BankConnection;
+  connection: BankConnectionListItem;
 };
 
 export function DeleteConnection({ connection }: Props) {

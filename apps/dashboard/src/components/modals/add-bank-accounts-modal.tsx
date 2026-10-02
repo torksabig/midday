@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { Avatar, AvatarFallback } from "@midday/ui/avatar";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import { useToast } from "@midday/ui/use-toast";
 import { getInitials } from "@midday/utils/format";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { BankConnectionAccount } from "@/lib/rust-api/bank-connections";
 import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
@@ -46,9 +46,7 @@ function RowsSkeleton() {
   );
 }
 
-type ExistingAccount = NonNullable<
-  RouterOutputs["bankConnections"]["get"]
->[number]["bankAccounts"][number];
+type ExistingAccount = BankConnectionAccount;
 
 type Props = {
   connectionId: string;

@@ -2,6 +2,7 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
+import { bankConnectionsQueryOptions } from "@/lib/rust-api/bank-connections-client";
 import { useTRPC } from "@/trpc/client";
 import { AddAccountButton } from "./add-account-button";
 import { BankConnections } from "./bank-connections";
@@ -29,7 +30,7 @@ export function BankAccountList() {
   const trpc = useTRPC();
 
   const { data: connections } = useSuspenseQuery(
-    trpc.bankConnections.get.queryOptions(),
+    bankConnectionsQueryOptions(trpc.bankConnections.get.queryKey()),
   );
 
   const { data: manualAccounts } = useSuspenseQuery(

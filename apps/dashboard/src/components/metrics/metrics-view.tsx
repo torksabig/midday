@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { updateMetricsSettingsAction } from "@/actions/update-metrics-settings-action";
 import { useMetricsFilter } from "@/hooks/use-metrics-filter";
 import { useUserQuery } from "@/hooks/use-user";
+import { bankConnectionsQueryOptions } from "@/lib/rust-api/bank-connections-client";
 import { useTRPC } from "@/trpc/client";
 import { BurnRateCard } from "./cards/burn-rate-card";
 import { CashBalanceCard } from "./cards/cash-balance-card";
@@ -116,7 +117,7 @@ export function MetricsView({
   const trpc = useTRPC();
   const { data: user } = useUserQuery();
   const { data: connections } = useQuery(
-    trpc.bankConnections.get.queryOptions(),
+    bankConnectionsQueryOptions(trpc.bankConnections.get.queryKey()),
   );
   const { from, to, currency, revenueType } = useMetricsFilter();
   const [layout, setLayout] = useState<ChartLayoutItem[]>(

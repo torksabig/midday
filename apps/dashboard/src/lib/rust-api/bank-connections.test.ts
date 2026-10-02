@@ -1,0 +1,71 @@
+import { expect, test } from "bun:test";
+import { normalizeBankConnection } from "./bank-connections";
+
+test("normalizes Rust bank connection list items for the dashboard", () => {
+  expect(
+    normalizeBankConnection({
+      id: "conn-1",
+      name: "Enable Banking",
+      logo_url: "https://example.com/logo.png",
+      provider: "enablebanking",
+      expires_at: "2026-12-01T00:00:00Z",
+      enrollment_id: "enroll-1",
+      institution_id: "inst-1",
+      reference_id: "ref-1",
+      last_accessed: "2026-10-01T00:00:00Z",
+      status: "connected",
+      bank_accounts: [
+        {
+          id: "acct-1",
+          account_id: "provider-acct-1",
+          name: "Checking",
+          enabled: true,
+          manual: false,
+          currency: "EUR",
+          balance: 100.5,
+          type: "depository",
+          error_retries: 0,
+          subtype: "checking",
+          bic: "NDEAFIHH",
+          routing_number: null,
+          wire_routing_number: null,
+          sort_code: null,
+          available_balance: 90,
+          credit_limit: null,
+        },
+      ],
+    }),
+  ).toEqual({
+    id: "conn-1",
+    name: "Enable Banking",
+    logoUrl: "https://example.com/logo.png",
+    provider: "enablebanking",
+    expiresAt: "2026-12-01T00:00:00Z",
+    enrollmentId: "enroll-1",
+    institutionId: "inst-1",
+    referenceId: "ref-1",
+    lastAccessed: "2026-10-01T00:00:00Z",
+    status: "connected",
+    accessToken: null,
+    bankAccounts: [
+      {
+        id: "acct-1",
+        accountId: "provider-acct-1",
+        name: "Checking",
+        enabled: true,
+        manual: false,
+        currency: "EUR",
+        balance: 100.5,
+        type: "depository",
+        errorRetries: 0,
+        subtype: "checking",
+        bic: "NDEAFIHH",
+        routingNumber: null,
+        wireRoutingNumber: null,
+        sortCode: null,
+        availableBalance: 90,
+        creditLimit: null,
+      },
+    ],
+  });
+});

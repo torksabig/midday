@@ -1,8 +1,19 @@
 import { getSession } from "@midday/supabase/cached-queries";
 import { sanitizeRedirectPath } from "@midday/utils/sanitize-redirect";
 import { type NextRequest, NextResponse } from "next/server";
+import { reconnectBankConnection } from "@/lib/rust-api/bank-connections";
 import { getTRPCClient } from "@/trpc/server";
 import { getUrl } from "@/utils/environment";
+
+function getRustApiUrl() {
+  const url =
+    process.env.RUST_API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_RUST_API_URL;
+
+  if (url) return url.replace(/\/$/, "");
+  if (process.env.NODE_ENV !== "production") return "http://127.0.0.1:8787";
+
+  throw new Error("RUST_API_INTERNAL_URL must be configured");
+}
 
 export async function GET(request: NextRequest) {
   const origin = getUrl();
@@ -73,11 +84,15 @@ export async function GET(request: NextRequest) {
     exchangeExpiresAt
   ) {
     try {
-      const connection = await trpc.bankConnections.reconnect.mutate({
-        referenceId: sessionId,
-        newReferenceId: exchangeSessionId,
-        expiresAt: exchangeExpiresAt,
-      });
+      const connection = await reconnectBankConnection(
+        getRustApiUrl(),
+        session.access_token,
+        {
+          referenceId: sessionId,
+          newReferenceId: exchangeSessionId,
+          expiresAt: exchangeExpiresAt,
+        },
+      );
 
       return NextResponse.redirect(
         new URL(
