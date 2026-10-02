@@ -1,7 +1,10 @@
 import { ComboboxDropdown } from "@midday/ui/combobox-dropdown";
 import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
+import {
+  createTransactionCategoryFromRust,
+  transactionCategoriesQueryOptions,
+} from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { getColorFromName } from "@/utils/categories";
 import { CategoryColor } from "./category";
@@ -100,25 +103,24 @@ export function SelectCategory({
   const transformedCategories = data?.map(transformCategory) ?? [];
   const categories = flattenCategories(transformedCategories);
 
-  const createCategoryMutation = useMutation(
-    trpc.transactionCategories.create.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.get.queryKey(),
-        });
+  const createCategoryMutation = useMutation({
+    mutationFn: createTransactionCategoryFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.get.queryKey(),
+      });
 
-        const created = data as CreatedCategory | null | undefined;
-        if (created) {
-          onChange({
-            id: created.id,
-            name: created.name,
-            color: created.color,
-            slug: created.slug!,
-          });
-        }
-      },
-    }),
-  );
+      const created = data as CreatedCategory | null | undefined;
+      if (created) {
+        onChange({
+          id: created.id,
+          name: created.name,
+          color: created.color,
+          slug: created.slug!,
+        });
+      }
+    },
+  });
 
   // @ts-expect-error - slug is not nullable
   const selectedValue = selected ? transformCategory(selected) : undefined;

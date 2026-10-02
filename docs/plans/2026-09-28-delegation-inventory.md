@@ -84,9 +84,9 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inboxAccounts.*` (other) | no | connect, OAuth exchange |
 | `transactionCategories.get` | yes | read · full tree |
 | `transactionCategories.getById` | yes | read · detail + children (AP-24) |
-| `transactionCategories.create` | yes | **write** · insert + activity (AP-30); embedding stays in Node |
-| `transactionCategories.update` | yes | **write** · partial update (AP-30) |
-| `transactionCategories.delete` | yes | **write** · non-system only (AP-30) |
+| `transactionCategories.create` | direct Rust | **write** · insert + activity (AP-30); dashboard calls `POST /api/v1/categories` directly; embedding stays in Node if needed |
+| `transactionCategories.update` | direct Rust | **write** · partial update (AP-30); dashboard calls `PUT /api/v1/categories/:id` directly and maps `parentId: null` to `clearParent` |
+| `transactionCategories.delete` | direct Rust | **write** · non-system only (AP-30); dashboard calls `DELETE /api/v1/categories/:id` directly |
 | `transactionCategories.*` (other) | no | — |
 | `transactionTags.create` | yes | **write** · link tag to tx (AP-24) |
 | `transactionTags.delete` | yes | **write** · unlink tag (AP-24) |

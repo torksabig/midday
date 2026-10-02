@@ -21,7 +21,10 @@ import {
 } from "@tanstack/react-table";
 import React from "react";
 import { useCategoryParams } from "@/hooks/use-category-params";
-import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
+import {
+  deleteTransactionCategoryFromRust,
+  transactionCategoriesQueryOptions,
+} from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import {
   type CategoriesTableMeta,
@@ -44,15 +47,14 @@ export function DataTable() {
 
   const { data } = useSuspenseQuery(categoriesQueryOptions);
 
-  const deleteCategoryMutation = useMutation(
-    trpc.transactionCategories.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const deleteCategoryMutation = useMutation({
+    mutationFn: deleteTransactionCategoryFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.get.queryKey(),
+      });
+    },
+  });
 
   // Flatten categories - include all parents and all children
   const flattenedData = React.useMemo(() => {

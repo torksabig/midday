@@ -21,6 +21,7 @@ import { Icons } from "@midday/ui/icons";
 import { Sheet, SheetContent, SheetHeader } from "@midday/ui/sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCategoryParams } from "@/hooks/use-category-params";
+import { deleteTransactionCategoryFromRust } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 import { CategoryEditForm } from "../forms/category-edit-form";
 
@@ -51,16 +52,15 @@ export function CategoryEditSheet() {
     ),
   );
 
-  const deleteCategoryMutation = useMutation(
-    trpc.transactionCategories.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.get.queryKey(),
-        });
-        setParams(null);
-      },
-    }),
-  );
+  const deleteCategoryMutation = useMutation({
+    mutationFn: deleteTransactionCategoryFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.get.queryKey(),
+      });
+      setParams(null);
+    },
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={() => setParams(null)}>

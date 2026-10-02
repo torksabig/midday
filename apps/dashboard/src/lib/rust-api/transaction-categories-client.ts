@@ -3,8 +3,14 @@
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type CreateTransactionCategoryInput,
+  createTransactionCategory,
+  type DeleteTransactionCategoryInput,
+  deleteTransactionCategory,
   fetchTransactionCategories,
   type TransactionCategory,
+  type UpdateTransactionCategoryInput,
+  updateTransactionCategory,
 } from "./transaction-categories";
 
 function getRustApiUrl() {
@@ -27,4 +33,34 @@ export function transactionCategoriesQueryOptions(queryKey: QueryKey) {
     queryKey,
     queryFn: fetchBrowserTransactionCategories,
   });
+}
+
+export async function createTransactionCategoryFromRust(
+  input: CreateTransactionCategoryInput,
+) {
+  return createTransactionCategory(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+}
+
+export async function updateTransactionCategoryFromRust(
+  input: UpdateTransactionCategoryInput,
+) {
+  return updateTransactionCategory(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+}
+
+export async function deleteTransactionCategoryFromRust(
+  input: DeleteTransactionCategoryInput,
+) {
+  return deleteTransactionCategory(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
 }

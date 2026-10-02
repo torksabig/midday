@@ -45,8 +45,24 @@ export interface paths {
     };
     get: operations["getTransactionCategories"];
     put?: never;
-    post?: never;
+    post: operations["createTransactionCategory"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/categories/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations["updateTransactionCategory"];
+    post?: never;
+    delete: operations["deleteTransactionCategory"];
     options?: never;
     head?: never;
     patch?: never;
@@ -268,6 +284,32 @@ export interface components {
     BulkUpdateNotificationSettingsBody: {
       updates: components["schemas"]["UpsertNotificationSettingBody"][];
     };
+    CategoryMutationResponse: {
+      color?: string | null;
+      createdAt: string;
+      description?: string | null;
+      excluded?: boolean | null;
+      id: string;
+      name: string;
+      parentId?: string | null;
+      slug?: string | null;
+      system?: boolean | null;
+      /** Format: double */
+      taxRate?: number | null;
+      taxReportingCode?: string | null;
+      taxType?: string | null;
+      teamId: string;
+    };
+    CreateCategoryBody: {
+      color?: string | null;
+      description?: string | null;
+      name: string;
+      parentId?: string | null;
+      /** Format: double */
+      taxRate?: number | null;
+      taxReportingCode?: string | null;
+      taxType?: string | null;
+    };
     CreateTagBody: {
       name: string;
     };
@@ -488,6 +530,18 @@ export interface components {
       name: string;
       teamId: string;
     };
+    UpdateCategoryBody: {
+      clearParent?: boolean | null;
+      color?: string | null;
+      description?: string | null;
+      excluded?: boolean | null;
+      name?: string | null;
+      parentId?: string | null;
+      /** Format: double */
+      taxRate?: number | null;
+      taxReportingCode?: string | null;
+      taxType?: string | null;
+    };
     UpdateNotificationStatusBody: {
       status: string;
     };
@@ -586,6 +640,136 @@ export interface operations {
       };
       /** @description Missing, invalid, or expired Supabase session JWT */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  createTransactionCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCategoryBody"];
+      };
+    };
+    responses: {
+      /** @description Created transaction category */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryMutationResponse"];
+        };
+      };
+      /** @description Category create requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  updateTransactionCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Category id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCategoryBody"];
+      };
+    };
+    responses: {
+      /** @description Updated transaction category */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryMutationResponse"];
+        };
+      };
+      /** @description Category update requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Category not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  deleteTransactionCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Category id */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Deleted transaction category */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryMutationResponse"];
+        };
+      };
+      /** @description Category delete requires Midday Postgres */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Missing, invalid, or expired Supabase session JWT */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Category not found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

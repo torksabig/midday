@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import {
   Form,
   FormControl,
@@ -23,6 +22,7 @@ import { TaxRateInput } from "@/components/tax-rate-input";
 import { useCategoryParams } from "@/hooks/use-category-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { createTransactionCategoryFromRust } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -38,8 +38,19 @@ const formSchema = z.object({
 
 type CreateCategoriesFormValues = z.infer<typeof formSchema>;
 
+type CategoryFormData = {
+  name?: string | null;
+  description?: string | null;
+  color?: string | null;
+  taxRate?: number | null;
+  taxType?: string | null;
+  taxReportingCode?: string | null;
+  excluded?: boolean | null;
+  parentId?: string | null;
+};
+
 type Props = {
-  data?: RouterOutputs["transactionCategories"]["getById"];
+  data?: CategoryFormData | null;
 };
 
 export function CategoryForm({ data }: Props) {
@@ -48,16 +59,15 @@ export function CategoryForm({ data }: Props) {
   const { setParams } = useCategoryParams();
   const { data: user } = useUserQuery();
 
-  const categoriesMutation = useMutation(
-    trpc.transactionCategories.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.get.queryKey(),
-        });
-        setParams(null);
-      },
-    }),
-  );
+  const categoriesMutation = useMutation({
+    mutationFn: createTransactionCategoryFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.get.queryKey(),
+      });
+      setParams(null);
+    },
+  });
 
   const defaultValues = {
     name: data?.name || "",

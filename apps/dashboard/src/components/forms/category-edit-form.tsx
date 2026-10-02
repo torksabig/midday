@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import {
   Form,
   FormControl,
@@ -23,6 +22,7 @@ import { TaxRateInput } from "@/components/tax-rate-input";
 import { useCategoryParams } from "@/hooks/use-category-params";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { updateTransactionCategoryFromRust } from "@/lib/rust-api/transaction-categories-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -39,8 +39,21 @@ const formSchema = z.object({
 
 type UpdateCategoriesFormValues = z.infer<typeof formSchema>;
 
+type CategoryEditFormData = {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  color?: string | null;
+  taxRate?: number | null;
+  taxType?: string | null;
+  taxReportingCode?: string | null;
+  excluded?: boolean | null;
+  parentId?: string | null;
+  children?: unknown[] | null;
+};
+
 type Props = {
-  data?: RouterOutputs["transactionCategories"]["getById"];
+  data?: CategoryEditFormData | null;
 };
 
 export function CategoryEditForm({ data }: Props) {
@@ -69,30 +82,29 @@ export function CategoryEditForm({ data }: Props) {
     form.reset(defaultValues);
   }, [data, form]);
 
-  const updateCategoryMutation = useMutation(
-    trpc.transactionCategories.update.mutationOptions({
-      onSuccess: (_, variables) => {
-        // Always invalidate category queries
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.get.queryKey(),
-        });
+  const updateCategoryMutation = useMutation({
+    mutationFn: updateTransactionCategoryFromRust,
+    onSuccess: (_, variables) => {
+      // Always invalidate category queries
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactionCategories.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactionCategories.getById.queryKey(),
+      });
 
-        // Check if excluded or taxRate changed (affects calculations)
-        const excludedChanged = data?.excluded !== variables.excluded;
-        const taxRateChanged = data?.taxRate !== variables.taxRate;
+      // Check if excluded or taxRate changed (affects calculations)
+      const excludedChanged = data?.excluded !== variables.excluded;
+      const taxRateChanged = data?.taxRate !== variables.taxRate;
 
-        if (excludedChanged || taxRateChanged) {
-          invalidateTransactionQueries();
-        }
+      if (excludedChanged || taxRateChanged) {
+        invalidateTransactionQueries();
+      }
 
-        setParams(null);
-      },
-    }),
-  );
+      setParams(null);
+    },
+  });
 
   function onSubmit(values: UpdateCategoriesFormValues) {
     const payload: {
