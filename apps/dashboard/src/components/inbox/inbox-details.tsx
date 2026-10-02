@@ -35,6 +35,7 @@ import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { getWebsiteLogo } from "@/utils/logos";
@@ -60,13 +61,10 @@ export function InboxDetails() {
   const id = params.inboxId;
 
   const { data, isLoading, isError } = useQuery(
-    trpc.inbox.getById.queryOptions(
-      { id: id! },
-      {
-        enabled: !!id,
-        retry: false,
-      },
-    ),
+    inboxByIdQueryOptions(trpc.inbox.getById.queryKey({ id: id! }), id!, {
+      enabled: !!id,
+      retry: false,
+    }),
   );
 
   const updateInboxMutation = useMutation(

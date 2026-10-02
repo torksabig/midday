@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserQuery } from "@/hooks/use-user";
+import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { LocalStorageKeys } from "@/utils/constants";
 import { FormatAmount } from "../format-amount";
@@ -27,12 +28,9 @@ export function SuggestedMatch() {
 
   // Get the inbox data to check if it has status "suggested_match"
   const { data: inboxData } = useQuery(
-    trpc.inbox.getById.queryOptions(
-      { id: id! },
-      {
-        enabled: !!id,
-      },
-    ),
+    inboxByIdQueryOptions(trpc.inbox.getById.queryKey({ id: id! }), id!, {
+      enabled: !!id,
+    }),
   );
 
   // Extract suggestion from inbox data

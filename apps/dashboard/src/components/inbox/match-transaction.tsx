@@ -19,6 +19,7 @@ import { useDebounceValue } from "usehooks-ts";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserQuery } from "@/hooks/use-user";
+import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionMatchItem } from "./transaction-match-item";
 import { TransactionUnmatchItem } from "./transaction-unmatch-item";
@@ -41,12 +42,9 @@ export function MatchTransaction() {
   const id = params.inboxId;
 
   const { data } = useQuery(
-    trpc.inbox.getById.queryOptions(
-      { id: id! },
-      {
-        enabled: !!id,
-      },
-    ),
+    inboxByIdQueryOptions(trpc.inbox.getById.queryKey({ id: id! }), id!, {
+      enabled: !!id,
+    }),
   );
 
   const { data: transactionMatch, isLoading } = useQuery(

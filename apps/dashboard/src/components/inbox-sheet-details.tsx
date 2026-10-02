@@ -11,6 +11,7 @@ import { FormatAmount } from "@/components/format-amount";
 import { InboxActions } from "@/components/inbox/inbox-actions";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { getWebsiteLogo } from "@/utils/logos";
 
@@ -23,11 +24,14 @@ export function InboxSheetDetails() {
   const isOpen = Boolean(params.inboxId && params.inboxType === "details");
 
   const { data, isLoading } = useQuery({
-    ...trpc.inbox.getById.queryOptions({
-      id: params.inboxId!,
-    }),
-    enabled: isOpen,
-    staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+    ...inboxByIdQueryOptions(
+      trpc.inbox.getById.queryKey({ id: params.inboxId! }),
+      params.inboxId!,
+      {
+        enabled: isOpen,
+        staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
+      },
+    ),
     placeholderData: () => {
       const pages = queryClient
         .getQueriesData({ queryKey: trpc.inbox.get.infiniteQueryKey() })

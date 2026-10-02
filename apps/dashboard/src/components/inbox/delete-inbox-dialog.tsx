@@ -19,6 +19,7 @@ import { useState } from "react";
 import { revalidateInbox } from "@/actions/revalidate-action";
 import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
+import { inboxCheckAttachmentsQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -44,8 +45,9 @@ export function DeleteInboxDialog({
 
   // Check if inbox item has transaction attachments
   const { data: attachmentData } = useQuery(
-    trpc.inbox.checkAttachments.queryOptions(
-      { id },
+    inboxCheckAttachmentsQueryOptions(
+      trpc.inbox.checkAttachments.queryKey({ id }),
+      id,
       {
         enabled: isOpen, // Only run when dialog is open
       },

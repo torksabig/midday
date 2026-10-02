@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, and transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, and inbox get/getById/checkAttachments (+ search/getByStatus helpers). Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -100,11 +100,11 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.searchTransactionMatch` | yes | read · FTS/pg_trgm match candidates (AP-53); scoring simplified vs Drizzle |
 | `transactions.import` | yes | **write** · bank account get/update SQL; import job stays Node (AP-58) |
 | `transactions.*` (other) | no | export (job-only), generateCsvMapping (AI) |
-| `inbox.get` | yes | read · list |
-| `inbox.getById` | yes | read |
-| `inbox.checkAttachments` | yes | read |
-| `inbox.search` | yes | read |
-| `inbox.getByStatus` | yes | read |
+| `inbox.get` | direct Rust | read · list; dashboard infinite query calls `GET /api/v1/inbox` directly and preserves tRPC infinite query keys |
+| `inbox.getById` | direct Rust | read · detail + suggestion/related; dashboard calls `GET /api/v1/inbox/{id}` directly |
+| `inbox.checkAttachments` | direct Rust | read · attachment linkage check; dashboard calls `GET /api/v1/inbox/{id}/check-attachments` directly |
+| `inbox.search` | direct Rust | read · search helpers wired; no dashboard fetch sites yet (global search still via `search.global`) |
+| `inbox.getByStatus` | direct Rust | read · by-status helpers wired; no dashboard fetch sites yet |
 | `inbox.update` | yes | **write** · partial PUT (AP-12c); `status: deleted` not on Rust path |
 | `inbox.matchTransaction` | yes | **write** · single-item match + attachment (AP-18); no grouped-inbox siblings |
 | `inbox.delete` | yes | **write** · soft-delete + attachment/suggestion cleanup (AP-18); storage remove stays in API |

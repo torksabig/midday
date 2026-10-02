@@ -14,6 +14,7 @@ import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useMatchSound } from "@/hooks/use-match-sound";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
+import { inboxInfiniteQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useInboxStore } from "@/store/inbox";
 import { useTRPC } from "@/trpc/client";
 import { InboxBulkActions } from "./inbox-bulk-actions";
@@ -60,20 +61,20 @@ export function InboxView() {
     }
   }, [params.connected]);
 
-  const infiniteQueryOptions = trpc.inbox.get.infiniteQueryOptions(
-    {
-      order: params.inboxOrder,
-      sort: params.inboxSort,
-      ...filter,
-      tab: filter.tab ?? "all", // Default to "all" tab
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const inboxListFilter = {
+    order: params.inboxOrder,
+    sort: params.inboxSort,
+    ...filter,
+    tab: filter.tab ?? "all", // Default to "all" tab
+  };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
-    useSuspenseInfiniteQuery(infiniteQueryOptions);
+    useSuspenseInfiniteQuery(
+      inboxInfiniteQueryOptions(
+        trpc.inbox.get.infiniteQueryKey(inboxListFilter),
+        inboxListFilter,
+      ),
+    );
 
   const tableData = useMemo(() => {
     return data?.pages.flatMap((page) => page.data) ?? [];

@@ -6,6 +6,7 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionMatchItem } from "./transaction-match-item";
 
@@ -19,12 +20,9 @@ export function TransactionUnmatchItem() {
   const id = params.inboxId;
 
   const { data } = useQuery(
-    trpc.inbox.getById.queryOptions(
-      { id: id! },
-      {
-        enabled: !!id,
-      },
-    ),
+    inboxByIdQueryOptions(trpc.inbox.getById.queryKey({ id: id! }), id!, {
+      enabled: !!id,
+    }),
   );
 
   const unmatchTransactionMutation = useMutation(

@@ -196,6 +196,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/by-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInboxByStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInboxById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/{id}/check-attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["checkInboxAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/default-settings-data": {
         parameters: {
             query?: never;
@@ -739,6 +819,145 @@ export interface components {
         };
         Health: {
             ok: boolean;
+        };
+        InboxAccountNested: {
+            email?: string | null;
+            id: string;
+            provider?: string | null;
+        };
+        InboxByStatusItem: {
+            /** Format: double */
+            amount?: number | null;
+            created_at: string;
+            currency?: string | null;
+            date?: string | null;
+            display_name?: string | null;
+            id: string;
+            status: string;
+            transaction_id?: string | null;
+        };
+        InboxCheckAttachmentRow: {
+            id: string;
+            name?: string | null;
+            transaction_id?: string | null;
+        };
+        InboxCheckAttachmentsResponse: {
+            attachments: components["schemas"]["InboxCheckAttachmentRow"][];
+            file_name?: string | null;
+            has_attachments: boolean;
+        };
+        InboxDetailItem: components["schemas"]["InboxListItem"] & {
+            grouped_inbox_id?: string | null;
+            meta?: Record<string, never> | null;
+            related_items?: components["schemas"]["InboxRelatedItem"][] | null;
+            suggestion?: null | components["schemas"]["InboxSuggestionNested"];
+        };
+        InboxListItem: {
+            /** Format: double */
+            amount?: number | null;
+            content_type?: string | null;
+            created_at: string;
+            currency?: string | null;
+            date?: string | null;
+            description?: string | null;
+            display_name?: string | null;
+            file_name?: string | null;
+            file_path?: string[] | null;
+            id: string;
+            inbox_account?: null | components["schemas"]["InboxAccountNested"];
+            inbox_account_id?: string | null;
+            /** Format: int32 */
+            related_count: number;
+            sender_email?: string | null;
+            status: string;
+            /** Format: double */
+            tax_amount?: number | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_type?: string | null;
+            transaction?: null | components["schemas"]["InboxTransactionNested"];
+            transaction_id?: string | null;
+            type?: string | null;
+            website?: string | null;
+        };
+        InboxListMeta: {
+            cursor?: string | null;
+            has_next_page: boolean;
+            has_previous_page: boolean;
+        };
+        InboxListResponse: {
+            data: components["schemas"]["InboxListItem"][];
+            meta: components["schemas"]["InboxListMeta"];
+        };
+        InboxRelatedItem: {
+            /** Format: double */
+            amount?: number | null;
+            content_type?: string | null;
+            created_at: string;
+            currency?: string | null;
+            date?: string | null;
+            description?: string | null;
+            display_name?: string | null;
+            file_name?: string | null;
+            file_path?: string[] | null;
+            id: string;
+            inbox_account_id?: string | null;
+            sender_email?: string | null;
+            status: string;
+            transaction_id?: string | null;
+            type?: string | null;
+            website?: string | null;
+        };
+        InboxSearchItem: {
+            /** Format: double */
+            amount?: number | null;
+            /** Format: double */
+            base_amount?: number | null;
+            base_currency?: string | null;
+            content_type?: string | null;
+            created_at: string;
+            currency?: string | null;
+            date?: string | null;
+            description?: string | null;
+            display_name?: string | null;
+            file_name?: string | null;
+            file_path?: string[] | null;
+            id: string;
+            /** Format: int64 */
+            size?: number | null;
+            status: string;
+            /** Format: double */
+            tax_amount?: number | null;
+            /** Format: double */
+            tax_rate?: number | null;
+            tax_type?: string | null;
+            type?: string | null;
+            website?: string | null;
+        };
+        InboxSuggestedTransaction: {
+            /** Format: double */
+            amount?: number | null;
+            currency?: string | null;
+            date?: string | null;
+            id: string;
+            name?: string | null;
+        };
+        InboxSuggestionNested: {
+            /** Format: double */
+            confidence_score?: number | null;
+            id?: string | null;
+            match_type?: string | null;
+            status?: string | null;
+            suggested_transaction?: null | components["schemas"]["InboxSuggestedTransaction"];
+            transaction_id?: string | null;
+        };
+        InboxTransactionNested: {
+            /** Format: double */
+            amount?: number | null;
+            currency?: string | null;
+            date?: string | null;
+            id: string;
+            name?: string | null;
         };
         InvoiceDefaultSettingsData: {
             nextInvoiceNumber: string;
@@ -1842,6 +2061,168 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Health"];
                 };
+            };
+        };
+    };
+    getInbox: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string;
+                pageSize?: number;
+                order?: string;
+                sort?: string;
+                status?: string;
+                tab?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated team inbox items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInboxByStatus: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox items filtered by status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxByStatusItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    searchInbox: {
+        parameters: {
+            query?: {
+                q?: string;
+                transactionId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxSearchItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInboxById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Inbox item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox item detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxDetailItem"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Inbox item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkInboxAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Inbox item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox attachment linkage check */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxCheckAttachmentsResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -10,6 +10,7 @@ import { InboxViewSkeleton } from "@/components/inbox/inbox-skeleton";
 import { InboxView } from "@/components/inbox/inbox-view";
 import { loadInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { loadInboxParams } from "@/hooks/use-inbox-params";
+import { inboxServerInfiniteQueryOptions } from "@/lib/rust-api/inbox-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -28,19 +29,19 @@ export default async function Page(props: Props) {
 
   // Fetch inbox data and accounts in parallel.
   // Wrapped in catch so a transient failure doesn't blank the page.
+  const inboxListFilter = {
+    order: params.inboxOrder,
+    sort: params.inboxSort,
+    ...filter,
+    tab: filter.tab ?? "all",
+  };
+
   const [data, accounts] = await Promise.all([
     queryClient
       .fetchInfiniteQuery(
-        trpc.inbox.get.infiniteQueryOptions(
-          {
-            order: params.inboxOrder,
-            sort: params.inboxSort,
-            ...filter,
-            tab: filter.tab ?? "all",
-          },
-          {
-            getNextPageParam: ({ meta }) => meta?.cursor,
-          },
+        inboxServerInfiniteQueryOptions(
+          trpc.inbox.get.infiniteQueryKey(inboxListFilter),
+          inboxListFilter,
         ),
       )
       .catch(() => null),
