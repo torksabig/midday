@@ -16,6 +16,12 @@ import { TopRevenueClient } from "@/components/top-revenue-client";
 import { loadCustomerFilterParams } from "@/hooks/use-customer-filter-params";
 import { loadSortParams } from "@/hooks/use-sort-params";
 import { customersServerInfiniteQueryOptions } from "@/lib/rust-api/customers-server";
+import {
+  invoiceInactiveClientsCountServerQueryOptions,
+  invoiceMostActiveClientServerQueryOptions,
+  invoiceNewCustomersCountServerQueryOptions,
+  invoiceTopRevenueClientServerQueryOptions,
+} from "@/lib/rust-api/invoices-server";
 import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
 import { getInitialTableSettings } from "@/utils/columns";
 
@@ -47,10 +53,18 @@ export default async function Page(props: Props) {
       trpc.customers.get.infiniteQueryKey(customersFilter),
       customersFilter,
     ),
-    trpc.invoice.mostActiveClient.queryOptions(),
-    trpc.invoice.inactiveClientsCount.queryOptions(),
-    trpc.invoice.topRevenueClient.queryOptions(),
-    trpc.invoice.newCustomersCount.queryOptions(),
+    invoiceMostActiveClientServerQueryOptions(
+      trpc.invoice.mostActiveClient.queryKey(),
+    ),
+    invoiceInactiveClientsCountServerQueryOptions(
+      trpc.invoice.inactiveClientsCount.queryKey(),
+    ),
+    invoiceTopRevenueClientServerQueryOptions(
+      trpc.invoice.topRevenueClient.queryKey(),
+    ),
+    invoiceNewCustomersCountServerQueryOptions(
+      trpc.invoice.newCustomersCount.queryKey(),
+    ),
   ] as Parameters<typeof batchPrefetch>[0]);
 
   return (

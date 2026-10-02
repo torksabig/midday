@@ -566,3 +566,127 @@ export async function moveTransactionToReview(
 
   return (await response.json()) as { success: boolean };
 }
+
+export type SimilarTransactionsParams = {
+  name: string;
+  categorySlug?: string | null;
+  transactionId?: string | null;
+};
+
+export type SearchTransactionMatchParams = {
+  query?: string | null;
+  inboxId?: string | null;
+  maxResults?: number | null;
+  minConfidenceScore?: number | null;
+  includeAlreadyMatched?: boolean | null;
+};
+
+/** Snake_case fields match Midday `searchTransactionMatch` / inbox UI. */
+export type SearchTransactionMatchRow = {
+  transaction_id: string;
+  name: string | null;
+  transaction_amount: number | null;
+  transaction_currency: string | null;
+  transaction_date: string | null;
+  name_score?: number;
+  amount_score?: number;
+  currency_score?: number;
+  date_score?: number;
+  confidence_score?: number;
+  is_already_matched: boolean;
+  matched_attachment_filename?: string | null;
+};
+
+export type SimilarTransactionRow = {
+  id: string;
+  amount?: number | null;
+  teamId?: string | null;
+  name?: string | null;
+  date?: string | null;
+  categorySlug?: string | null;
+  frequency?: string | null;
+};
+
+export function buildSimilarTransactionsQuery(
+  params: SimilarTransactionsParams,
+): string {
+  const search = new URLSearchParams({ name: params.name });
+  if (params.categorySlug) search.set("categorySlug", params.categorySlug);
+  if (params.transactionId) search.set("transactionId", params.transactionId);
+  return `?${search.toString()}`;
+}
+
+export function buildSearchTransactionMatchQuery(
+  params: SearchTransactionMatchParams,
+): string {
+  const search = new URLSearchParams();
+  if (params.query) search.set("query", params.query);
+  if (params.inboxId) search.set("inboxId", params.inboxId);
+  if (params.maxResults != null) {
+    search.set("maxResults", String(params.maxResults));
+  }
+  if (params.minConfidenceScore != null) {
+    search.set("minConfidenceScore", String(params.minConfidenceScore));
+  }
+  if (params.includeAlreadyMatched != null) {
+    search.set(
+      "includeAlreadyMatched",
+      String(params.includeAlreadyMatched),
+    );
+  }
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function fetchSimilarTransactions(
+  baseUrl: string,
+  accessToken: string | null,
+  params: SimilarTransactionsParams,
+): Promise<SimilarTransactionRow[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/similar${buildSimilarTransactionsQuery(params)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = await response.json();
+  return (Array.isArray(payload) ? payload : []) as SimilarTransactionRow[];
+}
+
+export async function fetchSearchTransactionMatch(
+  baseUrl: string,
+  accessToken: string | null,
+  params: SearchTransactionMatchParams,
+): Promise<SearchTransactionMatchRow[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/search-match${buildSearchTransactionMatchQuery(params)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = await response.json();
+  // Keep snake_case — matches Drizzle/`searchTransactionMatch` and inbox UI.
+  return (Array.isArray(payload) ? payload : []) as SearchTransactionMatchRow[];
+}

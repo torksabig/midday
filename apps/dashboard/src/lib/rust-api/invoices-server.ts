@@ -12,8 +12,14 @@ import {
   type InvoiceSummaryParams,
   type InvoicesList,
   type InvoicesListParams,
+  type MostActiveClient,
+  type TopRevenueClient,
+  fetchInvoiceInactiveClientsCount,
+  fetchInvoiceMostActiveClient,
+  fetchInvoiceNewCustomersCount,
   fetchInvoicePaymentStatus,
   fetchInvoiceSummary,
+  fetchInvoiceTopRevenueClient,
   fetchInvoicesList,
 } from "./invoices";
 
@@ -74,6 +80,60 @@ export function invoiceSummaryServerQueryOptions(
         getRustApiUrl(),
         session?.access_token ?? null,
         params,
+      );
+    },
+  });
+}
+
+export function invoiceMostActiveClientServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<MostActiveClient> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceMostActiveClient(
+        getRustApiUrl(),
+        session?.access_token ?? null,
+      );
+    },
+  });
+}
+
+export function invoiceInactiveClientsCountServerQueryOptions(
+  queryKey: QueryKey,
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<number> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceInactiveClientsCount(
+        getRustApiUrl(),
+        session?.access_token ?? null,
+      );
+    },
+  });
+}
+
+export function invoiceTopRevenueClientServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<TopRevenueClient> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceTopRevenueClient(
+        getRustApiUrl(),
+        session?.access_token ?? null,
+      );
+    },
+  });
+}
+
+export function invoiceNewCustomersCountServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<number> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceNewCustomersCount(
+        getRustApiUrl(),
+        session?.access_token ?? null,
       );
     },
   });

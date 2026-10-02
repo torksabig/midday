@@ -33,6 +33,7 @@ import {
   deleteTransactionTagFromRust,
 } from "@/lib/rust-api/transaction-tags-client";
 import {
+  similarTransactionsQueryOptions,
   transactionByIdQueryOptions,
   updateTransactionFromRust,
   updateTransactionsManyFromRust,
@@ -554,15 +555,21 @@ export function TransactionDetails() {
                   });
 
                   const similarTransactions = await queryClient.fetchQuery(
-                    trpc.transactions.getSimilarTransactions.queryOptions({
-                      transactionId: data?.id,
-                      name: data.name,
-                      frequency: value as
-                        | "weekly"
-                        | "monthly"
-                        | "annually"
-                        | "irregular",
-                    }),
+                    similarTransactionsQueryOptions(
+                      trpc.transactions.getSimilarTransactions.queryKey({
+                        transactionId: data?.id,
+                        name: data.name,
+                        frequency: value as
+                          | "weekly"
+                          | "monthly"
+                          | "annually"
+                          | "irregular",
+                      }),
+                      {
+                        transactionId: data?.id,
+                        name: data.name,
+                      },
+                    ),
                   );
 
                   if (

@@ -13,9 +13,15 @@ import {
   type InvoiceSummaryParams,
   type InvoicesList,
   type InvoicesListParams,
+  type MostActiveClient,
+  type TopRevenueClient,
   fetchInvoiceById,
+  fetchInvoiceInactiveClientsCount,
+  fetchInvoiceMostActiveClient,
+  fetchInvoiceNewCustomersCount,
   fetchInvoicePaymentStatus,
   fetchInvoiceSummary,
+  fetchInvoiceTopRevenueClient,
   fetchInvoicesList,
 } from "./invoices";
 
@@ -74,5 +80,37 @@ export function invoiceSummaryQueryOptions(
     queryKey,
     queryFn: async () =>
       fetchInvoiceSummary(getRustApiUrl(), await getAccessToken(), params),
+  });
+}
+
+export function invoiceMostActiveClientQueryOptions(queryKey: QueryKey) {
+  return queryOptions<MostActiveClient>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceMostActiveClient(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export function invoiceInactiveClientsCountQueryOptions(queryKey: QueryKey) {
+  return queryOptions<number>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceInactiveClientsCount(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export function invoiceTopRevenueClientQueryOptions(queryKey: QueryKey) {
+  return queryOptions<TopRevenueClient>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceTopRevenueClient(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export function invoiceNewCustomersCountQueryOptions(queryKey: QueryKey) {
+  return queryOptions<number>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceNewCustomersCount(getRustApiUrl(), await getAccessToken()),
   });
 }

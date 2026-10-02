@@ -3,12 +3,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@midday/ui/card";
 import NumberFlow from "@number-flow/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { invoiceInactiveClientsCountQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 
 export function InactiveClients() {
   const trpc = useTRPC();
   const { data } = useSuspenseQuery(
-    trpc.invoice.inactiveClientsCount.queryOptions(),
+    invoiceInactiveClientsCountQueryOptions(
+      trpc.invoice.inactiveClientsCount.queryKey(),
+    ),
   );
 
   return (

@@ -2,12 +2,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@midday/ui/card";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { invoiceMostActiveClientQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 
 export function MostActiveClient() {
   const trpc = useTRPC();
   const { data } = useSuspenseQuery(
-    trpc.invoice.mostActiveClient.queryOptions(),
+    invoiceMostActiveClientQueryOptions(
+      trpc.invoice.mostActiveClient.queryKey(),
+    ),
   );
 
   if (!data) {

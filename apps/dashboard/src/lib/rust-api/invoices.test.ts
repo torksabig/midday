@@ -7,6 +7,8 @@ import {
   normalizeInvoicePaymentStatus,
   normalizeInvoiceSummary,
   normalizeInvoicesList,
+  normalizeMostActiveClient,
+  normalizeTopRevenueClient,
 } from "./invoices";
 
 type RawInvoicesListResponse = components["schemas"]["InvoicesListResponse"];
@@ -124,5 +126,39 @@ test("deepCamelCaseKeys walks nested objects", () => {
   ).toEqual({
     invoiceNumber: "INV-1",
     nestedObj: { dueDate: "2026-01-01" },
+  });
+});
+
+test("normalizes most-active and top-revenue client metrics", () => {
+  expect(
+    normalizeMostActiveClient({
+      customer_id: "c1",
+      customer_name: "Acme",
+      invoice_count: 2,
+      total_tracker_time: 3660,
+    }),
+  ).toEqual({
+    customerId: "c1",
+    customerName: "Acme",
+    invoiceCount: 2,
+    totalTrackerTime: 3660,
+  });
+
+  expect(normalizeMostActiveClient(null)).toBeNull();
+
+  expect(
+    normalizeTopRevenueClient({
+      customer_id: "c2",
+      customer_name: "Big Co",
+      total_revenue: 1500,
+      currency: "USD",
+      invoice_count: 4,
+    }),
+  ).toEqual({
+    customerId: "c2",
+    customerName: "Big Co",
+    totalRevenue: 1500,
+    currency: "USD",
+    invoiceCount: 4,
   });
 });

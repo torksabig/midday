@@ -9,10 +9,16 @@ import { getAccessToken } from "@/utils/session";
 import {
   deleteTransactionsMany,
   type DeleteTransactionsManyInput,
+  fetchSearchTransactionMatch,
+  fetchSimilarTransactions,
   fetchTransactionById,
   fetchTransactionsList,
   fetchTransactionsReviewCount,
   moveTransactionToReview,
+  type SearchTransactionMatchParams,
+  type SearchTransactionMatchRow,
+  type SimilarTransactionRow,
+  type SimilarTransactionsParams,
   type TransactionDetail,
   type TransactionsList,
   type TransactionsListParams,
@@ -89,4 +95,38 @@ export async function moveTransactionToReviewFromRust(
   input: Parameters<typeof moveTransactionToReview>[2],
 ) {
   return moveTransactionToReview(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export function similarTransactionsQueryOptions(
+  queryKey: QueryKey,
+  params: SimilarTransactionsParams,
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions<SimilarTransactionRow[]>({
+    queryKey,
+    queryFn: async () =>
+      fetchSimilarTransactions(
+        getRustApiUrl(),
+        await getAccessToken(),
+        params,
+      ),
+    enabled: options.enabled,
+  });
+}
+
+export function searchTransactionMatchQueryOptions(
+  queryKey: QueryKey,
+  params: SearchTransactionMatchParams,
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions<SearchTransactionMatchRow[]>({
+    queryKey,
+    queryFn: async () =>
+      fetchSearchTransactionMatch(
+        getRustApiUrl(),
+        await getAccessToken(),
+        params,
+      ),
+    enabled: options.enabled,
+  });
 }

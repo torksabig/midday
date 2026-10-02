@@ -20,6 +20,7 @@ import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserQuery } from "@/hooks/use-user";
 import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import { searchTransactionMatchQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionMatchItem } from "./transaction-match-item";
 import { TransactionUnmatchItem } from "./transaction-unmatch-item";
@@ -48,12 +49,20 @@ export function MatchTransaction() {
   );
 
   const { data: transactionMatch, isLoading } = useQuery(
-    trpc.transactions.searchTransactionMatch.queryOptions({
-      query: debouncedValue,
-      inboxId: id ?? undefined,
-      maxResults: debouncedValue.length > 0 ? 200 : 3,
-      includeAlreadyMatched,
-    }),
+    searchTransactionMatchQueryOptions(
+      trpc.transactions.searchTransactionMatch.queryKey({
+        query: debouncedValue,
+        inboxId: id ?? undefined,
+        maxResults: debouncedValue.length > 0 ? 200 : 3,
+        includeAlreadyMatched,
+      }),
+      {
+        query: debouncedValue,
+        inboxId: id ?? undefined,
+        maxResults: debouncedValue.length > 0 ? 200 : 3,
+        includeAlreadyMatched,
+      },
+    ),
   );
 
   const isSearching = isLoading && debouncedValue.length > 0;

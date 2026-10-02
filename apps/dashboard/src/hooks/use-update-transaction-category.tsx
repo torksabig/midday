@@ -5,6 +5,7 @@ import { toast } from "@midday/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import {
+  similarTransactionsQueryOptions,
   updateTransactionFromRust,
   updateTransactionsManyFromRust,
 } from "@/lib/rust-api/transactions-client";
@@ -78,11 +79,18 @@ export function useUpdateTransactionCategory(
 
     // Check for similar transactions
     const similarTransactions = await queryClient.fetchQuery(
-      trpc.transactions.getSimilarTransactions.queryOptions({
-        transactionId,
-        name: transactionName,
-        categorySlug: category.slug,
-      }),
+      similarTransactionsQueryOptions(
+        trpc.transactions.getSimilarTransactions.queryKey({
+          transactionId,
+          name: transactionName,
+          categorySlug: category.slug,
+        }),
+        {
+          transactionId,
+          name: transactionName,
+          categorySlug: category.slug,
+        },
+      ),
     );
 
     // Show prompt if similar transactions found
@@ -101,7 +109,6 @@ export function useUpdateTransactionCategory(
               altText="Yes"
               onClick={() => {
                 const similarTransactionIds = similarTransactions.map(
-                  // @ts-expect-error
                   (t) => t.id,
                 );
                 updateTransactionsMutation.mutate({

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import type { components } from "./openapi.generated";
 import {
+  buildSearchTransactionMatchQuery,
+  buildSimilarTransactionsQuery,
   buildTransactionsListQuery,
   normalizeTransactionDetail,
   normalizeTransactionsList,
@@ -206,4 +208,25 @@ test("normalizes transaction detail suggestion fields", () => {
     documentPath: "x/y",
     confidenceScore: 0.9,
   });
+});
+
+test("buildSimilarTransactionsQuery and search-match query params", () => {
+  expect(
+    buildSimilarTransactionsQuery({
+      name: "Acme",
+      categorySlug: "software",
+      transactionId: "tx-1",
+    }),
+  ).toBe("?name=Acme&categorySlug=software&transactionId=tx-1");
+
+  expect(
+    buildSearchTransactionMatchQuery({
+      query: "coffee",
+      inboxId: "inbox-1",
+      maxResults: 3,
+      includeAlreadyMatched: true,
+    }),
+  ).toBe(
+    "?query=coffee&inboxId=inbox-1&maxResults=3&includeAlreadyMatched=true",
+  );
 });

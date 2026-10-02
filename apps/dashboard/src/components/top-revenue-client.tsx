@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@midday/ui/card";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTeamQuery } from "@/hooks/use-team";
 import { useUserQuery } from "@/hooks/use-user";
+import { invoiceTopRevenueClientQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { FormatAmount } from "./format-amount";
 
@@ -12,7 +13,9 @@ export function TopRevenueClient() {
   const { data: team } = useTeamQuery();
   const { data: user } = useUserQuery();
   const { data } = useSuspenseQuery(
-    trpc.invoice.topRevenueClient.queryOptions(),
+    invoiceTopRevenueClientQueryOptions(
+      trpc.invoice.topRevenueClient.queryKey(),
+    ),
   );
 
   if (!data) {

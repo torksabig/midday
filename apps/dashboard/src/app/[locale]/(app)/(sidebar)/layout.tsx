@@ -6,6 +6,7 @@ import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider
 import { Sidebar } from "@/components/sidebar";
 import { TimezoneDetector } from "@/components/timezone-detector";
 import { invoiceDefaultSettingsServerQueryOptions } from "@/lib/rust-api/invoice-default-settings-server";
+import { globalSearchServerQueryOptions } from "@/lib/rust-api/search-server";
 import { teamCurrentServerQueryOptions } from "@/lib/rust-api/team-server";
 import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import {
@@ -32,7 +33,11 @@ export default async function Layout({
     });
 
   // NOTE: These are used in the global sheets
-  batchPrefetch([trpc.search.global.queryOptions({ searchTerm: "" })]);
+  batchPrefetch([
+    globalSearchServerQueryOptions(trpc.search.global.queryKey({ searchTerm: "" }), {
+      searchTerm: "",
+    }),
+  ]);
 
   // Fetch the user – .catch → redirect so a transient API failure
   // (timeout, 5xx, expired session, etc.) doesn't crash the entire

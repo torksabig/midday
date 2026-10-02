@@ -30,6 +30,7 @@ import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { globalSearchQueryOptions } from "@/lib/rust-api/search-client";
 import { trackerTimerStatusQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useSearchStore } from "@/store/search";
 import { useTRPC } from "@/trpc/client";
@@ -700,9 +701,14 @@ export function Search() {
     isLoading,
     isFetching,
   } = useQuery({
-    ...trpc.search.global.queryOptions({
-      searchTerm: debouncedSearch,
-    }),
+    ...globalSearchQueryOptions(
+      trpc.search.global.queryKey({
+        searchTerm: debouncedSearch,
+      }),
+      {
+        searchTerm: debouncedSearch,
+      },
+    ),
     placeholderData: (previousData) => previousData,
   });
 

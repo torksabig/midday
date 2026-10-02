@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, and apps get/disconnect/update. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, and search.global. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -96,14 +96,14 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.updateMany` | direct Rust | **write** · bulk PATCH + tag insert; dashboard calls `POST /api/v1/transactions/update-many` directly |
 | `transactions.create` | yes | **write** · manual insert; enrich/match jobs stay Node (AP-54); still tRPC at create-form call site |
 | `transactions.moveToReview` | direct Rust | **write** · un-export + sync delete (AP-48); dashboard calls `POST /api/v1/transactions/{id}/move-to-review` directly |
-| `transactions.getSimilarTransactions` | yes | read · pg_trgm candidates (AP-49); JS name-score matrix gap |
-| `transactions.searchTransactionMatch` | yes | read · FTS/pg_trgm match candidates (AP-53); scoring simplified vs Drizzle |
+| `transactions.getSimilarTransactions` | direct Rust | read · pg_trgm candidates (AP-49); dashboard calls `GET /api/v1/transactions/similar` directly |
+| `transactions.searchTransactionMatch` | direct Rust | read · FTS/pg_trgm match candidates (AP-53); dashboard calls `GET /api/v1/transactions/search-match` directly (snake_case fields preserved) |
 | `transactions.import` | yes | **write** · bank account get/update SQL; import job stays Node (AP-58) |
 | `transactions.*` (other) | no | export (job-only), generateCsvMapping (AI) |
 | `inbox.get` | direct Rust | read · list; dashboard infinite query calls `GET /api/v1/inbox` directly and preserves tRPC infinite query keys |
 | `inbox.getById` | direct Rust | read · detail + suggestion/related; dashboard calls `GET /api/v1/inbox/{id}` directly |
 | `inbox.checkAttachments` | direct Rust | read · attachment linkage check; dashboard calls `GET /api/v1/inbox/{id}/check-attachments` directly |
-| `inbox.search` | direct Rust | read · search helpers wired; no dashboard fetch sites yet (global search still via `search.global`) |
+| `inbox.search` | direct Rust | read · search helpers wired; no dashboard fetch sites yet (cmd-k uses `search.global` → Rust) |
 | `inbox.getByStatus` | direct Rust | read · by-status helpers wired; no dashboard fetch sites yet |
 | `inbox.update` | yes | **write** · partial PUT (AP-12c); `status: deleted` not on Rust path |
 | `inbox.matchTransaction` | yes | **write** · single-item match + attachment (AP-18); no grouped-inbox siblings |
@@ -149,12 +149,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.paymentStatus` | direct Rust | read · weighted score (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/payment-status` directly |
 | `invoice.searchInvoiceNumber` | yes | read · ILIKE existence check (AP-25) |
 | `invoice.invoiceSummary` | direct Rust | read · FX rollup (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/summary` directly |
-| `invoice.mostActiveClient` | yes | read · 30d dashboard metric (Phase 10) |
-| `invoice.inactiveClientsCount` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.mostActiveClient` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/most-active-client` directly |
+| `invoice.inactiveClientsCount` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/inactive-clients-count` directly |
 | `invoice.averageDaysToPayment` | yes | read · 30d dashboard metric (Phase 10) |
 | `invoice.averageInvoiceSize` | yes | read · 30d by currency (Phase 10) |
-| `invoice.topRevenueClient` | yes | read · 30d dashboard metric (Phase 10) |
-| `invoice.newCustomersCount` | yes | read · 30d dashboard metric (Phase 10) |
+| `invoice.topRevenueClient` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/top-revenue-client` directly |
+| `invoice.newCustomersCount` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/new-customers-count` directly |
 | `invoice.update` | yes | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); no activity feed for paid/canceled |
 | `invoice.draft` | yes | **write** · upsert draft row (AP-29); `getNextInvoiceNumber` stays in Node |
 | `invoice.delete` | yes | **write** · draft/canceled only (AP-32) |
@@ -186,7 +186,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `accounting.disconnect` | yes | **write** · delete app row (reuses `/apps/:appId` DELETE) (AP-43) |
 | `accounting.export` | yes | **write** · app lookup SQL; export-to-accounting job stays Node (AP-60) |
 | `accounting.*` (other) | no | getAccounts (external provider) |
-| `search.global` | yes | read · `global_search()` RPC (Phase 5 slice 2) |
+| `search.global` | direct Rust | read · `global_search()` RPC; cmd-k + layout prefetch call `GET /api/v1/search/global` directly |
 | `search.attachments` | yes | read · inbox ILIKE + invoice list (Phase 5 slice 4) |
 | `reports.revenue` | yes | read · chart YoY (Phase 5 slice 3) |
 | `reports.profit` | yes | read · chart YoY |

@@ -46,6 +46,127 @@ export type InvoicesList = {
 
 export type InvoicePaymentStatus = RouterOutputs["invoice"]["paymentStatus"];
 export type InvoiceSummary = RouterOutputs["invoice"]["invoiceSummary"];
+export type MostActiveClient = RouterOutputs["invoice"]["mostActiveClient"];
+export type TopRevenueClient = RouterOutputs["invoice"]["topRevenueClient"];
+
+type RawMostActiveClientResponse =
+  components["schemas"]["MostActiveClientResponse"];
+type RawTopRevenueClientResponse =
+  components["schemas"]["TopRevenueClientResponse"];
+
+export function normalizeMostActiveClient(
+  payload: RawMostActiveClientResponse | null,
+): MostActiveClient {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(payload) as MostActiveClient;
+}
+
+export function normalizeTopRevenueClient(
+  payload: RawTopRevenueClientResponse | null,
+): TopRevenueClient {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(payload) as TopRevenueClient;
+}
+
+export async function fetchInvoiceMostActiveClient(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<MostActiveClient> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/most-active-client`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeMostActiveClient(
+    (await response.json()) as RawMostActiveClientResponse | null,
+  );
+}
+
+export async function fetchInvoiceInactiveClientsCount(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<number> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/inactive-clients-count`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return Number(await response.json());
+}
+
+export async function fetchInvoiceTopRevenueClient(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<TopRevenueClient> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/top-revenue-client`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeTopRevenueClient(
+    (await response.json()) as RawTopRevenueClientResponse | null,
+  );
+}
+
+export async function fetchInvoiceNewCustomersCount(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<number> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/new-customers-count`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return Number(await response.json());
+}
 
 function snakeToCamelKey(key: string): string {
   return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

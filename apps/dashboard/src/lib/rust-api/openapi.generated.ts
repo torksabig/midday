@@ -580,6 +580,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/metrics/inactive-clients-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceInactiveClientsCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/metrics/most-active-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceMostActiveClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/metrics/new-customers-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceNewCustomersCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/metrics/top-revenue-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceTopRevenueClient"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/payment-status": {
         parameters: {
             query?: never;
@@ -732,6 +796,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getOverviewSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/global": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSearchGlobal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1108,6 +1188,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/search-match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionsSearchMatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTransactionsSimilar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/update-many": {
         parameters: {
             query?: never;
@@ -1428,6 +1540,15 @@ export interface components {
             data: components["schemas"]["DocumentListRow"][];
             meta: components["schemas"]["DocumentsListMeta"];
         };
+        GlobalSearchRow: {
+            created_at: string;
+            data: components["schemas"]["Value"];
+            id: string;
+            /** Format: double */
+            relevance: number;
+            title: string;
+            type: string;
+        };
         Health: {
             ok: boolean;
         };
@@ -1690,6 +1811,14 @@ export interface components {
             tax_reporting_code?: string | null;
             tax_type?: string | null;
         };
+        MostActiveClientResponse: {
+            customer_id: string;
+            customer_name: string;
+            /** Format: int32 */
+            invoice_count: number;
+            /** Format: int32 */
+            total_tracker_time: number;
+        };
         MoveTransactionToReviewResponse: {
             success: boolean;
         };
@@ -1853,6 +1982,15 @@ export interface components {
             name?: string | null;
             plan?: string | null;
             subscription_status?: string | null;
+        };
+        TopRevenueClientResponse: {
+            currency: string;
+            customer_id: string;
+            customer_name: string;
+            /** Format: int32 */
+            invoice_count: number;
+            /** Format: double */
+            total_revenue: number;
         };
         TrackerProjectTagInput: {
             id: string;
@@ -3671,6 +3809,114 @@ export interface operations {
             };
         };
     };
+    getInvoiceInactiveClientsCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inactive clients count past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceMostActiveClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Most active client past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["MostActiveClientResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceNewCustomersCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New customers count past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceTopRevenueClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Top revenue client past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["TopRevenueClientResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInvoicePaymentStatus: {
         parameters: {
             query?: never;
@@ -4007,6 +4253,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewSummary"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getSearchGlobal: {
+        parameters: {
+            query?: {
+                searchTerm?: string;
+                language?: string;
+                limit?: number;
+                itemsPerTableLimit?: number;
+                relevanceThreshold?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Global search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlobalSearchRow"][];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
@@ -4968,6 +5247,78 @@ export interface operations {
                 };
                 content: {
                     "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTransactionsSearchMatch: {
+        parameters: {
+            query?: {
+                /** @description Free-text search */
+                query?: string;
+                /** @description Inbox item context */
+                inboxId?: string;
+                /** @description Max results */
+                maxResults?: number;
+                /** @description Minimum confidence */
+                minConfidenceScore?: number;
+                /** @description Include matched txs */
+                includeAlreadyMatched?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox match candidates (snake_case fields) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTransactionsSimilar: {
+        parameters: {
+            query: {
+                /** @description Transaction or merchant name */
+                name: string;
+                /** @description Exclude this category slug */
+                categorySlug?: string;
+                /** @description Source transaction id */
+                transactionId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Similar transactions by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
