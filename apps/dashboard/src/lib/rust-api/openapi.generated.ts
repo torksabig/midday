@@ -452,6 +452,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/delete-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deleteTransactionsMany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/review-count": {
         parameters: {
             query?: never;
@@ -468,6 +484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/update-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["updateTransactionsMany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/{id}": {
         parameters: {
             query?: never;
@@ -476,8 +508,24 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getTransactionById"];
-        put?: never;
+        put: operations["updateTransaction"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/{id}/move-to-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["moveTransactionToReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -686,6 +734,9 @@ export interface components {
             stripeConnectStatus?: string | null;
             subscriptionStatus?: string | null;
         };
+        DeleteTransactionsManyBody: {
+            ids: string[];
+        };
         Health: {
             ok: boolean;
         };
@@ -787,6 +838,9 @@ export interface components {
             tax_rate?: number | null;
             tax_reporting_code?: string | null;
             tax_type?: string | null;
+        };
+        MoveTransactionToReviewResponse: {
+            success: boolean;
         };
         NotificationActivity: {
             createdAt: string;
@@ -923,6 +977,9 @@ export interface components {
             name?: string | null;
             plan?: string | null;
             subscription_status?: string | null;
+        };
+        TransactionDeletedId: {
+            id: string;
         };
         TransactionTagBody: {
             tagId: string;
@@ -1104,6 +1161,36 @@ export interface components {
             heardAbout?: string | null;
             logoUrl?: string | null;
             name?: string | null;
+        };
+        UpdateTransactionBody: {
+            /** Format: double */
+            amount?: number | null;
+            assignedId?: string | null;
+            bankAccountId?: string | null;
+            categorySlug?: string | null;
+            currency?: string | null;
+            date?: string | null;
+            frequency?: string | null;
+            internal?: boolean | null;
+            name?: string | null;
+            note?: string | null;
+            recurring?: boolean | null;
+            status?: string | null;
+            /** Format: double */
+            taxAmount?: number | null;
+            /** Format: double */
+            taxRate?: number | null;
+        };
+        UpdateTransactionsManyBody: {
+            assignedId?: string | null;
+            categorySlug?: string | null;
+            frequency?: string | null;
+            ids: string[];
+            internal?: boolean | null;
+            note?: string | null;
+            recurring?: boolean | null;
+            status?: string | null;
+            tagId?: string | null;
         };
         /** @description Dashboard / tRPC `user.update` body (camelCase). */
         UpdateUserBody: {
@@ -2445,6 +2532,44 @@ export interface operations {
             };
         };
     };
+    deleteTransactionsMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteTransactionsManyBody"];
+            };
+        };
+        responses: {
+            /** @description Deleted manual transactions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionDeletedId"][];
+                };
+            };
+            /** @description Transaction delete requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getTransactionsReviewCount: {
         parameters: {
             query?: never;
@@ -2462,6 +2587,44 @@ export interface operations {
                 content: {
                     "text/plain": number;
                 };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateTransactionsMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTransactionsManyBody"];
+            };
+        };
+        responses: {
+            /** @description Updated transactions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TxDetailItem"][];
+                };
+            };
+            /** @description Bulk update requires Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
@@ -2502,6 +2665,77 @@ export interface operations {
             };
             /** @description Transaction not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateTransaction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTransactionBody"];
+            };
+        };
+        responses: {
+            /** @description Updated transaction detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TxDetailItem"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transaction not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    moveTransactionToReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Transaction id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Moved transaction to review */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MoveTransactionToReviewResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -4,6 +4,10 @@ import { ToastAction } from "@midday/ui/toast";
 import { toast } from "@midday/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
+import {
+  updateTransactionFromRust,
+  updateTransactionsManyFromRust,
+} from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 
 type Category = {
@@ -24,44 +28,42 @@ export function useUpdateTransactionCategory(
   const queryClient = useQueryClient();
   const invalidateTransactionQueries = useInvalidateTransactionQueries();
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions({
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey(),
-        });
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey(),
+      });
 
-        // If category changed, invalidate reports
-        if ("categorySlug" in variables) {
-          invalidateTransactionQueries();
-        }
+      // If category changed, invalidate reports
+      if ("categorySlug" in variables) {
+        invalidateTransactionQueries();
+      }
 
-        options?.onSuccess?.();
-      },
-      onError: options?.onError,
-    }),
-  );
+      options?.onSuccess?.();
+    },
+    onError: options?.onError,
+  });
 
-  const updateTransactionsMutation = useMutation(
-    trpc.transactions.updateMany.mutationOptions({
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey(),
-        });
+  const updateTransactionsMutation = useMutation({
+    mutationFn: updateTransactionsManyFromRust,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey(),
+      });
 
-        // If category changed, invalidate reports
-        if ("categorySlug" in variables) {
-          invalidateTransactionQueries();
-        }
-      },
-    }),
-  );
+      // If category changed, invalidate reports
+      if ("categorySlug" in variables) {
+        invalidateTransactionQueries();
+      }
+    },
+  });
 
   const updateCategory = async (
     transactionId: string,
@@ -99,6 +101,7 @@ export function useUpdateTransactionCategory(
               altText="Yes"
               onClick={() => {
                 const similarTransactionIds = similarTransactions.map(
+                  // @ts-expect-error
                   (t) => t.id,
                 );
                 updateTransactionsMutation.mutate({

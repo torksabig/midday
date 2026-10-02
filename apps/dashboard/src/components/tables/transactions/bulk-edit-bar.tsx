@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { BulkActions } from "@/components/bulk-actions";
 import { Portal } from "@/components/portal";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
+import { deleteTransactionsManyFromRust } from "@/lib/rust-api/transactions-client";
 import { useTransactionsStore } from "@/store/transactions";
 import { useTRPC } from "@/trpc/client";
 
@@ -41,21 +42,20 @@ export function BulkEditBar() {
   const hasSelection = selectedCount > 0;
 
   // Delete mutation for bulk delete
-  const deleteTransactionsMutation = useMutation(
-    trpc.transactions.deleteMany.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.TransactionDeleted.name, { count: selectedCount });
+  const deleteTransactionsMutation = useMutation({
+    mutationFn: deleteTransactionsManyFromRust,
+    onSuccess: () => {
+      track(LogEvents.TransactionDeleted.name, { count: selectedCount });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getReviewCount.queryKey(),
-        });
-        setRowSelection("all", {});
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getReviewCount.queryKey(),
+      });
+      setRowSelection("all", {});
+    },
+  });
 
   // Show bar when transactions are selected outside review tab
   // (review tab uses ExportBar instead)

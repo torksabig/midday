@@ -396,3 +396,173 @@ export async function fetchTransactionsReviewCount(
   const count = (await response.json()) as number;
   return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }
+
+export type UpdateTransactionInput = {
+  id: string;
+  name?: string;
+  amount?: number;
+  currency?: string;
+  date?: string;
+  bankAccountId?: string;
+  categorySlug?: string | null;
+  status?: string | null;
+  internal?: boolean;
+  recurring?: boolean;
+  note?: string | null;
+  assignedId?: string | null;
+  frequency?: string | null;
+  taxRate?: number | null;
+  taxAmount?: number | null;
+};
+
+export type UpdateTransactionsManyInput = {
+  ids: string[];
+  categorySlug?: string | null;
+  status?: string | null;
+  frequency?: string | null;
+  internal?: boolean;
+  note?: string | null;
+  assignedId?: string | null;
+  recurring?: boolean;
+  tagId?: string | null;
+};
+
+export type DeleteTransactionsManyInput = string[] | { ids: string[] };
+
+export type MoveTransactionToReviewInput =
+  | string
+  | { transactionId: string };
+
+function omitUndefined(
+  input: Record<string, unknown>,
+  skipKeys: string[] = [],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (skipKeys.includes(key) || value === undefined) continue;
+    body[key] = value;
+  }
+  return body;
+}
+
+export async function updateTransaction(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpdateTransactionInput,
+): Promise<TransactionDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const { id, ...fields } = input;
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(omitUndefined(fields)),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeTransactionDetail(
+    (await response.json()) as RawTxDetailItem,
+  );
+}
+
+export async function updateTransactionsMany(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpdateTransactionsManyInput,
+): Promise<TransactionDetail[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/update-many`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(omitUndefined(input as Record<string, unknown>)),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawTxDetailItem[];
+  return payload.map(normalizeTransactionDetail);
+}
+
+export async function deleteTransactionsMany(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DeleteTransactionsManyInput,
+): Promise<Array<{ id: string }>> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const ids = Array.isArray(input) ? input : input.ids;
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/delete-many`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(ids),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as Array<{ id: string }>;
+}
+
+export async function moveTransactionToReview(
+  baseUrl: string,
+  accessToken: string | null,
+  input: MoveTransactionToReviewInput,
+): Promise<{ success: boolean }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const id = typeof input === "string" ? input : input.transactionId;
+  const response = await fetch(
+    `${baseUrl}/api/v1/transactions/${encodeURIComponent(id)}/move-to-review`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as { success: boolean };
+}

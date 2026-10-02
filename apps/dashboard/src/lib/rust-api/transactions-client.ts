@@ -7,12 +7,19 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  deleteTransactionsMany,
+  type DeleteTransactionsManyInput,
   fetchTransactionById,
   fetchTransactionsList,
   fetchTransactionsReviewCount,
+  moveTransactionToReview,
   type TransactionDetail,
   type TransactionsList,
   type TransactionsListParams,
+  updateTransaction,
+  type UpdateTransactionInput,
+  updateTransactionsMany,
+  type UpdateTransactionsManyInput,
 } from "./transactions";
 
 function getRustApiUrl() {
@@ -60,4 +67,26 @@ export function transactionsReviewCountQueryOptions(queryKey: QueryKey) {
     queryFn: async () =>
       fetchTransactionsReviewCount(getRustApiUrl(), await getAccessToken()),
   });
+}
+
+export async function updateTransactionFromRust(input: UpdateTransactionInput) {
+  return updateTransaction(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function updateTransactionsManyFromRust(
+  input: UpdateTransactionsManyInput,
+) {
+  return updateTransactionsMany(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteTransactionsManyFromRust(
+  input: DeleteTransactionsManyInput,
+) {
+  return deleteTransactionsMany(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function moveTransactionToReviewFromRust(
+  input: Parameters<typeof moveTransactionToReview>[2],
+) {
+  return moveTransactionToReview(getRustApiUrl(), await getAccessToken(), input);
 }

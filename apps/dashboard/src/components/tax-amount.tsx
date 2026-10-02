@@ -19,6 +19,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useDebounceCallback } from "usehooks-ts";
+import { updateTransactionFromRust } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { FormatAmount } from "./format-amount";
 
@@ -42,42 +43,42 @@ export function TaxAmount({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions({
-      onMutate: async (variables) => {
-        // Cancel any outgoing refetches
-        await Promise.all([
-          queryClient.cancelQueries({
-            queryKey: trpc.transactions.getById.queryKey({ id: transactionId }),
-          }),
-          queryClient.cancelQueries({
-            queryKey: trpc.transactions.get.infiniteQueryKey(),
-          }),
-        ]);
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await Promise.all([
+        queryClient.cancelQueries({
+          queryKey: trpc.transactions.getById.queryKey({ id: transactionId }),
+        }),
+        queryClient.cancelQueries({
+          queryKey: trpc.transactions.get.infiniteQueryKey(),
+        }),
+      ]);
 
-        // Snapshot the previous value
-        const previousData = {
-          details: queryClient.getQueryData(
-            trpc.transactions.getById.queryKey({ id: transactionId }),
-          ),
-          list: queryClient.getQueryData(
-            trpc.transactions.get.infiniteQueryKey(),
-          ),
-        };
-
-        // Optimistically update the details view
-        queryClient.setQueryData(
+      // Snapshot the previous value
+      const previousData = {
+        details: queryClient.getQueryData(
           trpc.transactions.getById.queryKey({ id: transactionId }),
-          (old: any) => ({
-            ...old,
-            ...variables,
-          }),
-        );
-
-        // Optimistically update the list view
-        queryClient.setQueryData(
+        ),
+        list: queryClient.getQueryData(
           trpc.transactions.get.infiniteQueryKey(),
-          (old: any) => {
+        ),
+      };
+
+      // Optimistically update the details view
+      queryClient.setQueryData(
+        trpc.transactions.getById.queryKey({ id: transactionId }),
+        (old: any) => ({
+          ...old,
+          ...variables,
+        }),
+      );
+
+      // Optimistically update the list view
+      queryClient.setQueryData(
+        trpc.transactions.get.infiniteQueryKey(),
+        (old: any) => {
             if (!old?.pages) return old;
 
             return {
@@ -121,8 +122,7 @@ export function TaxAmount({
           queryKey: trpc.transactions.get.infiniteQueryKey(),
         });
       },
-    }),
-  );
+  });
 
   const isPercentageMode = taxRate !== null && taxRate !== undefined;
 

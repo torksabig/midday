@@ -35,7 +35,12 @@ import { useTransactionTab } from "@/hooks/use-transaction-tab";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
 import { useUploadProcessingToast } from "@/hooks/use-upload-processing-toast";
 import { useUserQuery } from "@/hooks/use-user";
-import { transactionsInfiniteQueryOptions } from "@/lib/rust-api/transactions-client";
+import {
+  deleteTransactionsManyFromRust,
+  moveTransactionToReviewFromRust,
+  transactionsInfiniteQueryOptions,
+  updateTransactionFromRust,
+} from "@/lib/rust-api/transactions-client";
 import { useExportStore } from "@/store/export";
 import {
   type TransactionTab,
@@ -178,58 +183,55 @@ export function DataTable({ initialSettings, initialTab }: Props) {
     onStatusChange: debouncedRefetch,
   });
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
 
-        toast({
-          title: "Transaction updated",
-          variant: "success",
-        });
-      },
-    }),
-  );
+      toast({
+        title: "Transaction updated",
+        variant: "success",
+      });
+    },
+  });
 
-  const deleteTransactionMutation = useMutation(
-    trpc.transactions.deleteMany.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
+  const deleteTransactionMutation = useMutation({
+    mutationFn: deleteTransactionsManyFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
 
-        // Invalidate inbox queries since matched inbox items are cleared
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.get.infiniteQueryKey(),
-        });
+      // Invalidate inbox queries since matched inbox items are cleared
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.getById.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.getById.queryKey(),
+      });
+    },
+  });
 
-  const moveToReviewMutation = useMutation(
-    trpc.transactions.moveToReview.mutationOptions({
-      onSuccess: () => {
-        // Invalidate transactions and review count
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getReviewCount.queryKey(),
-        });
+  const moveToReviewMutation = useMutation({
+    mutationFn: moveTransactionToReviewFromRust,
+    onSuccess: () => {
+      // Invalidate transactions and review count
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getReviewCount.queryKey(),
+      });
 
-        toast({
-          title: "Transaction moved to review",
-          variant: "success",
-        });
-      },
-    }),
-  );
+      toast({
+        title: "Transaction moved to review",
+        variant: "success",
+      });
+    },
+  });
 
   const { updateCategory } = useUpdateTransactionCategory({
     onSuccess: () => {

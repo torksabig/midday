@@ -16,6 +16,7 @@ import { Icons } from "@midday/ui/icons";
 import { useToast } from "@midday/ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tagsQueryOptions } from "@/lib/rust-api/tags-client";
+import { updateTransactionsManyFromRust } from "@/lib/rust-api/transactions-client";
 import { useTransactionsStore } from "@/store/transactions";
 import { useTRPC } from "@/trpc/client";
 import { SelectCategory } from "./select-category";
@@ -32,30 +33,29 @@ export function BulkActions({ ids }: Props) {
 
   const { setRowSelection } = useTransactionsStore();
 
-  const updateTransactionsMutation = useMutation(
-    trpc.transactions.updateMany.mutationOptions({
-      onSuccess: (_, data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
+  const updateTransactionsMutation = useMutation({
+    mutationFn: updateTransactionsManyFromRust,
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
 
-        setRowSelection("all", {});
+      setRowSelection("all", {});
 
-        toast({
-          title: `Updated ${data?.ids.length} transactions.`,
-          variant: "success",
-          duration: 3500,
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Something went wrong please try again.",
-          duration: 3500,
-          variant: "error",
-        });
-      },
-    }),
-  );
+      toast({
+        title: `Updated ${data?.ids.length} transactions.`,
+        variant: "success",
+        duration: 3500,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Something went wrong please try again.",
+        duration: 3500,
+        variant: "error",
+      });
+    },
+  });
 
   const { data: tags } = useQuery({
     ...tagsQueryOptions(trpc.tags.get.queryKey()),

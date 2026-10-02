@@ -4,6 +4,7 @@ import { Icons } from "@midday/ui/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
+import { updateTransactionFromRust } from "@/lib/rust-api/transactions-client";
 import { useTransactionsStore } from "@/store/transactions";
 import { useTRPC } from "@/trpc/client";
 
@@ -18,9 +19,9 @@ export function TransactionShortcuts({ isFulfilled, status }: Props) {
   const { transactionId, setParams } = useTransactionParams();
   const transactionIds = useTransactionsStore((s) => s.transactionIds);
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions(),
-  );
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
+  });
 
   const canToggleReviewReady =
     !isFulfilled && status !== "excluded" && status !== "archived";

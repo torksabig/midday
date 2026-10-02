@@ -138,6 +138,19 @@ test("normalizes snake_case transaction list payloads", () => {
   });
 });
 
+test("omitUndefined keeps null clears for transaction updates", () => {
+  expect(
+    Object.fromEntries(
+      Object.entries({
+        id: "tx-1",
+        name: "Updated",
+        status: undefined,
+        categorySlug: null,
+      }).filter(([key, value]) => key !== "id" && value !== undefined),
+    ),
+  ).toEqual({ name: "Updated", categorySlug: null });
+});
+
 test("normalizes transaction detail suggestion fields", () => {
   const payload = {
     id: "tx-1",

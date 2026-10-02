@@ -32,7 +32,11 @@ import {
   createTransactionTagFromRust,
   deleteTransactionTagFromRust,
 } from "@/lib/rust-api/transaction-tags-client";
-import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
+import {
+  transactionByIdQueryOptions,
+  updateTransactionFromRust,
+  updateTransactionsManyFromRust,
+} from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { AssignUser } from "./assign-user";
 import { FormatAmount } from "./format-amount";
@@ -83,128 +87,127 @@ export function TransactionDetails() {
     },
   });
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions({
-      onSuccess: (_, variables) => {
-        track(LogEvents.TransactionUpdated.name);
-        if ("categorySlug" in variables) {
-          track(LogEvents.TransactionCategoryChanged.name, {
-            category: variables.categorySlug,
-          });
-        }
-        if ("categorySlug" in variables || "internal" in variables) {
-          invalidateTransactionQueries();
-        } else {
-          queryClient.invalidateQueries({
-            queryKey: trpc.transactions.get.infiniteQueryKey(),
-          });
-        }
-      },
-      onMutate: async (variables) => {
-        // Cancel any outgoing refetches
-        await Promise.all([
-          queryClient.cancelQueries({
-            queryKey: trpc.transactions.getById.queryKey({
-              id: transactionId!,
-            }),
-          }),
-          queryClient.cancelQueries({
-            queryKey: trpc.transactions.get.infiniteQueryKey(),
-          }),
-        ]);
-
-        // Snapshot the previous values
-        const previousData = {
-          details: queryClient.getQueryData(
-            trpc.transactions.getById.queryKey({ id: transactionId! }),
-          ),
-          list: queryClient.getQueryData(
-            trpc.transactions.get.infiniteQueryKey(),
-          ),
-        };
-
-        // Optimistically update details view
-        queryClient.setQueryData(
-          trpc.transactions.getById.queryKey({ id: transactionId! }),
-          (old: any) => {
-            if (variables.categorySlug) {
-              const categories = queryClient.getQueryData(
-                trpc.transactionCategories.get.queryKey(),
-              );
-              const category = categories?.find(
-                (c) => c.slug === variables.categorySlug,
-              );
-
-              if (category) {
-                return {
-                  ...old,
-                  ...variables,
-                  category,
-                };
-              }
-            }
-
-            return {
-              ...old,
-              ...variables,
-            };
-          },
-        );
-
-        // Optimistically update list view
-        queryClient.setQueryData(
-          trpc.transactions.get.infiniteQueryKey(),
-          (old: any) => {
-            if (!old?.pages) return old;
-
-            return {
-              ...old,
-              pages: old.pages.map((page: any) => ({
-                ...page,
-                data: page.data.map((transaction: any) =>
-                  transaction.id === transactionId
-                    ? {
-                        ...transaction,
-                        ...variables,
-                        ...(variables.categorySlug && {
-                          category: queryClient
-                            .getQueryData(
-                              trpc.transactionCategories.get.queryKey(),
-                            )
-                            ?.find((c) => c.slug === variables.categorySlug),
-                        }),
-                      }
-                    : transaction,
-                ),
-              })),
-            };
-          },
-        );
-
-        return { previousData };
-      },
-      onError: (_, __, context) => {
-        // Revert both caches on error
-        queryClient.setQueryData(
-          trpc.transactions.getById.queryKey({ id: transactionId! }),
-          context?.previousData.details,
-        );
-        queryClient.setQueryData(
-          trpc.transactions.get.infiniteQueryKey(),
-          context?.previousData.list,
-        );
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
+    onSuccess: (_, variables) => {
+      track(LogEvents.TransactionUpdated.name);
+      if ("categorySlug" in variables) {
+        track(LogEvents.TransactionCategoryChanged.name, {
+          category: variables.categorySlug,
         });
-
+      }
+      if ("categorySlug" in variables || "internal" in variables) {
+        invalidateTransactionQueries();
+      } else {
         queryClient.invalidateQueries({
           queryKey: trpc.transactions.get.infiniteQueryKey(),
         });
-      },
-    }),
-  );
+      }
+    },
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await Promise.all([
+        queryClient.cancelQueries({
+          queryKey: trpc.transactions.getById.queryKey({
+            id: transactionId!,
+          }),
+        }),
+        queryClient.cancelQueries({
+          queryKey: trpc.transactions.get.infiniteQueryKey(),
+        }),
+      ]);
+
+      // Snapshot the previous values
+      const previousData = {
+        details: queryClient.getQueryData(
+          trpc.transactions.getById.queryKey({ id: transactionId! }),
+        ),
+        list: queryClient.getQueryData(
+          trpc.transactions.get.infiniteQueryKey(),
+        ),
+      };
+
+      // Optimistically update details view
+      queryClient.setQueryData(
+        trpc.transactions.getById.queryKey({ id: transactionId! }),
+        (old: any) => {
+          if (variables.categorySlug) {
+            const categories = queryClient.getQueryData(
+              trpc.transactionCategories.get.queryKey(),
+            );
+            const category = categories?.find(
+              (c) => c.slug === variables.categorySlug,
+            );
+
+            if (category) {
+              return {
+                ...old,
+                ...variables,
+                category,
+              };
+            }
+          }
+
+          return {
+            ...old,
+            ...variables,
+          };
+        },
+      );
+
+      // Optimistically update list view
+      queryClient.setQueryData(
+        trpc.transactions.get.infiniteQueryKey(),
+        (old: any) => {
+          if (!old?.pages) return old;
+
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              data: page.data.map((transaction: any) =>
+                transaction.id === transactionId
+                  ? {
+                      ...transaction,
+                      ...variables,
+                      ...(variables.categorySlug && {
+                        category: queryClient
+                          .getQueryData(
+                            trpc.transactionCategories.get.queryKey(),
+                          )
+                          ?.find((c) => c.slug === variables.categorySlug),
+                      }),
+                    }
+                  : transaction,
+              ),
+            })),
+          };
+        },
+      );
+
+      return { previousData };
+    },
+    onError: (_, __, context) => {
+      // Revert both caches on error
+      queryClient.setQueryData(
+        trpc.transactions.getById.queryKey({ id: transactionId! }),
+        context?.previousData.details,
+      );
+      queryClient.setQueryData(
+        trpc.transactions.get.infiniteQueryKey(),
+        context?.previousData.list,
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   const createTransactionTagMutation = useMutation({
     mutationFn: createTransactionTagFromRust,
@@ -232,19 +235,18 @@ export function TransactionDetails() {
     },
   });
 
-  const updateTransactionsMutation = useMutation(
-    trpc.transactions.updateMany.mutationOptions({
-      onSuccess: (_, _data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
-        });
+  const updateTransactionsMutation = useMutation({
+    mutationFn: updateTransactionsManyFromRust,
+    onSuccess: (_, _data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id: transactionId! }),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   if (isLoading || !data) {
     return (

@@ -32,6 +32,7 @@ import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-cat
 import { useUserQuery } from "@/hooks/use-user";
 import { bankAccountsQueryOptions } from "@/lib/rust-api/bank-accounts-client";
 import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-categories-client";
+import { updateTransactionFromRust } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 
 type Transaction = RouterOutputs["transactions"]["getById"];
@@ -63,8 +64,8 @@ export function TransactionEditForm({ transaction }: Props) {
 
   const { updateCategory } = useUpdateTransactionCategory();
 
-  const updateTransactionMutation = useMutation(
-    trpc.transactions.update.mutationOptions({
+  const updateTransactionMutation = useMutation({
+    mutationFn: updateTransactionFromRust,
       onSuccess: (_, variables) => {
         // If category or internal (exclude from reports) changed, invalidate reports
         if ("categorySlug" in variables || "internal" in variables) {
@@ -173,8 +174,7 @@ export function TransactionEditForm({ transaction }: Props) {
           );
         }
       },
-    }),
-  );
+  });
 
   // Derive transaction type from amount sign
   // Ensure amount is treated as a number for comparison

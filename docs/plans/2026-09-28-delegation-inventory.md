@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, and transactions list/getById/review-count. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, and transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -92,13 +92,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `transactions.get` | direct Rust | read · list filters (Phase 2e matrix); dashboard infinite query calls `GET /api/v1/transactions` directly and preserves tRPC infinite query keys |
 | `transactions.getById` | direct Rust | read · detail + pending suggestion; dashboard calls `GET /api/v1/transactions/{id}` directly |
 | `transactions.getReviewCount` | direct Rust | read · ready-for-export count; dashboard calls `GET /api/v1/transactions/review-count` directly |
-| `transactions.update` | yes | **write** · partial PATCH-style PUT on Midday Postgres; clears tax on category change; drops `accounting_sync_records` when un-exporting (Phase 11 **first write**) |
-| `transactions.updateMany` | yes | **write** · bulk PATCH + tag insert + sync record delete (AP-12b); no bulk activity feed |
-| `transactions.deleteMany` | yes | **write** · manual txs only (AP-17) |
-| `transactions.moveToReview` | yes | **write** · un-export + sync delete (AP-48) |
+| `transactions.update` | direct Rust | **write** · partial PATCH-style PUT on Midday Postgres; dashboard calls `PUT /api/v1/transactions/{id}` directly |
+| `transactions.updateMany` | direct Rust | **write** · bulk PATCH + tag insert; dashboard calls `POST /api/v1/transactions/update-many` directly |
+| `transactions.create` | yes | **write** · manual insert; enrich/match jobs stay Node (AP-54); still tRPC at create-form call site |
+| `transactions.moveToReview` | direct Rust | **write** · un-export + sync delete (AP-48); dashboard calls `POST /api/v1/transactions/{id}/move-to-review` directly |
 | `transactions.getSimilarTransactions` | yes | read · pg_trgm candidates (AP-49); JS name-score matrix gap |
 | `transactions.searchTransactionMatch` | yes | read · FTS/pg_trgm match candidates (AP-53); scoring simplified vs Drizzle |
-| `transactions.create` | yes | **write** · manual insert; enrich/match jobs stay Node (AP-54) |
 | `transactions.import` | yes | **write** · bank account get/update SQL; import job stays Node (AP-58) |
 | `transactions.*` (other) | no | export (job-only), generateCsvMapping (AI) |
 | `inbox.get` | yes | read · list |
