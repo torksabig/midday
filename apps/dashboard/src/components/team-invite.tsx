@@ -1,14 +1,18 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { Avatar, AvatarFallback, AvatarImage } from "@midday/ui/avatar";
 import { SubmitButton } from "@midday/ui/submit-button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import {
+  acceptTeamInviteFromRust,
+  declineTeamInviteFromRust,
+} from "@/lib/rust-api/team-client";
+import type { UserInvite } from "@/lib/rust-api/team";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
-  invite: RouterOutputs["team"]["invitesByEmail"][number];
+  invite: UserInvite;
 };
 
 export function TeamInvite({ invite }: Props) {
@@ -25,30 +29,28 @@ export function TeamInvite({ invite }: Props) {
     }),
   );
 
-  const acceptInviteMutation = useMutation(
-    trpc.team.acceptInvite.mutationOptions({
-      onSuccess: (data) => {
-        if (!data.teamId) {
-          return;
-        }
+  const acceptInviteMutation = useMutation({
+    mutationFn: acceptTeamInviteFromRust,
+    onSuccess: (data) => {
+      if (!data.teamId) {
+        return;
+      }
 
-        // Switch to the newly joined team
-        switchTeamMutation.mutate({
-          teamId: data.teamId,
-        });
-      },
-    }),
-  );
+      // Switch to the newly joined team
+      switchTeamMutation.mutate({
+        teamId: data.teamId,
+      });
+    },
+  });
 
-  const declineInviteMutation = useMutation(
-    trpc.team.declineInvite.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.team.invitesByEmail.queryKey(),
-        });
-      },
-    }),
-  );
+  const declineInviteMutation = useMutation({
+    mutationFn: declineTeamInviteFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.invitesByEmail.queryKey(),
+      });
+    },
+  });
 
   return (
     <div className="flex justify-between items-center">

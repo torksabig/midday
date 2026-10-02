@@ -10,27 +10,27 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, and search.global. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update + user.invites, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers) plus update/match/confirmMatch/declineMatch/unmatch + blocklist get/create/delete, documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, search.global, and team invites/connectionStatus + accept/decline/deleteInvite + updateMember/deleteMember. Hybrid stays on tRPC: `inbox.delete`/`deleteMany` (storage remove), `team.invite` (Trigger email), gated decrypt, `bankConnections.delete` (Trigger teardown). |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
 | `user.delete` | no | write · Supabase admin + Resend |
-| `user.invites` | yes | read · pending team invites by email (Phase 10) |
+| `user.invites` | direct Rust | read · pending team invites by email; dashboard calls `GET /api/v1/user/invites` |
 | `team.current` | direct Rust | read · identity/team shell; dashboard calls `GET /api/v1/team/current` with the Supabase session JWT |
 | `team.members` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/members` directly |
 | `team.list` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/list` directly |
-| `team.teamInvites` | yes | read · AP-13 |
+| `team.teamInvites` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/invites` |
 | `team.update` | direct Rust | **write** · name/currency/settings PUT `/api/v1/team` (AP-22); dashboard calls Rust directly |
-| `team.connectionStatus` | yes | read · bank + inbox status summary (AP-26) |
+| `team.connectionStatus` | direct Rust | read · bank + inbox status summary (AP-26); dashboard calls `GET /api/v1/team/connection-status` |
 | `team.availablePlans` | yes | read · starter/pro flags (AP-50) |
-| `team.acceptInvite` | yes | **write** · join team from invite (AP-41) |
-| `team.declineInvite` | yes | **write** · delete invite by email (AP-41) |
-| `team.deleteInvite` | yes | **write** · owner cancels invite (AP-41) |
-| `team.invitesByEmail` | yes | read · reuse `/user/invites` (AP-41) |
-| `team.deleteMember` | yes | **write** · owner removes member; cache invalidate Node (AP-42) |
-| `team.updateMember` | yes | **write** · owner role change (AP-42) |
+| `team.acceptInvite` | direct Rust | **write** · join team from invite (AP-41); dashboard calls `POST /api/v1/team/invites/accept` |
+| `team.declineInvite` | direct Rust | **write** · delete invite by email (AP-41); dashboard calls `POST /api/v1/team/invites/decline` |
+| `team.deleteInvite` | direct Rust | **write** · owner cancels invite (AP-41); dashboard calls `DELETE /api/v1/team/invites/{id}` |
+| `team.invitesByEmail` | direct Rust | read · reuse `/user/invites` (AP-41); dashboard calls Rust directly |
+| `team.deleteMember` | direct Rust | **write** · owner removes member (AP-42); dashboard calls `DELETE /api/v1/team/members`; cache invalidate stays Node-side if any |
+| `team.updateMember` | direct Rust | **write** · owner changes role (AP-42); dashboard calls `PUT /api/v1/team/members` |
 | `team.leave` | yes | **write** · leave team; last-owner guard; cache invalidate Node (AP-43) |
-| `team.invite` | yes | **write** · invite SQL insert; Trigger email stays Node (AP-60) |
+| `team.invite` | yes | **write** · invite SQL insert; Trigger email stays Node (AP-60) — **hybrid, keep on tRPC** |
 | `team.delete` | yes | **write** · prep + delete SQL; delete-team job stays Node (AP-61) |
 | `team.create` | yes | **write** · multi-table + category seed SQL; tax helpers stay Node (AP-62) |
 | `team.*` (other) | no | — |
@@ -105,16 +105,16 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inbox.checkAttachments` | direct Rust | read · attachment linkage check; dashboard calls `GET /api/v1/inbox/{id}/check-attachments` directly |
 | `inbox.search` | direct Rust | read · search helpers wired; no dashboard fetch sites yet (cmd-k uses `search.global` → Rust) |
 | `inbox.getByStatus` | direct Rust | read · by-status helpers wired; no dashboard fetch sites yet |
-| `inbox.update` | yes | **write** · partial PUT (AP-12c); `status: deleted` not on Rust path |
-| `inbox.matchTransaction` | yes | **write** · single-item match + attachment (AP-18); no grouped-inbox siblings |
-| `inbox.delete` | yes | **write** · soft-delete + attachment/suggestion cleanup (AP-18); storage remove stays in API |
-| `inbox.deleteMany` | yes | **write** · batch soft-delete (AP-18) |
-| `inbox.confirmMatch` | yes | **write** · confirm suggestion + match (AP-47); grouped siblings gap same as match |
-| `inbox.declineMatch` | yes | **write** · decline suggestion + pending (AP-47) |
-| `inbox.unmatchTransaction` | yes | **write** · unmatch group + learning feedback (AP-47) |
-| `inbox.blocklist.get` | yes | read · team blocklist (AP-40) |
-| `inbox.blocklist.create` | yes | **write** · insert blocklist row (AP-40) |
-| `inbox.blocklist.delete` | yes | **write** · delete blocklist row (AP-40) |
+| `inbox.update` | direct Rust | **write** · partial PUT (AP-12c); dashboard calls `PUT /api/v1/inbox/{id}`; `status: deleted` not on Rust path |
+| `inbox.matchTransaction` | direct Rust | **write** · single-item match + attachment (AP-18); dashboard calls `POST /api/v1/inbox/{id}/match`; no grouped-inbox siblings |
+| `inbox.delete` | yes | **write** · soft-delete + attachment/suggestion cleanup (AP-18); **hybrid — storage remove stays on tRPC** |
+| `inbox.deleteMany` | yes | **write** · batch soft-delete (AP-18); **hybrid — storage remove stays on tRPC** |
+| `inbox.confirmMatch` | direct Rust | **write** · confirm suggestion + match (AP-47); dashboard calls `POST /api/v1/inbox/confirm-match` |
+| `inbox.declineMatch` | direct Rust | **write** · decline suggestion + pending (AP-47); dashboard calls `POST /api/v1/inbox/decline-match` |
+| `inbox.unmatchTransaction` | direct Rust | **write** · unmatch group + learning feedback (AP-47); dashboard calls `POST /api/v1/inbox/{id}/unmatch` |
+| `inbox.blocklist.get` | direct Rust | read · team blocklist (AP-40); dashboard calls `GET /api/v1/inbox/blocklist` |
+| `inbox.blocklist.create` | direct Rust | **write** · insert blocklist row (AP-40); dashboard calls `POST /api/v1/inbox/blocklist` |
+| `inbox.blocklist.delete` | direct Rust | **write** · delete blocklist row (AP-40); dashboard calls `DELETE /api/v1/inbox/blocklist/{id}` |
 | `inbox.create` | yes | **write** · insert inbox item (AP-57) |
 | `inbox.*` (other) | no | processAttachments / retryMatching (jobs) |
 | `overview.summary` | direct Rust | read · dashboard home; dashboard calls `GET /api/v1/overview/summary` with the Supabase session JWT |

@@ -11,6 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
+import { teamInvitesQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "./columns";
 import { DataTableHeader } from "./table-header";
@@ -20,7 +21,7 @@ export function DataTable() {
 
   const trpc = useTRPC();
   const { data } = useSuspenseQuery({
-    ...trpc.team.teamInvites.queryOptions(),
+    ...teamInvitesQueryOptions(trpc.team.teamInvites.queryKey()),
   });
 
   const table = useReactTable({

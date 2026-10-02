@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { InboxBlocklistSettings } from "@/components/inbox/inbox-blocklist-settings";
 import { InboxConnectedAccounts } from "@/components/inbox/inbox-connected-accounts";
 import { InboxEmailSettings } from "@/components/inbox/inbox-email-settings";
+import { inboxBlocklistServerQueryOptions } from "@/lib/rust-api/inbox-server";
 import { prefetch, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   prefetch(trpc.inboxAccounts.get.queryOptions());
-  prefetch(trpc.inbox.blocklist.get.queryOptions());
+  prefetch(
+    inboxBlocklistServerQueryOptions(trpc.inbox.blocklist.get.queryKey()),
+  );
 
   return (
     <div className="max-w-[800px]">

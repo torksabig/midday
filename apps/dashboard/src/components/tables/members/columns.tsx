@@ -34,6 +34,10 @@ import "@tanstack/react-table";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import {
+  deleteTeamMemberFromRust,
+  updateTeamMemberFromRust,
+} from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 const userFilterFn: FilterFn<TeamMember> = (
@@ -92,21 +96,20 @@ export const columns: ColumnDef<TeamMember>[] = [
       const queryClient = useQueryClient();
       const router = useRouter();
 
-      const deleteMemberMutation = useMutation(
-        trpc.team.deleteMember.mutationOptions({
-          onSuccess: () => {
-            track(LogEvents.MemberRemoved.name);
-            queryClient.invalidateQueries({
-              queryKey: trpc.team.members.queryKey(),
-            });
-          },
-          onError: () => {
-            toast({
-              title: "Error deleting member",
-            });
-          },
-        }),
-      );
+      const deleteMemberMutation = useMutation({
+        mutationFn: deleteTeamMemberFromRust,
+        onSuccess: () => {
+          track(LogEvents.MemberRemoved.name);
+          queryClient.invalidateQueries({
+            queryKey: trpc.team.members.queryKey(),
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Error deleting member",
+          });
+        },
+      });
 
       const leaveTeamMutation = useMutation(
         trpc.team.leave.mutationOptions({
@@ -116,15 +119,14 @@ export const columns: ColumnDef<TeamMember>[] = [
         }),
       );
 
-      const updateMemberMutation = useMutation(
-        trpc.team.updateMember.mutationOptions({
-          onSuccess: () => {
-            queryClient.invalidateQueries({
-              queryKey: trpc.team.members.queryKey(),
-            });
-          },
-        }),
-      );
+      const updateMemberMutation = useMutation({
+        mutationFn: updateTeamMemberFromRust,
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: trpc.team.members.queryKey(),
+          });
+        },
+      });
 
       return (
         <div className="flex justify-end">

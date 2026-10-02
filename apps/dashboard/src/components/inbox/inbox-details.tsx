@@ -35,7 +35,11 @@ import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
-import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  createInboxBlocklistFromRust,
+  inboxByIdQueryOptions,
+  updateInboxFromRust,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { getWebsiteLogo } from "@/utils/logos";
@@ -67,27 +71,26 @@ export function InboxDetails() {
     }),
   );
 
-  const updateInboxMutation = useMutation(
-    trpc.inbox.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.get.infiniteQueryKey(),
-        });
+  const updateInboxMutation = useMutation({
+    mutationFn: updateInboxFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   const retryMatchingMutation = useMutation(
     trpc.inbox.retryMatching.mutationOptions(),
   );
 
-  const blockSenderMutation = useMutation(
-    trpc.inbox.blocklist.create.mutationOptions({
-      onMutate: async (variables) => {
+  const blockSenderMutation = useMutation({
+    mutationFn: createInboxBlocklistFromRust,
+    onMutate: async (variables) => {
         // Check if the currently selected inbox item matches what was blocked
         if (data) {
           const shouldDeselect =
@@ -149,7 +152,7 @@ export function InboxDetails() {
           queryKey: trpc.inbox.get.infiniteQueryKey(),
         });
       },
-    }),
+    },
   );
 
   const handleBlockEmail = () => {

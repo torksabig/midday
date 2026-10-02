@@ -22,7 +22,10 @@ import { useEffect } from "react";
 import { z } from "zod/v3";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useZodForm } from "@/hooks/use-zod-form";
-import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  inboxByIdQueryOptions,
+  updateInboxFromRust,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -56,15 +59,14 @@ export function EditInboxModal({ children }: Props) {
     },
   });
 
-  const updateInboxMutation = useMutation(
-    trpc.inbox.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const updateInboxMutation = useMutation({
+    mutationFn: updateInboxFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.get.queryKey(),
+      });
+    },
+  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     updateInboxMutation.mutate({

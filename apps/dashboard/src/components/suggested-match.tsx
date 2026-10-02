@@ -9,6 +9,10 @@ import { useToast } from "@midday/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDocumentParams } from "@/hooks/use-document-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import {
+  confirmInboxMatchFromRust,
+  declineInboxMatchFromRust,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { LocalStorageKeys } from "@/utils/constants";
 import { FilePreview } from "./file-preview";
@@ -40,9 +44,9 @@ export function SuggestedMatch({
     false,
   );
 
-  const confirmMutation = useMutation(
-    trpc.inbox.confirmMatch.mutationOptions({
-      onSuccess: () => {
+  const confirmMutation = useMutation({
+    mutationFn: confirmInboxMatchFromRust,
+    onSuccess: () => {
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({
           queryKey: trpc.transactions.getById.queryKey({ id: transactionId }),
@@ -53,12 +57,12 @@ export function SuggestedMatch({
 
         showLearningToast();
       },
-    }),
+    },
   );
 
-  const declineMutation = useMutation(
-    trpc.inbox.declineMatch.mutationOptions({
-      onSuccess: () => {
+  const declineMutation = useMutation({
+    mutationFn: declineInboxMatchFromRust,
+    onSuccess: () => {
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({
           queryKey: trpc.transactions.getById.queryKey({ id: transactionId }),
@@ -69,7 +73,7 @@ export function SuggestedMatch({
 
         showLearningToast();
       },
-    }),
+    },
   );
 
   const showLearningToast = () => {

@@ -19,7 +19,10 @@ import { useDebounceValue } from "usehooks-ts";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserQuery } from "@/hooks/use-user";
-import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  inboxByIdQueryOptions,
+  matchInboxFromRust,
+} from "@/lib/rust-api/inbox-client";
 import { searchTransactionMatchQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionMatchItem } from "./transaction-match-item";
@@ -108,9 +111,9 @@ export function MatchTransaction() {
     setIncludeAlreadyMatched(!includeAlreadyMatched);
   };
 
-  const matchTransactionMutation = useMutation(
-    trpc.inbox.matchTransaction.mutationOptions({
-      onMutate: async (variables) => {
+  const matchTransactionMutation = useMutation({
+    mutationFn: matchInboxFromRust,
+    onMutate: async (variables) => {
         const { id, transactionId } = variables;
         const queryKey = trpc.inbox.getById.queryKey({ id });
 
@@ -159,7 +162,7 @@ export function MatchTransaction() {
           queryKey: trpc.transactions.searchTransactionMatch.queryKey(),
         });
       },
-    }),
+    },
   );
 
   const handleSelect = (option?: { id: string; name: string }) => {

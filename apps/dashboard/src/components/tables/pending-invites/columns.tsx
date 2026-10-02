@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { Avatar, AvatarFallback } from "@midday/ui/avatar";
 import { Button } from "@midday/ui/button";
 import {
@@ -10,10 +9,10 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, FilterFn, Row } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
+import type { TeamInvite } from "@/lib/rust-api/team";
+import { deleteTeamInviteFromRust } from "@/lib/rust-api/team-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
-
-type TeamInvite = RouterOutputs["team"]["teamInvites"][number];
 
 const emailFilterFn: FilterFn<TeamInvite> = (
   row: Row<TeamInvite>,
@@ -54,15 +53,14 @@ export const columns: ColumnDef<TeamInvite>[] = [
       const trpc = useTRPC();
       const queryClient = useQueryClient();
 
-      const deleteInvite = useMutation(
-        trpc.team.deleteInvite.mutationOptions({
-          onSuccess: () => {
-            queryClient.invalidateQueries({
-              queryKey: trpc.team.teamInvites.queryKey(),
-            });
-          },
-        }),
-      );
+      const deleteInvite = useMutation({
+        mutationFn: deleteTeamInviteFromRust,
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: trpc.team.teamInvites.queryKey(),
+          });
+        },
+      });
 
       return (
         <div className="flex justify-end">

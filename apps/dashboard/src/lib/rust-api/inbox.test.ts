@@ -4,6 +4,7 @@ import {
   buildInboxByStatusQuery,
   buildInboxListQuery,
   buildInboxSearchQuery,
+  normalizeInboxBlocklistEntry,
   normalizeInboxCheckAttachments,
   normalizeInboxDetail,
   normalizeInboxList,
@@ -246,5 +247,23 @@ test("normalizes check-attachments and search items", () => {
     baseAmount: 12.5,
     baseCurrency: "EUR",
     type: "invoice",
+  });
+});
+
+test("normalizes blocklist entries from camelCase payload", () => {
+  expect(
+    normalizeInboxBlocklistEntry({
+      id: "bl-1",
+      teamId: "team-1",
+      type: "domain",
+      value: "spam.com",
+      createdAt: "2026-01-02T10:00:00Z",
+    }),
+  ).toEqual({
+    id: "bl-1",
+    teamId: "team-1",
+    type: "domain",
+    value: "spam.com",
+    createdAt: "2026-01-02T10:00:00Z",
   });
 });

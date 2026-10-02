@@ -8,7 +8,11 @@ import { motion } from "framer-motion";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserQuery } from "@/hooks/use-user";
-import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  confirmInboxMatchFromRust,
+  declineInboxMatchFromRust,
+  inboxByIdQueryOptions,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { LocalStorageKeys } from "@/utils/constants";
 import { FormatAmount } from "../format-amount";
@@ -50,9 +54,9 @@ export function SuggestedMatch() {
     return s && "suggestedTransaction" in s && s.suggestedTransaction;
   };
 
-  const confirmMatchMutation = useMutation(
-    trpc.inbox.confirmMatch.mutationOptions({
-      onSuccess: () => {
+  const confirmMatchMutation = useMutation({
+    mutationFn: confirmInboxMatchFromRust,
+    onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.inbox.getById.queryKey({ id: id! }),
         });
@@ -75,12 +79,12 @@ export function SuggestedMatch() {
 
         showLearningToast();
       },
-    }),
+    },
   );
 
-  const declineMatchMutation = useMutation(
-    trpc.inbox.declineMatch.mutationOptions({
-      onSuccess: () => {
+  const declineMatchMutation = useMutation({
+    mutationFn: declineInboxMatchFromRust,
+    onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.inbox.getById.queryKey({ id: id! }),
         });
@@ -100,7 +104,7 @@ export function SuggestedMatch() {
 
         showLearningToast();
       },
-    }),
+    },
   );
 
   const showLearningToast = () => {
@@ -116,7 +120,7 @@ export function SuggestedMatch() {
   };
 
   const handleConfirm = () => {
-    if (suggestion && id) {
+    if (suggestion?.id && suggestion.transactionId && id) {
       confirmMatchMutation.mutate({
         suggestionId: suggestion.id,
         inboxId: id,
@@ -126,7 +130,7 @@ export function SuggestedMatch() {
   };
 
   const handleDecline = () => {
-    if (suggestion && id) {
+    if (suggestion?.id && id) {
       declineMatchMutation.mutate({
         suggestionId: suggestion.id,
         inboxId: id,

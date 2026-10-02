@@ -6,7 +6,10 @@ import { redirect } from "next/navigation";
 import { SelectTeamTable } from "@/components/tables/select-team/table";
 import { TeamInvites } from "@/components/team-invites";
 import { UserMenu } from "@/components/user-menu";
-import { teamListServerQueryOptions } from "@/lib/rust-api/team-server";
+import {
+  teamListServerQueryOptions,
+  userInvitesServerQueryOptions,
+} from "@/lib/rust-api/team-server";
 import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
@@ -20,7 +23,7 @@ export default async function Teams() {
     teamListServerQueryOptions(trpc.team.list.queryKey()),
   );
   const invites = await queryClient.fetchQuery(
-    trpc.team.invitesByEmail.queryOptions(),
+    userInvitesServerQueryOptions(trpc.team.invitesByEmail.queryKey()),
   );
 
   const user = await queryClient.fetchQuery(viewerServerQueryOptions());

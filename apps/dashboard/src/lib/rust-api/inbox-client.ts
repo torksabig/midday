@@ -7,11 +7,20 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  confirmInboxMatch,
+  type ConfirmInboxMatchInput,
+  createInboxBlocklist,
+  type CreateInboxBlocklistInput,
+  declineInboxMatch,
+  type DeclineInboxMatchInput,
+  deleteInboxBlocklist,
+  fetchInboxBlocklist,
   fetchInboxById,
   fetchInboxByStatus,
   fetchInboxCheckAttachments,
   fetchInboxList,
   fetchInboxSearch,
+  type InboxBlocklistEntry,
   type InboxByStatusItem,
   type InboxByStatusParams,
   type InboxCheckAttachments,
@@ -20,6 +29,12 @@ import {
   type InboxListParams,
   type InboxSearchItem,
   type InboxSearchParams,
+  matchInbox,
+  type MatchInboxInput,
+  unmatchInbox,
+  type UnmatchInboxInput,
+  updateInbox,
+  type UpdateInboxInput,
 } from "./inbox";
 
 function getRustApiUrl() {
@@ -95,4 +110,42 @@ export function inboxByStatusQueryOptions(
     queryFn: async () =>
       fetchInboxByStatus(getRustApiUrl(), await getAccessToken(), params),
   });
+}
+
+export function inboxBlocklistQueryOptions(queryKey: QueryKey) {
+  return queryOptions<InboxBlocklistEntry[]>({
+    queryKey,
+    queryFn: async () =>
+      fetchInboxBlocklist(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export async function updateInboxFromRust(input: UpdateInboxInput) {
+  return updateInbox(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function matchInboxFromRust(input: MatchInboxInput) {
+  return matchInbox(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function confirmInboxMatchFromRust(input: ConfirmInboxMatchInput) {
+  return confirmInboxMatch(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function declineInboxMatchFromRust(input: DeclineInboxMatchInput) {
+  return declineInboxMatch(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function unmatchInboxFromRust(input: UnmatchInboxInput) {
+  return unmatchInbox(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function createInboxBlocklistFromRust(
+  input: CreateInboxBlocklistInput,
+) {
+  return createInboxBlocklist(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteInboxBlocklistFromRust(id: string) {
+  return deleteInboxBlocklist(getRustApiUrl(), await getAccessToken(), id);
 }

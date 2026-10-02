@@ -1,13 +1,14 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { userInvitesQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { TeamInvite } from "./team-invite";
 
 export function TeamInvites() {
   const trpc = useTRPC();
   const { data: invites } = useSuspenseQuery(
-    trpc.team.invitesByEmail.queryOptions(),
+    userInvitesQueryOptions(trpc.team.invitesByEmail.queryKey()),
   );
 
   return (

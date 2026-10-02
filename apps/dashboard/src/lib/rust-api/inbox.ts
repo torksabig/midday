@@ -478,3 +478,312 @@ export async function fetchInboxCheckAttachments(
     (await response.json()) as RawInboxCheckAttachments,
   );
 }
+
+export type UpdateInboxInput = {
+  id: string;
+  status?: string | null;
+  displayName?: string | null;
+  currency?: string | null;
+  amount?: number | null;
+};
+
+export type MatchInboxInput = {
+  id: string;
+  transactionId: string;
+};
+
+export type ConfirmInboxMatchInput = {
+  suggestionId: string;
+  inboxId: string;
+  transactionId: string;
+};
+
+export type DeclineInboxMatchInput = {
+  suggestionId: string;
+  inboxId: string;
+};
+
+export type UnmatchInboxInput = {
+  id: string;
+};
+
+export type InboxBlocklistEntry = {
+  id: string;
+  teamId: string | null;
+  type: string;
+  value: string;
+  createdAt: string | null;
+};
+
+export type CreateInboxBlocklistInput = {
+  type: "email" | "domain" | string;
+  value: string;
+};
+
+function omitUndefined(
+  input: Record<string, unknown>,
+  skipKeys: string[] = [],
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (skipKeys.includes(key) || value === undefined) continue;
+    body[key] = value;
+  }
+  return body;
+}
+
+export function normalizeInboxBlocklistEntry(
+  row: Record<string, unknown>,
+): InboxBlocklistEntry {
+  return {
+    id: String(row.id),
+    teamId:
+      typeof row.teamId === "string"
+        ? row.teamId
+        : typeof row.team_id === "string"
+          ? row.team_id
+          : null,
+    type: String(row.type ?? ""),
+    value: String(row.value ?? ""),
+    createdAt:
+      typeof row.createdAt === "string"
+        ? row.createdAt
+        : typeof row.created_at === "string"
+          ? row.created_at
+          : null,
+  };
+}
+
+export async function updateInbox(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpdateInboxInput,
+): Promise<InboxDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const { id, ...fields } = input;
+  const response = await fetch(
+    `${baseUrl}/api/v1/inbox/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(omitUndefined(fields as Record<string, unknown>)),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInboxDetail((await response.json()) as RawInboxDetailItem);
+}
+
+export async function matchInbox(
+  baseUrl: string,
+  accessToken: string | null,
+  input: MatchInboxInput,
+): Promise<InboxDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/inbox/${encodeURIComponent(input.id)}/match`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ transactionId: input.transactionId }),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInboxDetail((await response.json()) as RawInboxDetailItem);
+}
+
+export async function confirmInboxMatch(
+  baseUrl: string,
+  accessToken: string | null,
+  input: ConfirmInboxMatchInput,
+): Promise<InboxDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox/confirm-match`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      suggestionId: input.suggestionId,
+      inboxId: input.inboxId,
+      transactionId: input.transactionId,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInboxDetail((await response.json()) as RawInboxDetailItem);
+}
+
+export async function declineInboxMatch(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DeclineInboxMatchInput,
+): Promise<{ ok: true }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox/decline-match`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      suggestionId: input.suggestionId,
+      inboxId: input.inboxId,
+    }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return { ok: true };
+}
+
+export async function unmatchInbox(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UnmatchInboxInput,
+): Promise<unknown> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/inbox/${encodeURIComponent(input.id)}/unmatch`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return response.json();
+}
+
+export async function fetchInboxBlocklist(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<InboxBlocklistEntry[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox/blocklist`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as Record<string, unknown>[];
+  return payload.map(normalizeInboxBlocklistEntry);
+}
+
+export async function createInboxBlocklist(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreateInboxBlocklistInput,
+): Promise<InboxBlocklistEntry> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox/blocklist`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ type: input.type, value: input.value }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInboxBlocklistEntry(
+    (await response.json()) as Record<string, unknown>,
+  );
+}
+
+export async function deleteInboxBlocklist(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<{ id: string } | null> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/inbox/blocklist/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = await response.json();
+  if (payload == null) return null;
+  if (typeof payload === "object" && payload !== null && "id" in payload) {
+    return { id: String((payload as { id: unknown }).id) };
+  }
+  return null;
+}

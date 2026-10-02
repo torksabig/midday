@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BankLogo } from "@/components/bank-logo";
+import { teamConnectionStatusQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import {
   buildConnectionIssues,
@@ -73,10 +74,14 @@ export function ConnectionStatus() {
   }, []);
 
   const { data, isLoading } = useQuery({
-    ...trpc.team.connectionStatus.queryOptions(),
-    enabled: shouldFetch,
-    staleTime: 60 * 1000,
-    refetchOnWindowFocus: false,
+    ...teamConnectionStatusQueryOptions(
+      trpc.team.connectionStatus.queryKey(),
+      {
+        enabled: shouldFetch,
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+      },
+    ),
   });
 
   const issues = useMemo(() => buildConnectionIssues(data), [data]);

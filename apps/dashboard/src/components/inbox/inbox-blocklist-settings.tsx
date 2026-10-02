@@ -34,6 +34,11 @@ import { useEffect } from "react";
 import { useFieldArray } from "react-hook-form";
 import { z } from "zod/v3";
 import { useZodForm } from "@/hooks/use-zod-form";
+import {
+  createInboxBlocklistFromRust,
+  deleteInboxBlocklistFromRust,
+  inboxBlocklistQueryOptions,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -81,7 +86,7 @@ export function InboxBlocklistSettings() {
   const queryClient = useQueryClient();
 
   const { data: blocklistData } = useSuspenseQuery(
-    trpc.inbox.blocklist.get.queryOptions(),
+    inboxBlocklistQueryOptions(trpc.inbox.blocklist.get.queryKey()),
   );
 
   const existingEntries = blocklistData ?? [];
@@ -120,25 +125,24 @@ export function InboxBlocklistSettings() {
     control: form.control,
   });
 
-  const createMutation = useMutation(
-    trpc.inbox.blocklist.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.blocklist.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const createMutation = useMutation({
+    mutationFn: createInboxBlocklistFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.blocklist.get.queryKey(),
+      });
+    },
+  });
 
-  const deleteMutation = useMutation(
-    trpc.inbox.blocklist.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.blocklist.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const deleteMutation = useMutation({
+    mutationFn: async (input: { id: string }) =>
+      deleteInboxBlocklistFromRust(input.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.blocklist.get.queryKey(),
+      });
+    },
+  });
 
   const onSubmit = form.handleSubmit(async (data) => {
     const entriesToCreate = data.entries.filter(

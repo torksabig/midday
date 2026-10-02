@@ -7,9 +7,11 @@ import {
 } from "@tanstack/react-query";
 import { getServerRequestContext } from "@/trpc/request-context";
 import {
+  fetchInboxBlocklist,
   fetchInboxById,
   fetchInboxCheckAttachments,
   fetchInboxList,
+  type InboxBlocklistEntry,
   type InboxCheckAttachments,
   type InboxDetail,
   type InboxList,
@@ -70,6 +72,19 @@ export function inboxCheckAttachmentsServerQueryOptions(
         getRustApiUrl(),
         session?.access_token ?? null,
         id,
+      );
+    },
+  });
+}
+
+export function inboxBlocklistServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<InboxBlocklistEntry[]> => {
+      const { session } = await getServerRequestContext();
+      return fetchInboxBlocklist(
+        getRustApiUrl(),
+        session?.access_token ?? null,
       );
     },
   });

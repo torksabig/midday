@@ -4,11 +4,15 @@ import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getServerRequestContext } from "@/trpc/request-context";
 import {
   fetchCurrentTeam,
+  fetchTeamInvites,
   fetchTeamList,
   fetchTeamMembers,
+  fetchUserInvites,
+  type TeamInvite,
   type TeamListItem,
   type TeamMember,
   teamCurrentQueryKey,
+  type UserInvite,
 } from "./team";
 
 function getRustApiUrl() {
@@ -48,6 +52,26 @@ export function teamListServerQueryOptions(queryKey: QueryKey) {
     queryFn: async (): Promise<TeamListItem[]> => {
       const { session } = await getServerRequestContext();
       return fetchTeamList(getRustApiUrl(), session?.access_token ?? null);
+    },
+  });
+}
+
+export function userInvitesServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<UserInvite[]> => {
+      const { session } = await getServerRequestContext();
+      return fetchUserInvites(getRustApiUrl(), session?.access_token ?? null);
+    },
+  });
+}
+
+export function teamInvitesServerQueryOptions(queryKey: QueryKey) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<TeamInvite[]> => {
+      const { session } = await getServerRequestContext();
+      return fetchTeamInvites(getRustApiUrl(), session?.access_token ?? null);
     },
   });
 }

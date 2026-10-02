@@ -6,7 +6,10 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
-import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  inboxByIdQueryOptions,
+  unmatchInboxFromRust,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { TransactionMatchItem } from "./transaction-match-item";
 
@@ -25,9 +28,9 @@ export function TransactionUnmatchItem() {
     }),
   );
 
-  const unmatchTransactionMutation = useMutation(
-    trpc.inbox.unmatchTransaction.mutationOptions({
-      onSuccess: () => {
+  const unmatchTransactionMutation = useMutation({
+    mutationFn: unmatchInboxFromRust,
+    onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.transactions.searchTransactionMatch.queryKey({
             inboxId: id ?? undefined,
@@ -69,7 +72,7 @@ export function TransactionUnmatchItem() {
           queryKey: trpc.inbox.get.infiniteQueryKey(),
         });
       },
-    }),
+    },
   );
 
   if (!data?.transaction) {

@@ -7,6 +7,11 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import {
+  acceptTeamInviteFromRust,
+  declineTeamInviteFromRust,
+  userInvitesQueryOptions,
+} from "@/lib/rust-api/team-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 
@@ -14,35 +19,35 @@ export function Invites() {
   const t = useI18n();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { data: invites } = useSuspenseQuery(trpc.user.invites.queryOptions());
-
-  const declineInviteMutation = useMutation(
-    trpc.team.declineInvite.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.user.invites.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.team.list.queryKey(),
-        });
-      },
-    }),
+  const { data: invites } = useSuspenseQuery(
+    userInvitesQueryOptions(trpc.user.invites.queryKey()),
   );
 
-  const acceptInviteMutation = useMutation(
-    trpc.team.acceptInvite.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.user.invites.queryKey(),
-        });
+  const declineInviteMutation = useMutation({
+    mutationFn: declineTeamInviteFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.user.invites.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.team.list.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.list.queryKey(),
+      });
+    },
+  });
+
+  const acceptInviteMutation = useMutation({
+    mutationFn: acceptTeamInviteFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.user.invites.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.list.queryKey(),
+      });
+    },
+  });
 
   if (!invites?.length) {
     return null;

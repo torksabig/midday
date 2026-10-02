@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { normalizeTeamListItem, normalizeTeamMember, normalizeTeamUpdate } from "./team";
+import {
+  normalizeTeamConnectionStatus,
+  normalizeTeamListItem,
+  normalizeTeamMember,
+  normalizeTeamUpdate,
+  normalizeUserInvite,
+} from "./team";
 import { normalizeUserUpdate } from "./user";
 
 test("normalizes Rust team members for the dashboard", () => {
@@ -105,5 +111,67 @@ test("normalizes snake_case team/user update responses", () => {
     timezone: "UTC",
     timezoneAutoSync: false,
     teamId: "team-1",
+  });
+});
+
+test("normalizes user invites with nested snake_case fields", () => {
+  expect(
+    normalizeUserInvite({
+      id: "invite-1",
+      email: "ada@example.com",
+      code: "abc",
+      role: "member",
+      user: { id: "u1", full_name: "Ada", email: "owner@acme.com" },
+      team: { id: "t1", name: "Acme", logo_url: "https://logo" },
+    }),
+  ).toEqual({
+    id: "invite-1",
+    email: "ada@example.com",
+    code: "abc",
+    role: "member",
+    user: { id: "u1", fullName: "Ada", email: "owner@acme.com" },
+    team: { id: "t1", name: "Acme", logoUrl: "https://logo" },
+  });
+});
+
+test("normalizes team connection status payload", () => {
+  expect(
+    normalizeTeamConnectionStatus({
+      bankConnections: [
+        {
+          id: "bc1",
+          name: "Chase",
+          status: "connected",
+          expiresAt: null,
+          logoUrl: null,
+        },
+      ],
+      inboxAccounts: [
+        {
+          id: "ia1",
+          email: "inbox@acme.com",
+          status: "connected",
+          provider: "gmail",
+        },
+      ],
+    }),
+  ).toEqual({
+    bankConnections: [
+      {
+        id: "bc1",
+        name: "Chase",
+        status: "connected",
+        expiresAt: null,
+        logoUrl: null,
+      },
+    ],
+    inboxAccounts: [
+      {
+        id: "ia1",
+        email: "inbox@acme.com",
+        status: "connected",
+        provider: "gmail",
+      },
+    ],
   });
 });
