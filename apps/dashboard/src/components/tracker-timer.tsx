@@ -14,6 +14,11 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef } from "react";
 import { useGlobalTimerStatus } from "@/hooks/use-global-timer-status";
+import {
+  startTrackerTimerFromRust,
+  stopTrackerTimerFromRust,
+  trackerTimerStatusQueryOptions,
+} from "@/lib/rust-api/tracker-entries-client";
 import { useTimerStore } from "@/store/timer";
 import { useTRPC } from "@/trpc/client";
 import { secondsToHoursAndMinutes } from "@/utils/format";
@@ -46,15 +51,20 @@ export function TrackerTimer({
   const justStoppedRef = useRef(false);
 
   // Get current timer status - reduced refetch frequency
-  const { data: timerStatus } = useQuery({
-    ...trpc.trackerEntries.getTimerStatus.queryOptions(),
-    refetchInterval: (query) => {
-      // Only refetch if there's a running timer, and less frequently
-      return query.state.data?.isRunning ? 60000 : false; // Sync every 60 seconds when running
-    },
-    refetchOnWindowFocus: true, // Refetch when window regains focus to sync after long unfocused periods
-    staleTime: 30000, // Consider data fresh for 30 seconds
-  });
+  const { data: timerStatus } = useQuery(
+    trackerTimerStatusQueryOptions(
+      trpc.trackerEntries.getTimerStatus.queryKey(),
+      {},
+      {
+        refetchInterval: (query) => {
+          // Only refetch if there's a running timer, and less frequently
+          return query.state.data?.isRunning ? 60000 : false; // Sync every 60 seconds when running
+        },
+        refetchOnWindowFocus: true, // Refetch when window regains focus to sync after long unfocused periods
+        staleTime: 30000, // Consider data fresh for 30 seconds
+      },
+    ),
+  );
 
   // Check if this specific project is the one running
   const isThisProjectRunning = useMemo(
@@ -81,103 +91,102 @@ export function TrackerTimer({
   }, [isThisProjectRunning, globalIsRunning, globalElapsedTime]);
 
   // Start timer mutation
-  const startTimerMutation = useMutation(
-    trpc.trackerEntries.startTimer.mutationOptions({
-      onMutate: async (variables) => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({
-          queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
-        });
+  const startTimerMutation = useMutation({
+    mutationFn: startTrackerTimerFromRust,
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
+      });
 
-        // Optimistically update React Query cache (include project name for GlobalTimerProvider)
-        queryClient.setQueryData(
-          trpc.trackerEntries.getTimerStatus.queryKey(),
-          (old: any) => ({
-            ...old,
-            isRunning: true,
-            currentEntry: {
-              ...old?.currentEntry,
-              projectId: variables.projectId,
-              trackerProject: {
-                ...old?.currentEntry?.trackerProject,
-                name: projectName,
-              },
-            },
-            elapsedTime: 0,
-          }),
-        );
-
-        // Immediately update Zustand store for instant UI feedback
-        setTimerStatus({
+      // Optimistically update React Query cache (include project name for GlobalTimerProvider)
+      queryClient.setQueryData(
+        trpc.trackerEntries.getTimerStatus.queryKey(),
+        (old: any) => ({
+          ...old,
           isRunning: true,
+          currentEntry: {
+            ...old?.currentEntry,
+            projectId: variables.projectId,
+            trackerProject: {
+              ...old?.currentEntry?.trackerProject,
+              name: projectName,
+            },
+          },
           elapsedTime: 0,
-          projectName,
-          projectId: variables.projectId,
-        });
-      },
-      onSuccess: () => {
-        // Invalidate queries to sync with server
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getCurrentTimer.queryKey(),
-        });
-      },
-    }),
-  );
+        }),
+      );
+
+      // Immediately update Zustand store for instant UI feedback
+      setTimerStatus({
+        isRunning: true,
+        elapsedTime: 0,
+        projectName,
+        projectId: variables.projectId,
+      });
+    },
+    onSuccess: () => {
+      // Invalidate queries to sync with server
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getCurrentTimer.queryKey(),
+      });
+    },
+  });
 
   // Stop timer mutation
-  const stopTimerMutation = useMutation(
-    trpc.trackerEntries.stopTimer.mutationOptions({
-      onMutate: async () => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({
-          queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
-        });
+  const stopTimerMutation = useMutation({
+    mutationFn: stopTrackerTimerFromRust,
+    onMutate: async () => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
+      });
 
-        // Capture elapsed time and project name before stopping
-        const currentElapsedTime = totalElapsedSeconds;
-        const currentProjectName = projectName;
+      // Capture elapsed time and project name before stopping
+      const currentElapsedTime = totalElapsedSeconds;
+      const currentProjectName = projectName;
 
-        // Optimistically update React Query cache
-        queryClient.setQueryData(
-          trpc.trackerEntries.getTimerStatus.queryKey(),
-          (old: any) => ({
-            ...old,
-            isRunning: false,
-            currentEntry: null,
-            elapsedTime: 0,
-          }),
-        );
-
-        // Immediately update Zustand store to stop interval and reset UI
-        setTimerStatus({
+      // Optimistically update React Query cache
+      queryClient.setQueryData(
+        trpc.trackerEntries.getTimerStatus.queryKey(),
+        (old: any) => ({
+          ...old,
           isRunning: false,
+          currentEntry: null,
           elapsedTime: 0,
-          projectName: null,
-          projectId: null,
-        });
+        }),
+      );
 
-        return { currentElapsedTime, currentProjectName };
-      },
-      onSuccess: (data, __, context) => {
-        // Invalidate queries to sync with server
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getCurrentTimer.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.byDate.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.byRange.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-        });
+      // Immediately update Zustand store to stop interval and reset UI
+      setTimerStatus({
+        isRunning: false,
+        elapsedTime: 0,
+        projectName: null,
+        projectId: null,
+      });
+
+      return { currentElapsedTime, currentProjectName };
+    },
+    onSuccess: (data, __, context) => {
+      // Invalidate queries to sync with server
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getTimerStatus.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getCurrentTimer.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.byDate.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.byRange.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
+      });
 
         // Check if the entry was discarded due to short duration
         if (data?.discarded) {
@@ -192,9 +201,8 @@ export function TrackerTimer({
             variant: "success",
           });
         }
-      },
-    }),
-  );
+    },
+  });
 
   const formatTime = useCallback((seconds: number) => {
     const hours = Math.floor(seconds / 3600);

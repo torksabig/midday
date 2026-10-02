@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { trackerTimerStatusQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useTimerStore } from "@/store/timer";
 import { useTRPC } from "@/trpc/client";
 
@@ -11,12 +12,17 @@ export function GlobalTimerProvider() {
   const lastSyncRef = useRef<string | null>(null);
 
   // Get current timer status from server
-  const { data: timerStatus } = useQuery({
-    ...trpc.trackerEntries.getTimerStatus.queryOptions(),
-    refetchInterval: false,
-    refetchOnWindowFocus: true, // Sync with server when tab regains focus
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: timerStatus } = useQuery(
+    trackerTimerStatusQueryOptions(
+      trpc.trackerEntries.getTimerStatus.queryKey(),
+      {},
+      {
+        refetchInterval: false,
+        refetchOnWindowFocus: true, // Sync with server when tab regains focus
+        staleTime: 5 * 60 * 1000,
+      },
+    ),
+  );
 
   // Sync server status to Zustand store
   useEffect(() => {

@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, and invoices get/getById/paymentStatus/invoiceSummary. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview, inbox get/getById/checkAttachments (+ search/getByStatus helpers), documents get/getById/getRelatedDocuments, customers get/getById/getInvoiceSummary, invoices get/getById/paymentStatus/invoiceSummary, and trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate. Gated decrypt (`getDetails`/`getWithPaymentInfo`) and `bankConnections.delete` (Trigger teardown) stay on Node. |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -170,13 +170,13 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `trackerProjects.getById` | yes | read · detail + assigned users (Phase 9) |
 | `trackerProjects.upsert` | yes | **write** · insert/update + tags + activity (AP-38) |
 | `trackerProjects.delete` | yes | **write** · team-scoped delete (AP-38) |
-| `trackerEntries.byRange` | yes | read · calendar week/month (Phase 6 slice 1) |
+| `trackerEntries.byRange` | direct Rust | read · calendar week/month (Phase 6 slice 1); dashboard calls `GET /api/v1/tracker/entries/by-range` directly |
 | `trackerEntries.getBillableHours` | yes | read · earnings rollup (Phase 6 slice 1) |
-| `trackerEntries.byDate` | yes | read · day sheet (Phase 9) |
-| `trackerEntries.getCurrentTimer` | yes | read · running entry (Phase 9) |
-| `trackerEntries.getTimerStatus` | yes | read · elapsed + summary (Phase 9) |
-| `trackerEntries.startTimer` | yes | **write** · start running entry (AP-27); stops prior running timer |
-| `trackerEntries.stopTimer` | yes | **write** · stop / discard <60s (AP-27) |
+| `trackerEntries.byDate` | direct Rust | read · day sheet (Phase 9); dashboard calls `GET /api/v1/tracker/entries/by-date` directly |
+| `trackerEntries.getCurrentTimer` | direct Rust | read · running entry (Phase 9); helpers wired; dashboard invalidates preserved tRPC keys |
+| `trackerEntries.getTimerStatus` | direct Rust | read · elapsed + summary (Phase 9); dashboard calls `GET /api/v1/tracker/timer/status` directly |
+| `trackerEntries.startTimer` | direct Rust | **write** · start running entry (AP-27); dashboard calls `POST /api/v1/tracker/timer/start` directly |
+| `trackerEntries.stopTimer` | direct Rust | **write** · stop / discard <60s (AP-27); dashboard calls `POST /api/v1/tracker/timer/stop` directly |
 | `trackerEntries.upsert` | yes | **write** · multi-date upsert + activity on create (AP-32) |
 | `trackerEntries.delete` | yes | **write** · team-scoped delete (AP-32) |
 | `trackerEntries.*` (other) | no | bulkCreate |

@@ -30,6 +30,7 @@ import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { trackerTimerStatusQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useSearchStore } from "@/store/search";
 import { useTRPC } from "@/trpc/client";
 import { FilePreviewIcon } from "../file-preview-icon";
@@ -568,11 +569,16 @@ export function Search() {
   const trpc = useTRPC();
 
   // Get current timer status to prioritize tracker section
-  const { data: timerStatus, refetch: refetchTimerStatus } = useQuery({
-    ...trpc.trackerEntries.getTimerStatus.queryOptions(),
-    refetchInterval: false,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: timerStatus, refetch: refetchTimerStatus } = useQuery(
+    trackerTimerStatusQueryOptions(
+      trpc.trackerEntries.getTimerStatus.queryKey(),
+      {},
+      {
+        refetchInterval: false,
+        staleTime: 5 * 60 * 1000,
+      },
+    ),
+  );
 
   useHotkeys(
     "esc",

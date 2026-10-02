@@ -28,6 +28,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useLatestProjectId } from "@/hooks/use-latest-project-id";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { trackerEntriesByDateQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useTRPC } from "@/trpc/client";
 import { parseDateAsUTC } from "@/utils/date";
 import { secondsToHoursAndMinutes } from "@/utils/format";
@@ -483,14 +484,16 @@ const useTrackerData = (selectedDate: string | null) => {
   const [data, setData] = useState<TrackerRecord[]>([]);
   const [totalDuration, setTotalDuration] = useState(0);
 
-  const { data: trackerData, refetch } = useQuery({
-    ...trpc.trackerEntries.byDate.queryOptions(
-      { date: selectedDate ?? "" },
+  const byDateParams = { date: selectedDate ?? "" };
+  const { data: trackerData, refetch } = useQuery(
+    trackerEntriesByDateQueryOptions(
+      trpc.trackerEntries.byDate.queryKey(byDateParams),
+      byDateParams,
       {
         enabled: !!selectedDate,
       },
     ),
-  });
+  );
 
   const deleteTrackerEntry = useMutation(
     trpc.trackerEntries.delete.mutationOptions({

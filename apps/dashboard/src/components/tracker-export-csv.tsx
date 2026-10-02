@@ -13,6 +13,7 @@ import Papa from "papaparse";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useUserQuery } from "@/hooks/use-user";
+import { trackerEntriesByRangeQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useTRPC } from "@/trpc/client";
 import { secondsToHoursAndMinutes } from "@/utils/format";
 
@@ -40,15 +41,19 @@ export function TrackerExportCSV({ name, projectId }: Props) {
   async function downloadCSV() {
     if (!date?.from || !date?.to) return;
 
-    const queryOptions = trpc.trackerEntries.byRange.queryOptions({
-      from: date?.from?.toISOString(),
-      to: date?.to?.toISOString(),
+    const rangeParams = {
+      from: date?.from?.toISOString() ?? "",
+      to: date?.to?.toISOString() ?? "",
       projectId,
-    });
+    };
+    const data = await queryClient.fetchQuery(
+      trackerEntriesByRangeQueryOptions(
+        trpc.trackerEntries.byRange.queryKey(rangeParams),
+        rangeParams,
+      ),
+    );
 
-    const data = await queryClient.fetchQuery(queryOptions);
-
-    const entries = Object.values(data?.result ?? {}).flat() as TrackerEntry[];
+    const entries = Object.values(data?.result ?? {}).flat() as unknown as TrackerEntry[];
 
     const formattedData = entries.map((item: TrackerEntry) => {
       const formattedItem: Record<string, string | null> = {

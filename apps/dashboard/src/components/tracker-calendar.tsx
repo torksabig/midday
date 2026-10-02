@@ -21,6 +21,7 @@ import { useBillableHours } from "@/hooks/use-billable-hours";
 import { useCalendarDates } from "@/hooks/use-calendar-dates";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { trackerEntriesByRangeQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useTRPC } from "@/trpc/client";
 import { CalendarHeader } from "./tracker/calendar-header";
 import { CalendarMonthView } from "./tracker/calendar-month-view";
@@ -107,8 +108,12 @@ export function TrackerCalendar({ weeklyCalendar }: Props) {
     };
   };
 
+  const dateRange = getDateRange();
   const { data } = useQuery(
-    trpc.trackerEntries.byRange.queryOptions(getDateRange()),
+    trackerEntriesByRangeQueryOptions(
+      trpc.trackerEntries.byRange.queryKey(dateRange),
+      dateRange,
+    ),
   );
 
   // Single source of truth for billable hours calculations
