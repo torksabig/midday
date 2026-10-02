@@ -12,7 +12,8 @@ import { TrackerCalendar } from "@/components/tracker-calendar";
 import { TrackerSearchFilter } from "@/components/tracker-search-filter";
 import { loadSortParams } from "@/hooks/use-sort-params";
 import { loadTrackerFilterParams } from "@/hooks/use-tracker-filter-params";
-import { prefetch, trpc } from "@/trpc/server";
+import { trackerProjectsServerInfiniteQueryOptions } from "@/lib/rust-api/tracker-projects-server";
+import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
 import { Cookies } from "@/utils/constants";
 
 export const metadata: Metadata = {
@@ -29,19 +30,20 @@ export default async function Page(props: Props) {
   const { sort } = loadSortParams(searchParams);
   const weeklyCalendar = (await cookies()).get(Cookies.WeeklyCalendar);
 
-  prefetch(
-    trpc.trackerProjects.get.infiniteQueryOptions(
-      {
-        ...filter,
-        sort,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+  const projectsFilter = {
+    ...filter,
+    sort,
+  };
+
+  batchPrefetch([
+    trackerProjectsServerInfiniteQueryOptions(
+      trpc.trackerProjects.get.infiniteQueryKey(projectsFilter),
+      projectsFilter,
     ),
-  );
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
+    <HydrateClient>
     <ScrollableContent>
       <TrackerCalendar weeklyCalendar={weeklyCalendar?.value === "true"} />
 
@@ -60,5 +62,6 @@ export default async function Page(props: Props) {
         </Suspense>
       </ErrorBoundary>
     </ScrollableContent>
+    </HydrateClient>
   );
 }

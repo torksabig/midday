@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { LogEvents } from "@midday/events/events";
 import { uniqueCurrencies } from "@midday/location/currencies";
 import { Collapsible, CollapsibleContent } from "@midday/ui/collapsible";
@@ -37,6 +36,8 @@ import { useLatestProjectId } from "@/hooks/use-latest-project-id";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import type { TrackerProject } from "@/lib/rust-api/tracker-projects";
+import { upsertTrackerProjectFromRust } from "@/lib/rust-api/tracker-projects-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -60,7 +61,7 @@ const formSchema = z.object({
 });
 
 type Props = {
-  data?: RouterOutputs["trackerProjects"]["getById"];
+  data?: TrackerProject | null;
   defaultCurrency: string;
 };
 
@@ -74,27 +75,26 @@ export function TrackerProjectForm({ data, defaultCurrency }: Props) {
   const { setParams: setCustomerParams } = useCustomerParams();
   const { setLatestProjectId } = useLatestProjectId(user?.teamId);
 
-  const upsertTrackerProjectMutation = useMutation(
-    trpc.trackerProjects.upsert.mutationOptions({
-      onSuccess: (result) => {
-        if (!isEdit) {
-          track(LogEvents.TrackerProjectCreated.name);
-        }
-        setLatestProjectId(result?.id ?? null);
+  const upsertTrackerProjectMutation = useMutation({
+    mutationFn: upsertTrackerProjectFromRust,
+    onSuccess: (result) => {
+      if (!isEdit) {
+        track(LogEvents.TrackerProjectCreated.name);
+      }
+      setLatestProjectId(result?.id ?? null);
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.getById.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.getById.queryKey(),
+      });
 
-        // Close the tracker project form
-        setTrackerParams({ create: null });
-      },
-    }),
-  );
+      // Close the tracker project form
+      setTrackerParams({ create: null });
+    },
+  });
 
   const form = useZodForm(formSchema, {
     defaultValues: {

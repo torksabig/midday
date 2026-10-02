@@ -28,6 +28,36 @@ export type StopTrackerTimerInput = {
   stop?: string;
 };
 
+export type TrackerBillableHoursParams = {
+  date: string;
+  view: "week" | "month";
+  weekStartsOnMonday?: boolean;
+};
+
+export type UpsertTrackerEntriesInput = {
+  id?: string;
+  start: string;
+  stop: string;
+  dates: string[];
+  assignedId?: string | null;
+  projectId: string;
+  description?: string | null;
+  duration: number;
+};
+
+export type DeleteTrackerEntryInput = {
+  id: string;
+};
+
+export type TrackerBillableHours = {
+  totalDuration?: number;
+  totalAmount?: number;
+  earningsByCurrency?: Record<string, number>;
+  projectBreakdown?: unknown[];
+  currency?: string;
+  [key: string]: unknown;
+};
+
 export type TrackerTimerStatus = {
   isRunning: boolean;
   elapsedTime: number;
@@ -113,6 +143,18 @@ export function buildTrackerEntriesByDateQuery(
   const search = new URLSearchParams();
   search.set("date", params.date);
   if (params.projectId) search.set("projectId", params.projectId);
+  return `?${search.toString()}`;
+}
+
+export function buildTrackerBillableHoursQuery(
+  params: TrackerBillableHoursParams,
+): string {
+  const search = new URLSearchParams();
+  search.set("date", params.date);
+  search.set("view", params.view);
+  if (params.weekStartsOnMonday != null) {
+    search.set("weekStartsOnMonday", String(params.weekStartsOnMonday));
+  }
   return `?${search.toString()}`;
 }
 
@@ -281,4 +323,86 @@ export async function stopTrackerTimer(
   }
 
   return deepCamelCaseKeys(await response.json()) as TrackerEntry;
+}
+
+export async function fetchTrackerBillableHours(
+  baseUrl: string,
+  accessToken: string | null,
+  params: TrackerBillableHoursParams,
+): Promise<TrackerBillableHours> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await rustFetch(
+    `${baseUrl}/api/v1/tracker/billable-hours${buildTrackerBillableHoursQuery(params)}`,
+    accessToken,
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as TrackerBillableHours;
+}
+
+export async function upsertTrackerEntries(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpsertTrackerEntriesInput,
+): Promise<TrackerEntry[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await rustFetch(
+    `${baseUrl}/api/v1/tracker/entries/upsert`,
+    accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        id: input.id,
+        start: input.start,
+        stop: input.stop,
+        dates: input.dates,
+        assignedId: input.assignedId ?? undefined,
+        projectId: input.projectId,
+        description: input.description ?? undefined,
+        duration: input.duration,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as TrackerEntry[];
+}
+
+export async function deleteTrackerEntry(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DeleteTrackerEntryInput,
+): Promise<{ id: string } | null> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await rustFetch(
+    `${baseUrl}/api/v1/tracker/entries/${encodeURIComponent(input.id)}`,
+    accessToken,
+    { method: "DELETE" },
+  );
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as { id: string };
 }

@@ -3,8 +3,11 @@
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type DeleteTrackerEntryInput,
   type StartTrackerTimerInput,
   type StopTrackerTimerInput,
+  type TrackerBillableHours,
+  type TrackerBillableHoursParams,
   type TrackerEntriesByDate,
   type TrackerEntriesByDateParams,
   type TrackerEntriesByRange,
@@ -12,12 +15,16 @@ import {
   type TrackerEntry,
   type TrackerTimerParams,
   type TrackerTimerStatus,
+  type UpsertTrackerEntriesInput,
+  deleteTrackerEntry,
+  fetchTrackerBillableHours,
   fetchTrackerCurrentTimer,
   fetchTrackerEntriesByDate,
   fetchTrackerEntriesByRange,
   fetchTrackerTimerStatus,
   startTrackerTimer,
   stopTrackerTimer,
+  upsertTrackerEntries,
 } from "./tracker-entries";
 
 function getRustApiUrl() {
@@ -102,4 +109,37 @@ export async function stopTrackerTimerFromRust(
   input: StopTrackerTimerInput = {},
 ) {
   return stopTrackerTimer(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export function trackerBillableHoursQueryOptions(
+  queryKey: QueryKey,
+  params: TrackerBillableHoursParams,
+  options: {
+    enabled?: boolean;
+    refetchInterval?: number | false;
+    refetchOnWindowFocus?: boolean;
+  } = {},
+) {
+  return queryOptions<TrackerBillableHours>({
+    queryKey,
+    queryFn: async () =>
+      fetchTrackerBillableHours(
+        getRustApiUrl(),
+        await getAccessToken(),
+        params,
+      ),
+    enabled: options.enabled,
+    refetchInterval: options.refetchInterval,
+    refetchOnWindowFocus: options.refetchOnWindowFocus,
+  });
+}
+
+export async function upsertTrackerEntriesFromRust(
+  input: UpsertTrackerEntriesInput,
+) {
+  return upsertTrackerEntries(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteTrackerEntryFromRust(input: DeleteTrackerEntryInput) {
+  return deleteTrackerEntry(getRustApiUrl(), await getAccessToken(), input);
 }

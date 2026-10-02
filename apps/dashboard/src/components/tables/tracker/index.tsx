@@ -12,6 +12,10 @@ import { useSortParams } from "@/hooks/use-sort-params";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTrackerFilterParams } from "@/hooks/use-tracker-filter-params";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  deleteTrackerProjectFromRust,
+  trackerProjectsInfiniteQueryOptions,
+} from "@/lib/rust-api/tracker-projects-client";
 import { useTRPC } from "@/trpc/client";
 import { DataTableHeader } from "./data-table-header";
 import { DataTableRow } from "./data-table-row";
@@ -34,33 +38,32 @@ export function DataTable() {
     startFromColumn: 1,
   });
 
-  const infiniteQueryOptions = trpc.trackerProjects.get.infiniteQueryOptions(
-    {
-      ...filter,
-      q: deferredSearch ?? null,
-      sort: params.sort,
-    },
-    {
-      getNextPageParam: ({ meta }) => meta?.cursor,
-    },
-  );
+  const listParams = {
+    ...filter,
+    q: deferredSearch ?? null,
+    sort: params.sort,
+  };
 
   const { data, fetchNextPage, hasNextPage, refetch, isFetching } =
-    useSuspenseInfiniteQuery(infiniteQueryOptions);
+    useSuspenseInfiniteQuery(
+      trackerProjectsInfiniteQueryOptions(
+        trpc.trackerProjects.get.infiniteQueryKey(listParams),
+        listParams,
+      ),
+    );
 
-  const deleteTrackerProjectMutation = useMutation(
-    trpc.trackerProjects.delete.mutationOptions({
-      onSuccess: (result) => {
-        track(LogEvents.TrackerProjectDeleted.name);
+  const deleteTrackerProjectMutation = useMutation({
+    mutationFn: deleteTrackerProjectFromRust,
+    onSuccess: (result) => {
+      track(LogEvents.TrackerProjectDeleted.name);
 
-        if (result && result.id === latestProjectId) {
-          setLatestProjectId(null);
-        }
+      if (result && result.id === latestProjectId) {
+        setLatestProjectId(null);
+      }
 
-        refetch();
-      },
-    }),
-  );
+      refetch();
+    },
+  });
 
   const pageData = data?.pages.flatMap((page) => page.data);
 

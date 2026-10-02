@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { formatISO } from "date-fns";
+import { trackerBillableHoursQueryOptions } from "@/lib/rust-api/tracker-entries-client";
 import { useTRPC } from "@/trpc/client";
 
 type UseBillableHoursParams = {
@@ -32,14 +33,21 @@ export function useBillableHours(params: UseBillableHoursParams) {
       ? date
       : formatISO(date, { representation: "date" });
 
-  return useQuery({
-    ...trpc.trackerEntries.getBillableHours.queryOptions({
-      date: dateString,
-      view,
-      weekStartsOnMonday,
-    }),
-    enabled,
-    refetchInterval,
-    refetchOnWindowFocus,
-  });
+  const billableParams = {
+    date: dateString,
+    view,
+    weekStartsOnMonday,
+  };
+
+  return useQuery(
+    trackerBillableHoursQueryOptions(
+      trpc.trackerEntries.getBillableHours.queryKey(billableParams),
+      billableParams,
+      {
+        enabled,
+        refetchInterval,
+        refetchOnWindowFocus,
+      },
+    ),
+  );
 }

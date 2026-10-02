@@ -6,6 +6,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useLatestProjectId } from "@/hooks/use-latest-project-id";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  trackerProjectsQueryOptions,
+  upsertTrackerProjectFromRust,
+} from "@/lib/rust-api/tracker-projects-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -32,41 +36,42 @@ export function TrackerSelectProject({
   const [isOpen, setIsOpen] = useState(false);
   const { setLatestProjectId } = useLatestProjectId(user?.teamId);
 
+  const listParams = { pageSize: 100 };
   const { data, isLoading, refetch } = useQuery(
-    trpc.trackerProjects.get.queryOptions({
-      pageSize: 100,
-    }),
+    trackerProjectsQueryOptions(
+      trpc.trackerProjects.get.queryKey(listParams),
+      listParams,
+    ),
   );
 
-  const upsertTrackerProjectMutation = useMutation(
-    trpc.trackerProjects.upsert.mutationOptions({
-      onSuccess: (result) => {
-        if (result?.id && result?.name) {
-          const project = { id: result.id, name: result.name };
-          onCreate(project);
-          handleSelect(project);
-          setLatestProjectId(result.id);
-          refetch();
+  const upsertTrackerProjectMutation = useMutation({
+    mutationFn: upsertTrackerProjectFromRust,
+    onSuccess: (result) => {
+      if (result?.id && result?.name) {
+        const project = { id: result.id, name: result.name };
+        onCreate(project);
+        handleSelect(project);
+        setLatestProjectId(result.id);
+        refetch();
 
-          queryClient.invalidateQueries({
-            queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-          });
-
-          // Invalidate global search
-          queryClient.invalidateQueries({
-            queryKey: trpc.search.global.queryKey(),
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          duration: 3500,
-          variant: "error",
-          title: "Something went wrong please try again.",
+        queryClient.invalidateQueries({
+          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
         });
-      },
-    }),
-  );
+
+        // Invalidate global search
+        queryClient.invalidateQueries({
+          queryKey: trpc.search.global.queryKey(),
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        duration: 3500,
+        variant: "error",
+        title: "Something went wrong please try again.",
+      });
+    },
+  });
 
   const options =
     data?.data.map((project) => ({

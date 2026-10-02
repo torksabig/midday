@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  buildTrackerBillableHoursQuery,
   buildTrackerEntriesByDateQuery,
   buildTrackerEntriesByRangeQuery,
   buildTrackerTimerQuery,
@@ -30,6 +31,16 @@ test("buildTrackerEntriesByDateQuery encodes date filters", () => {
       projectId: "proj-1",
     }),
   ).toBe("?date=2026-01-02&projectId=proj-1");
+});
+
+test("buildTrackerBillableHoursQuery encodes view filters", () => {
+  expect(
+    buildTrackerBillableHoursQuery({
+      date: "2026-01-02",
+      view: "week",
+      weekStartsOnMonday: true,
+    }),
+  ).toBe("?date=2026-01-02&view=week&weekStartsOnMonday=true");
 });
 
 test("deepCamelCaseKeys normalizes timer status payloads", () => {

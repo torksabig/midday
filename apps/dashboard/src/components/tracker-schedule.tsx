@@ -28,7 +28,12 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useLatestProjectId } from "@/hooks/use-latest-project-id";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
 import { useUserQuery } from "@/hooks/use-user";
-import { trackerEntriesByDateQueryOptions } from "@/lib/rust-api/tracker-entries-client";
+import {
+  deleteTrackerEntryFromRust,
+  trackerEntriesByDateQueryOptions,
+  upsertTrackerEntriesFromRust,
+} from "@/lib/rust-api/tracker-entries-client";
+import { trackerProjectsQueryOptions } from "@/lib/rust-api/tracker-projects-client";
 import { useTRPC } from "@/trpc/client";
 import { parseDateAsUTC } from "@/utils/date";
 import { secondsToHoursAndMinutes } from "@/utils/format";
@@ -495,44 +500,42 @@ const useTrackerData = (selectedDate: string | null) => {
     ),
   );
 
-  const deleteTrackerEntry = useMutation(
-    trpc.trackerEntries.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.byRange.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getBillableHours.queryKey(),
-        });
-        refetch();
-      },
-    }),
-  );
+  const deleteTrackerEntry = useMutation({
+    mutationFn: deleteTrackerEntryFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.byRange.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getBillableHours.queryKey(),
+      });
+      refetch();
+    },
+  });
 
-  const upsertTrackerEntry = useMutation(
-    trpc.trackerEntries.upsert.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.TrackerEntryCreated.name);
+  const upsertTrackerEntry = useMutation({
+    mutationFn: upsertTrackerEntriesFromRust,
+    onSuccess: () => {
+      track(LogEvents.TrackerEntryCreated.name);
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.byRange.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerEntries.getBillableHours.queryKey(),
-        });
-        refetch();
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.byRange.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerEntries.getBillableHours.queryKey(),
+      });
+      refetch();
 
-        // Close the tracker project form
-        setTrackerParams({ selectedDate: null });
-      },
-    }),
-  );
+      // Close the tracker project form
+      setTrackerParams({ selectedDate: null });
+    },
+  });
 
   // Process API data
   useEffect(() => {
@@ -595,10 +598,12 @@ export function TrackerSchedule() {
   const trpc = useTRPC();
 
   // Load projects to get project names
+  const projectsListParams = { pageSize: 100 };
   const { data: projectsData } = useQuery(
-    trpc.trackerProjects.get.queryOptions({
-      pageSize: 100,
-    }),
+    trackerProjectsQueryOptions(
+      trpc.trackerProjects.get.queryKey(projectsListParams),
+      projectsListParams,
+    ),
   );
 
   const {

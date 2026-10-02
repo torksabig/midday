@@ -25,6 +25,10 @@ import { TrackerProjectForm } from "@/components/forms/tracker-project-form";
 import { useLatestProjectId } from "@/hooks/use-latest-project-id";
 import { useTeamQuery } from "@/hooks/use-team";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
+import {
+  deleteTrackerProjectFromRust,
+  trackerProjectByIdQueryOptions,
+} from "@/lib/rust-api/tracker-projects-client";
 import { useTRPC } from "@/trpc/client";
 
 export function TrackerUpdateSheet() {
@@ -38,8 +42,9 @@ export function TrackerUpdateSheet() {
   const isOpen = update !== null && Boolean(projectId);
 
   const { data } = useQuery(
-    trpc.trackerProjects.getById.queryOptions(
-      { id: projectId! },
+    trackerProjectByIdQueryOptions(
+      trpc.trackerProjects.getById.queryKey({ id: projectId! }),
+      projectId!,
       {
         enabled: isOpen,
         staleTime: 30 * 1000, // 30 seconds - prevents excessive refetches when reopening
@@ -58,21 +63,20 @@ export function TrackerUpdateSheet() {
     ),
   );
 
-  const deleteTrackerProjectMutation = useMutation(
-    trpc.trackerProjects.delete.mutationOptions({
-      onSuccess: (result) => {
-        if (result && result.id === latestProjectId) {
-          setLatestProjectId(null);
-        }
+  const deleteTrackerProjectMutation = useMutation({
+    mutationFn: deleteTrackerProjectFromRust,
+    onSuccess: (result) => {
+      if (result && result.id === latestProjectId) {
+        setLatestProjectId(null);
+      }
 
-        setParams({ projectId: null, update: null });
+      setParams({ projectId: null, update: null });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.trackerProjects.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   return (
     <AlertDialog>
