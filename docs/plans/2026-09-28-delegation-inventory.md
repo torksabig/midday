@@ -60,7 +60,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `apps.update` | direct Rust | **write** · single settings option (AP-39); dashboard calls `PUT /api/v1/apps/{app_id}/settings` directly |
 | `apps.updateSettings` | yes | **write** · replace settings array (AP-39); no dashboard call sites |
 | `apps.removeWhatsAppConnection` | yes | **write** · platform identity + config (AP-57) |
-| `apps.createPlatformLinkToken` | yes | **write** · insert link token (AP-57) |
+| `apps.createPlatformLinkToken` | direct Rust | **write** · insert link token (AP-57); connect Slack/Telegram/WhatsApp/iMessage call `POST /api/v1/apps/platform-link-tokens` |
 | `apps.*` (other) | no | — |
 | `apiKeys.get` | direct Rust | read · team keys metadata, no raw secrets (AP-26); dashboard calls `GET /api/v1/api-keys` directly |
 | `apiKeys.delete` | direct Rust | **write** · DB delete (AP-40); dashboard calls `DELETE /api/v1/api-keys/{id}` directly; cache invalidation via React Query |
@@ -115,7 +115,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `inbox.blocklist.get` | direct Rust | read · team blocklist (AP-40); dashboard calls `GET /api/v1/inbox/blocklist` |
 | `inbox.blocklist.create` | direct Rust | **write** · insert blocklist row (AP-40); dashboard calls `POST /api/v1/inbox/blocklist` |
 | `inbox.blocklist.delete` | direct Rust | **write** · delete blocklist row (AP-40); dashboard calls `DELETE /api/v1/inbox/blocklist/{id}` |
-| `inbox.create` | yes | **write** · insert inbox item (AP-57) |
+| `inbox.create` | direct Rust | **write** · insert inbox item (AP-57); upload zones call `POST /api/v1/inbox`; `processAttachments` stays tRPC (jobs) |
 | `inbox.*` (other) | no | processAttachments / retryMatching (jobs) |
 | `overview.summary` | direct Rust | read · dashboard home; dashboard calls `GET /api/v1/overview/summary` with the Supabase session JWT |
 | `documents.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/documents` directly and preserves tRPC infinite query keys |
@@ -510,7 +510,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H7 DONE** (portal public reads + availablePlans/notificationSettings helpers). Next eligible: `apps.createPlatformLinkToken` + `inbox.create` (SQL writes with dashboard call sites). Remains hybrid on tRPC: `oauthApplications.authorize`/`updateApprovalStatus` (Resend email), `invoiceRecurring.pause`/`delete` (BullMQ), `invoiceRecurring.create`/`update` (notifications/validation), `invoice.create` (send/schedule), `documents.delete` (storage), `transactionAttachments.processAttachment` (jobs). Remains gated: decrypt/encrypt, Resend, live OAuth provider exchange, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H7/H8 DONE** (portal public reads, availablePlans/notificationSettings helpers, platform-link tokens, inbox.create). Little remains besides hybrids/STOP: `invoice.getInvoiceByToken` (JWT verify in Node), team.create/delete, accounting.export, oauth authorize/approve email, recurring pause/delete/create/update, documents.delete/reprocess, etc. Remains gated: decrypt/encrypt, Resend, live OAuth provider exchange, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

@@ -14,7 +14,10 @@ import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
-import { appsQueryOptions } from "@/lib/rust-api/apps-client";
+import {
+  appsQueryOptions,
+  createPlatformLinkTokenFromRust,
+} from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 
 export function ConnectSlack() {
@@ -28,13 +31,12 @@ export function ConnectSlack() {
   const isInstalled =
     installedApps?.some((app) => app.app_id === "slack") ?? false;
 
-  const createLinkTokenMutation = useMutation(
-    trpc.apps.createPlatformLinkToken.mutationOptions({
-      onSuccess: (token) => {
-        setLinkCode(token.code);
-      },
-    }),
-  );
+  const createLinkTokenMutation = useMutation({
+    mutationFn: createPlatformLinkTokenFromRust,
+    onSuccess: (token) => {
+      setLinkCode(token.code);
+    },
+  });
 
   const { connect, isLoading } = useAppOAuth({
     installUrlEndpoint: "/apps/slack/install-url",

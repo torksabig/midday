@@ -8,6 +8,7 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { useUserQuery } from "@/hooks/use-user";
+import { createInboxItemFromRust } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { resumableUpload } from "@/utils/upload";
 
@@ -25,9 +26,9 @@ export function useInboxUpload() {
   const toastRef = useRef({ toast, dismiss, update });
   toastRef.current = { toast, dismiss, update };
 
-  const { mutateAsync: createInboxItem } = useMutation(
-    trpc.inbox.create.mutationOptions(),
-  );
+  const { mutateAsync: createInboxItem } = useMutation({
+    mutationFn: createInboxItemFromRust,
+  });
   const { mutate: processAttachments } = useMutation(
     trpc.inbox.processAttachments.mutationOptions(),
   );

@@ -787,3 +787,72 @@ export async function deleteInboxBlocklist(
   }
   return null;
 }
+
+/** Dashboard / tRPC `inbox.create` input shape. */
+export type CreateInboxItemInput = {
+  filename: string;
+  mimetype: string;
+  size: number;
+  filePath: string[];
+};
+
+export type CreatedInboxItem = {
+  id: string;
+  fileName?: string | null;
+  filePath?: string[] | null;
+  displayName?: string | null;
+  status?: string | null;
+  [key: string]: unknown;
+};
+
+function deepCamelCaseKeysInbox(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(deepCamelCaseKeysInbox);
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+        key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase()),
+        deepCamelCaseKeysInbox(nested),
+      ]),
+    );
+  }
+  return value;
+}
+
+export function normalizeCreatedInboxItem(payload: unknown): CreatedInboxItem {
+  return deepCamelCaseKeysInbox(payload) as CreatedInboxItem;
+}
+
+/** Midday `inbox.create` — maps UI filename/mimetype → Rust displayName/contentType. */
+export async function createInboxItem(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreateInboxItemInput,
+): Promise<CreatedInboxItem> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      displayName: input.filename,
+      fileName: input.filename,
+      contentType: input.mimetype,
+      size: input.size,
+      filePath: input.filePath,
+      status: "processing",
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeCreatedInboxItem(await response.json());
+}

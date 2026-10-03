@@ -14,7 +14,10 @@ import { Spinner } from "@midday/ui/spinner";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { appsQueryOptions } from "@/lib/rust-api/apps-client";
+import {
+  appsQueryOptions,
+  createPlatformLinkTokenFromRust,
+} from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 import { useConnectDialogReset } from "./use-connect-dialog";
 
@@ -39,13 +42,12 @@ export function ConnectTelegram({ showTrigger = true }: ConnectTelegramProps) {
     displayName?: string;
   }>;
 
-  const createLinkTokenMutation = useMutation(
-    trpc.apps.createPlatformLinkToken.mutationOptions({
-      onSuccess: (token) => {
-        setLinkCode(token.code);
-      },
-    }),
-  );
+  const createLinkTokenMutation = useMutation({
+    mutationFn: createPlatformLinkTokenFromRust,
+    onSuccess: (token) => {
+      setLinkCode(token.code);
+    },
+  });
 
   const handleOpenChange = useConnectDialogReset({
     setOpen,

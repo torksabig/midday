@@ -4,6 +4,7 @@ import {
   buildInboxByStatusQuery,
   buildInboxListQuery,
   buildInboxSearchQuery,
+  normalizeCreatedInboxItem,
   normalizeInboxBlocklistEntry,
   normalizeInboxCheckAttachments,
   normalizeInboxDetail,
@@ -265,5 +266,21 @@ test("normalizes blocklist entries from camelCase payload", () => {
     type: "domain",
     value: "spam.com",
     createdAt: "2026-01-02T10:00:00Z",
+  });
+});
+
+test("normalizes created inbox item payload", () => {
+  expect(
+    normalizeCreatedInboxItem({
+      id: "inbox-1",
+      file_name: "receipt.pdf",
+      display_name: "receipt.pdf",
+      status: "processing",
+    }),
+  ).toMatchObject({
+    id: "inbox-1",
+    fileName: "receipt.pdf",
+    displayName: "receipt.pdf",
+    status: "processing",
   });
 });

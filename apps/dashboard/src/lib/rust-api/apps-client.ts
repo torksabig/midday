@@ -3,9 +3,12 @@
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type CreatePlatformLinkTokenInput,
   type DisconnectAppInput,
   type InstalledApp,
+  type PlatformLinkToken,
   type UpdateAppSettingsInput,
+  createPlatformLinkToken,
   disconnectApp,
   fetchApps,
   updateAppSettings,
@@ -33,4 +36,14 @@ export async function disconnectAppFromRust(input: DisconnectAppInput) {
 
 export async function updateAppSettingsFromRust(input: UpdateAppSettingsInput) {
   return updateAppSettings(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function createPlatformLinkTokenFromRust(
+  input: CreatePlatformLinkTokenInput,
+): Promise<PlatformLinkToken> {
+  return createPlatformLinkToken(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
 }

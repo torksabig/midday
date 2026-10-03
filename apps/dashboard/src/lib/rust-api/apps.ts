@@ -104,3 +104,69 @@ export async function updateAppSettings(
 
   return (await response.json()) as InstalledApp;
 }
+
+export type CreatePlatformLinkTokenInput = {
+  provider: string;
+};
+
+export type PlatformLinkToken = {
+  id: string;
+  code: string;
+  provider: string;
+  teamId?: string | null;
+  userId?: string | null;
+  expiresAt?: string | null;
+  usedAt?: string | null;
+  createdAt?: string | null;
+  [key: string]: unknown;
+};
+
+function snakeToCamelKey(key: string): string {
+  return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+function deepCamelCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(deepCamelCaseKeys);
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+        snakeToCamelKey(key),
+        deepCamelCaseKeys(nested),
+      ]),
+    );
+  }
+  return value;
+}
+
+export function normalizePlatformLinkToken(
+  payload: unknown,
+): PlatformLinkToken {
+  return deepCamelCaseKeys(payload) as PlatformLinkToken;
+}
+
+/** Midday `apps.createPlatformLinkToken`. */
+export async function createPlatformLinkToken(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreatePlatformLinkTokenInput,
+): Promise<PlatformLinkToken> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await rustFetch(
+    `${baseUrl}/api/v1/apps/platform-link-tokens`,
+    accessToken,
+    {
+      method: "POST",
+      body: JSON.stringify({ provider: input.provider }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizePlatformLinkToken(await response.json());
+}

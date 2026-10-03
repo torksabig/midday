@@ -52,6 +52,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/apps/platform-link-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createPlatformLinkToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/apps/{app_id}": {
         parameters: {
             query?: never;
@@ -509,7 +525,7 @@ export interface paths {
         };
         get: operations["getInbox"];
         put?: never;
-        post?: never;
+        post: operations["createInboxItem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2498,6 +2514,21 @@ export interface components {
             type: string;
             value: string;
         };
+        CreateInboxBody: {
+            /** Format: int64 */
+            amountCents?: number | null;
+            contentType?: string;
+            displayName: string;
+            fileName?: string;
+            filePath?: string[];
+            inboxAccountId?: string | null;
+            referenceId?: string | null;
+            senderEmail?: string | null;
+            /** Format: double */
+            size?: number;
+            status?: string | null;
+            website?: string | null;
+        };
         CreateInvoiceTemplateBody: {
             currency?: string | null;
             customerLabel?: string | null;
@@ -2560,6 +2591,9 @@ export interface components {
             scopes?: string[] | null;
             screenshots?: string[] | null;
             website?: string | null;
+        };
+        CreatePlatformLinkTokenBody: {
+            provider: string;
         };
         CreateProductBody: {
             currency?: string | null;
@@ -3850,6 +3884,37 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Installed apps for team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createPlatformLinkToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformLinkTokenBody"];
+            };
+        };
+        responses: {
+            /** @description Created platform link token (one-time code) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5184,6 +5249,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InboxListResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createInboxItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInboxBody"];
+            };
+        };
+        responses: {
+            /** @description Created inbox item row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */

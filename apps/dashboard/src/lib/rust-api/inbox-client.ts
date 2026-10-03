@@ -11,6 +11,9 @@ import {
   type ConfirmInboxMatchInput,
   createInboxBlocklist,
   type CreateInboxBlocklistInput,
+  createInboxItem,
+  type CreateInboxItemInput,
+  type CreatedInboxItem,
   declineInboxMatch,
   type DeclineInboxMatchInput,
   deleteInboxBlocklist,
@@ -148,4 +151,10 @@ export async function createInboxBlocklistFromRust(
 
 export async function deleteInboxBlocklistFromRust(id: string) {
   return deleteInboxBlocklist(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function createInboxItemFromRust(
+  input: CreateInboxItemInput,
+): Promise<CreatedInboxItem> {
+  return createInboxItem(getRustApiUrl(), await getAccessToken(), input);
 }

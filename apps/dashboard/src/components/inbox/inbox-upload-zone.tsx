@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useUserQuery } from "@/hooks/use-user";
+import { createInboxItemFromRust } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { resumableUpload } from "@/utils/upload";
 
@@ -40,9 +41,9 @@ export function UploadZone({ children, onUploadComplete }: Props) {
   const processAttachmentsMutation = useMutation(
     trpc.inbox.processAttachments.mutationOptions(),
   );
-  const createInboxItemMutation = useMutation(
-    trpc.inbox.create.mutationOptions(),
-  );
+  const createInboxItemMutation = useMutation({
+    mutationFn: createInboxItemFromRust,
+  });
 
   useEffect(() => {
     if (!toastId && showProgress) {
