@@ -34,7 +34,7 @@ test("buildInvoicesListQuery encodes filters like the façade", () => {
       recurringIds: ["rec-1"],
     }),
   ).toBe(
-    "?cursor=25&pageSize=25&q=INV&start=2026-01-01&end=2026-01-31&recurring=true&statuses%5B%5D=paid&statuses%5B%5D=overdue&customers%5B%5D=cust-1&sort%5B%5D=createdAt&sort%5B%5D=desc&ids%5B%5D=inv-1&recurringIds%5B%5D=rec-1",
+    "?cursor=25&pageSize=25&q=INV&start=2026-01-01&end=2026-01-31&recurring=true&statuses=paid&statuses=overdue&customers=cust-1&sort=createdAt&sort=desc&ids=inv-1&recurringIds=rec-1",
   );
 });
 
@@ -43,9 +43,7 @@ test("buildInvoiceSummaryQuery encodes statuses", () => {
     buildInvoiceSummaryQuery({
       statuses: ["draft", "scheduled", "unpaid"],
     }),
-  ).toBe(
-    "?statuses%5B%5D=draft&statuses%5B%5D=scheduled&statuses%5B%5D=unpaid",
-  );
+  ).toBe("?statuses=draft&statuses=scheduled&statuses=unpaid");
 });
 
 test("normalizes snake_case invoices list payloads", () => {
