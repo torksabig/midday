@@ -299,20 +299,21 @@ export function buildInvoicesListQuery(params: InvoicesListParams): string {
   if (params.start) search.set("start", params.start);
   if (params.end) search.set("end", params.end);
   if (params.recurring != null) search.set("recurring", String(params.recurring));
+  // Axum/serde_urlencoded expects bracketed repeated keys for Vec query params.
   for (const v of params.statuses ?? []) {
-    if (v) search.append("statuses", v);
+    if (v) search.append("statuses[]", v);
   }
   for (const v of params.customers ?? []) {
-    if (v) search.append("customers", v);
+    if (v) search.append("customers[]", v);
   }
   for (const v of params.sort ?? []) {
-    if (v) search.append("sort", v);
+    if (v) search.append("sort[]", v);
   }
   for (const v of params.ids ?? []) {
-    if (v) search.append("ids", v);
+    if (v) search.append("ids[]", v);
   }
   for (const v of params.recurringIds ?? []) {
-    if (v) search.append("recurringIds", v);
+    if (v) search.append("recurringIds[]", v);
   }
 
   const query = search.toString();
@@ -321,8 +322,9 @@ export function buildInvoicesListQuery(params: InvoicesListParams): string {
 
 export function buildInvoiceSummaryQuery(params: InvoiceSummaryParams): string {
   const search = new URLSearchParams();
+  // Axum/serde_urlencoded expects bracketed repeated keys for Vec query params.
   for (const v of params.statuses ?? []) {
-    if (v) search.append("statuses", v);
+    if (v) search.append("statuses[]", v);
   }
   const query = search.toString();
   return query ? `?${query}` : "";
