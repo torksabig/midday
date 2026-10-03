@@ -17,6 +17,7 @@ import { OAuthApplicationForm } from "@/components/forms/oauth-application-form"
 import { DeleteOAuthApplicationModal } from "@/components/modals/delete-oauth-application-modal";
 import { OAuthApplicationStatusBadge } from "@/components/oauth-application-status-badge";
 import { useOAuthApplicationParams } from "@/hooks/use-oauth-application-params";
+import { oauthApplicationByIdQueryOptions } from "@/lib/rust-api/oauth-applications-client";
 import { useTRPC } from "@/trpc/client";
 
 export function OAuthApplicationEditSheet() {
@@ -31,11 +32,10 @@ export function OAuthApplicationEditSheet() {
   const isOpen = Boolean(applicationId && editApplication);
 
   const { data: application } = useQuery(
-    trpc.oauthApplications.get.queryOptions(
-      { id: applicationId! },
-      {
-        enabled: isOpen,
-      },
+    oauthApplicationByIdQueryOptions(
+      trpc.oauthApplications.get.queryKey({ id: applicationId! }),
+      applicationId!,
+      { enabled: isOpen },
     ),
   );
 

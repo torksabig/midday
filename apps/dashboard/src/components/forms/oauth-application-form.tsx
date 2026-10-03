@@ -41,6 +41,10 @@ import { useOAuthApplicationParams } from "@/hooks/use-oauth-application-params"
 import { useUpload } from "@/hooks/use-upload";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import {
+  createOAuthApplicationFromRust,
+  updateOAuthApplicationFromRust,
+} from "@/lib/rust-api/oauth-applications-client";
 import { useOAuthSecretModalStore } from "@/store/oauth-secret-modal";
 import { useTRPC } from "@/trpc/client";
 import { RESOURCES } from "@/utils/scopes";
@@ -184,40 +188,40 @@ export function OAuthApplicationForm({ data }: Props) {
     }
   }, [data, form]);
 
-  const createMutation = useMutation(
-    trpc.oauthApplications.create.mutationOptions({
-      onSuccess: (result) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.list.queryKey(),
-        });
+  const createMutation = useMutation({
+    mutationKey: trpc.oauthApplications.create.mutationKey(),
+    mutationFn: createOAuthApplicationFromRust,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.list.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.get.queryKey(),
+      });
 
-        setParams(null);
-        if (result.clientSecret && result.name) {
-          setSecret(result.clientSecret, result.name);
-        }
-      },
-    }),
-  );
+      setParams(null);
+      if (result.clientSecret && result.name) {
+        setSecret(result.clientSecret, result.name);
+      }
+    },
+  });
 
-  const updateMutation = useMutation(
-    trpc.oauthApplications.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.list.queryKey(),
-        });
+  const updateMutation = useMutation({
+    mutationKey: trpc.oauthApplications.update.mutationKey(),
+    mutationFn: updateOAuthApplicationFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.list.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.get.queryKey(),
+      });
 
-        setParams(null);
-      },
-    }),
-  );
+      setParams(null);
+    },
+  });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     // Convert redirect URIs from object array to string array for API

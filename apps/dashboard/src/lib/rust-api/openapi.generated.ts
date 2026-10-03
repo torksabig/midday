@@ -1268,6 +1268,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oauth-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOAuthApplications"];
+        put?: never;
+        post: operations["createOAuthApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth-applications/application-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOAuthApplicationInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth-applications/authorized": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAuthorizedOAuthApplications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth-applications/authorized/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeOAuthApplicationAccess"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth-applications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOAuthApplicationById"];
+        put: operations["updateOAuthApplication"];
+        post?: never;
+        delete: operations["deleteOAuthApplication"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth-applications/{id}/regenerate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["regenerateOAuthApplicationSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/overview/summary": {
         parameters: {
             query?: never;
@@ -2126,6 +2222,12 @@ export interface components {
         AccountBalancesQuery: {
             currency?: string | null;
         };
+        ApplicationInfoQuery: {
+            clientId: string;
+            redirectUri: string;
+            scope: string;
+            state?: string | null;
+        };
         AttachmentInput: {
             name: string;
             path: string[];
@@ -2365,6 +2467,19 @@ export interface components {
             vatLabel?: string | null;
             /** Format: double */
             vatRate?: number | null;
+        };
+        CreateOAuthAppBody: {
+            description?: string | null;
+            developerName?: string | null;
+            installUrl?: string | null;
+            isPublic?: boolean | null;
+            logoUrl?: string | null;
+            name: string;
+            overview?: string | null;
+            redirectUris: string[];
+            scopes?: string[] | null;
+            screenshots?: string[] | null;
+            website?: string | null;
         };
         CreateProductBody: {
             currency?: string | null;
@@ -3347,6 +3462,20 @@ export interface components {
         };
         UpdateNotificationStatusBody: {
             status: string;
+        };
+        UpdateOAuthAppBody: {
+            active?: boolean | null;
+            description?: string | null;
+            developerName?: string | null;
+            installUrl?: string | null;
+            isPublic?: boolean | null;
+            logoUrl?: string | null;
+            name?: string | null;
+            overview?: string | null;
+            redirectUris?: string[] | null;
+            scopes?: string[] | null;
+            screenshots?: string[] | null;
+            website?: string | null;
         };
         UpdateProductBody: {
             currency?: string | null;
@@ -6866,6 +6995,312 @@ export interface operations {
                 content?: never;
             };
             /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOAuthApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team OAuth applications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createOAuthApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOAuthAppBody"];
+            };
+        };
+        responses: {
+            /** @description Created OAuth application (plaintext client_secret once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOAuthApplicationInfo: {
+        parameters: {
+            query: {
+                clientId: string;
+                redirectUri: string;
+                scope: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Consent-screen application info */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Invalid client_id, redirect_uri, or scopes */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAuthorizedOAuthApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User authorized OAuth applications for team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revokeOAuthApplicationAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuth application id */
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked user access tokens */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOAuthApplicationById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuth application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OAuth application detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OAuth application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateOAuthApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuth application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOAuthAppBody"];
+            };
+        };
+        responses: {
+            /** @description Updated OAuth application */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OAuth application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteOAuthApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuth application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted OAuth application */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OAuth application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    regenerateOAuthApplicationSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description OAuth application id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rotated client secret (plaintext once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OAuth application not found */
             404: {
                 headers: {
                     [name: string]: unknown;

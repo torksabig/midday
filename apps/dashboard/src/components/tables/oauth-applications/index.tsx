@@ -17,6 +17,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useOAuthApplicationParams } from "@/hooks/use-oauth-application-params";
+import { oauthApplicationsQueryOptions } from "@/lib/rust-api/oauth-applications-client";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "./columns";
 import { EmptyState } from "./empty-state";
@@ -24,9 +25,9 @@ import { EmptyState } from "./empty-state";
 export function OAuthDataTable() {
   const trpc = useTRPC();
   const { setParams } = useOAuthApplicationParams();
-  const { data } = useSuspenseQuery({
-    ...trpc.oauthApplications.list.queryOptions(),
-  });
+  const { data } = useSuspenseQuery(
+    oauthApplicationsQueryOptions(trpc.oauthApplications.list.queryKey()),
+  );
 
   const applications = data?.data ?? [];
 

@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useOAuthParams } from "@/hooks/use-oauth-params";
 import { useTeamQuery } from "@/hooks/use-team";
+import { oauthApplicationInfoQueryOptions } from "@/lib/rust-api/oauth-applications-client";
 import { teamListQueryOptions } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 import { getKnownClient } from "@/utils/known-oauth-clients";
@@ -55,13 +56,18 @@ export function OAuthConsentScreen() {
     }
   }, [currentTeam?.id, selectedTeamId]);
 
+  const applicationInfoInput = {
+    clientId: clientId!,
+    redirectUri: redirectUri!,
+    scope: scope!,
+    state: state || undefined,
+  };
+
   const { data: applicationInfo } = useSuspenseQuery(
-    trpc.oauthApplications.getApplicationInfo.queryOptions({
-      clientId: clientId!,
-      redirectUri: redirectUri!,
-      scope: scope!,
-      state: state || undefined,
-    }),
+    oauthApplicationInfoQueryOptions(
+      trpc.oauthApplications.getApplicationInfo.queryKey(applicationInfoInput),
+      applicationInfoInput,
+    ),
   );
 
   const knownClient = useMemo(

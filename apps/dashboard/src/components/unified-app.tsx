@@ -22,6 +22,7 @@ import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
 import { disconnectAppFromRust } from "@/lib/rust-api/apps-client";
+import { revokeOAuthApplicationAccessFromRust } from "@/lib/rust-api/oauth-applications-client";
 import { useTRPC } from "@/trpc/client";
 import { getScopeDescription } from "@/utils/scopes";
 import { AppSettings } from "./app-settings";
@@ -256,15 +257,15 @@ export function UnifiedAppComponent({ app }: UnifiedAppProps) {
     },
   });
 
-  const revokeExternalAppMutation = useMutation(
-    trpc.oauthApplications.revokeAccess.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.authorized.queryKey(),
-        });
-      },
-    }),
-  );
+  const revokeExternalAppMutation = useMutation({
+    mutationKey: trpc.oauthApplications.revokeAccess.mutationKey(),
+    mutationFn: revokeOAuthApplicationAccessFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.authorized.queryKey(),
+      });
+    },
+  });
 
   // Mutation to disconnect inbox accounts (Gmail/Outlook)
   const disconnectInboxAccountMutation = useMutation(

@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { OAuthConsentScreen } from "@/components/oauth/oauth-consent-screen";
 import { OAuthErrorMessage } from "@/components/oauth/oauth-error-message";
 import { loadOAuthParams } from "@/hooks/use-oauth-params";
+import { oauthApplicationInfoServerQueryOptions } from "@/lib/rust-api/oauth-applications-server";
 import { teamCurrentServerQueryOptions, teamListServerQueryOptions } from "@/lib/rust-api/team-server";
 import { viewerServerQueryOptions } from "@/lib/rust-api/viewer-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
@@ -59,27 +60,32 @@ export default async function Page(props: Props) {
     redirect(`/login?return_to=${encodeURIComponent(returnPath)}`);
   }
 
+  const applicationInfoInput = {
+    clientId: client_id!,
+    redirectUri: redirect_uri!,
+    scope: scope!,
+    state: state || undefined,
+  };
+  const applicationInfoQueryKey =
+    trpc.oauthApplications.getApplicationInfo.queryKey(applicationInfoInput);
+
   // Validate OAuth application and parameters
   try {
     // Validate the OAuth application info first
     await queryClient.fetchQuery(
-      trpc.oauthApplications.getApplicationInfo.queryOptions({
-        clientId: client_id!,
-        redirectUri: redirect_uri!,
-        scope: scope!,
-        state: state || undefined,
-      }),
+      oauthApplicationInfoServerQueryOptions(
+        applicationInfoQueryKey,
+        applicationInfoInput,
+      ),
     );
 
     // If validation passes, prefetch additional data for hydration
     await Promise.all([
       queryClient.prefetchQuery(
-        trpc.oauthApplications.getApplicationInfo.queryOptions({
-          clientId: client_id!,
-          redirectUri: redirect_uri!,
-          scope: scope!,
-          state: state || undefined,
-        }),
+        oauthApplicationInfoServerQueryOptions(
+          applicationInfoQueryKey,
+          applicationInfoInput,
+        ),
       ),
       queryClient.prefetchQuery(
         teamListServerQueryOptions(trpc.team.list.queryKey()),

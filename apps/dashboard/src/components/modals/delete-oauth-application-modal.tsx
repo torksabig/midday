@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useOAuthApplicationParams } from "@/hooks/use-oauth-application-params";
+import { deleteOAuthApplicationFromRust } from "@/lib/rust-api/oauth-applications-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -36,18 +37,18 @@ export function DeleteOAuthApplicationModal({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const deleteApplicationMutation = useMutation(
-    trpc.oauthApplications.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.oauthApplications.list.queryKey(),
-        });
-        onOpenChange(false);
-        setParams(null);
-        setValue("");
-      },
-    }),
-  );
+  const deleteApplicationMutation = useMutation({
+    mutationKey: trpc.oauthApplications.delete.mutationKey(),
+    mutationFn: deleteOAuthApplicationFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.oauthApplications.list.queryKey(),
+      });
+      onOpenChange(false);
+      setParams(null);
+      setValue("");
+    },
+  });
 
   const handleClose = () => {
     onOpenChange(false);
