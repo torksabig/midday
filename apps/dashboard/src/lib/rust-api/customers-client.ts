@@ -10,12 +10,17 @@ import {
   type Customer,
   type CustomersList,
   type CustomersListParams,
+  type PortalCustomerById,
+  type PortalInvoicesPage,
+  type PortalInvoicesParams,
   cancelCustomerEnrichment,
   clearCustomerEnrichment,
   deleteCustomer,
   fetchCustomerById,
+  fetchCustomerByPortalId,
   fetchCustomerInvoiceSummary,
   fetchCustomersList,
+  fetchPortalInvoices,
   toggleCustomerPortal,
   type ToggleCustomerPortalInput,
   upsertCustomer,
@@ -112,4 +117,30 @@ export async function clearCustomerEnrichmentFromRust(
 ) {
   const id = typeof input === "string" ? input : input.id;
   return clearCustomerEnrichment(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export function customerByPortalIdQueryOptions(
+  queryKey: QueryKey,
+  portalId: string,
+) {
+  return queryOptions<PortalCustomerById>({
+    queryKey,
+    queryFn: async () => fetchCustomerByPortalId(getRustApiUrl(), portalId),
+  });
+}
+
+export function portalInvoicesInfiniteQueryOptions(
+  queryKey: QueryKey,
+  params: { portalId: string } & PortalInvoicesParams,
+) {
+  return infiniteQueryOptions({
+    queryKey,
+    queryFn: async ({ pageParam }): Promise<PortalInvoicesPage> =>
+      fetchPortalInvoices(getRustApiUrl(), params.portalId, {
+        pageSize: params.pageSize,
+        cursor: pageParam ?? undefined,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.meta.cursor ?? undefined,
+  });
 }

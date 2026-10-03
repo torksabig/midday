@@ -1,5 +1,6 @@
 import { formatAmount } from "@midday/utils/format";
 import { ImageResponse } from "next/og";
+import { customerByPortalIdServerQueryOptions } from "@/lib/rust-api/customers-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 export const contentType = "image/png";
@@ -13,9 +14,12 @@ export default async function Image({ params }: Props) {
   const queryClient = getQueryClient();
 
   const data = await queryClient.fetchQuery(
-    trpc.customers.getByPortalId.queryOptions({
+    customerByPortalIdServerQueryOptions(
+      trpc.customers.getByPortalId.queryKey({
+        portalId,
+      }),
       portalId,
-    }),
+    ),
   );
 
   if (!data) {

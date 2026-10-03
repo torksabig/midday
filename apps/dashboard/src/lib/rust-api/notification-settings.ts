@@ -112,3 +112,65 @@ export async function updateNotificationSetting(
 
   return normalizeSetting((await response.json()) as RawNotificationSetting);
 }
+
+/** Midday `notificationSettings.get` — OpenAPI helper; settings UI uses getAll. */
+export async function fetchNotificationSettings(
+  baseUrl: string,
+  accessToken: string | null,
+  params: { notificationType?: string } = {},
+): Promise<NotificationSetting[]> {
+  requireAccessToken(accessToken);
+
+  const search = new URLSearchParams();
+  if (params.notificationType) {
+    search.set("notificationType", params.notificationType);
+  }
+  const query = search.toString();
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/notification-settings${query ? `?${query}` : ""}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawNotificationSetting[];
+  return payload.map(normalizeSetting);
+}
+
+/** Midday `notificationSettings.bulkUpdate` — OpenAPI helper; no UI call sites. */
+export async function bulkUpdateNotificationSettings(
+  baseUrl: string,
+  accessToken: string | null,
+  settings: UpdateNotificationSettingInput[],
+): Promise<NotificationSetting[]> {
+  requireAccessToken(accessToken);
+
+  const response = await fetch(`${baseUrl}/api/v1/notification-settings/bulk`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ updates: settings }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawNotificationSetting[];
+  return payload.map(normalizeSetting);
+}

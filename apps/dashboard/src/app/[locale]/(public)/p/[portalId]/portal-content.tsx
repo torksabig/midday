@@ -24,6 +24,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InvoiceStatus } from "@/components/invoice-status";
 import { downloadFile } from "@/lib/download";
+import {
+  customerByPortalIdQueryOptions,
+  portalInvoicesInfiniteQueryOptions,
+} from "@/lib/rust-api/customers-client";
 import { saveFile } from "@/lib/save-file";
 import { useTRPC } from "@/trpc/client";
 
@@ -39,17 +43,18 @@ export function PortalContent({ portalId }: Props) {
 
   // Fetch customer and summary data
   const { data: portalData } = useSuspenseQuery(
-    trpc.customers.getByPortalId.queryOptions({ portalId }),
+    customerByPortalIdQueryOptions(
+      trpc.customers.getByPortalId.queryKey({ portalId }),
+      portalId,
+    ),
   );
 
   // Fetch invoices with infinite query
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useSuspenseInfiniteQuery(
-      trpc.customers.getPortalInvoices.infiniteQueryOptions(
+      portalInvoicesInfiniteQueryOptions(
+        trpc.customers.getPortalInvoices.infiniteQueryKey({ portalId }),
         { portalId },
-        {
-          getNextPageParam: ({ meta }) => meta?.cursor,
-        },
       ),
     );
 

@@ -10,8 +10,13 @@ import {
   type Customer,
   type CustomersList,
   type CustomersListParams,
+  type PortalCustomerById,
+  type PortalInvoicesPage,
+  type PortalInvoicesParams,
   fetchCustomerById,
+  fetchCustomerByPortalId,
   fetchCustomersList,
+  fetchPortalInvoices,
 } from "./customers";
 
 function getRustApiUrl() {
@@ -57,5 +62,32 @@ export function customerByIdServerQueryOptions(queryKey: QueryKey, id: string) {
         id,
       );
     },
+  });
+}
+
+export function customerByPortalIdServerQueryOptions(
+  queryKey: QueryKey,
+  portalId: string,
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<PortalCustomerById> =>
+      fetchCustomerByPortalId(getRustApiUrl(), portalId),
+  });
+}
+
+export function portalInvoicesServerInfiniteQueryOptions(
+  queryKey: QueryKey,
+  params: { portalId: string } & PortalInvoicesParams,
+) {
+  return infiniteQueryOptions({
+    queryKey,
+    queryFn: async ({ pageParam }): Promise<PortalInvoicesPage> =>
+      fetchPortalInvoices(getRustApiUrl(), params.portalId, {
+        pageSize: params.pageSize,
+        cursor: pageParam ?? undefined,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.meta.cursor ?? undefined,
   });
 }

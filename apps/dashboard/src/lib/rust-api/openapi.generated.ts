@@ -1380,6 +1380,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/{portal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCustomerByPortalId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/{portal_id}/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPortalInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports": {
         parameters: {
             query?: never;
@@ -1677,6 +1709,22 @@ export interface paths {
         };
         get?: never;
         put: operations["updateTeam"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/available-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getTeamAvailablePlans"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -3156,6 +3204,11 @@ export interface components {
             payment_status: string;
             /** Format: int32 */
             score: number;
+        };
+        PortalInvoicesQuery: {
+            cursor?: string | null;
+            /** Format: int64 */
+            pageSize?: number | null;
         };
         PublicReportResponse: {
             createdAt?: string | null;
@@ -7374,6 +7427,55 @@ export interface operations {
             };
         };
     };
+    getCustomerByPortalId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public customer portal id */
+                portal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public portal customer + invoice summary, or null */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getPortalInvoices: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Public customer portal id */
+                portal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public portal invoice list page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
     createReport: {
         parameters: {
             query?: never;
@@ -8063,6 +8165,33 @@ export interface operations {
             };
             /** @description Team not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getTeamAvailablePlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Available team plan flags (starter/pro) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

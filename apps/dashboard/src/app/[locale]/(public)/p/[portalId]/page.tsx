@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import {
+  customerByPortalIdServerQueryOptions,
+  portalInvoicesServerInfiniteQueryOptions,
+} from "@/lib/rust-api/customers-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 import { PortalContent } from "./portal-content";
 
@@ -11,9 +15,12 @@ export async function generateMetadata(props: {
 
   try {
     const data = await queryClient.fetchQuery(
-      trpc.customers.getByPortalId.queryOptions({
-        portalId: params.portalId,
-      }),
+      customerByPortalIdServerQueryOptions(
+        trpc.customers.getByPortalId.queryKey({
+          portalId: params.portalId,
+        }),
+        params.portalId,
+      ),
     );
 
     if (!data) {
@@ -67,9 +74,12 @@ export default async function Page(props: Props) {
 
   // Prefetch customer and summary data
   const portalData = await queryClient.fetchQuery(
-    trpc.customers.getByPortalId.queryOptions({
-      portalId: params.portalId,
-    }),
+    customerByPortalIdServerQueryOptions(
+      trpc.customers.getByPortalId.queryKey({
+        portalId: params.portalId,
+      }),
+      params.portalId,
+    ),
   );
 
   if (!portalData) {
@@ -78,13 +88,11 @@ export default async function Page(props: Props) {
 
   // Prefetch invoices
   await queryClient.fetchInfiniteQuery(
-    trpc.customers.getPortalInvoices.infiniteQueryOptions(
-      {
+    portalInvoicesServerInfiniteQueryOptions(
+      trpc.customers.getPortalInvoices.infiniteQueryKey({
         portalId: params.portalId,
-      },
-      {
-        getNextPageParam: ({ meta }) => meta?.cursor,
-      },
+      }),
+      { portalId: params.portalId },
     ),
   );
 

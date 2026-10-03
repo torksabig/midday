@@ -577,6 +577,41 @@ export async function deleteTeamMember(
 
 export type LeaveTeamInput = { teamId: string };
 
+export type AvailablePlans = {
+  starter: boolean;
+  pro: boolean;
+};
+
+export function normalizeAvailablePlans(payload: unknown): AvailablePlans {
+  const row = (payload ?? {}) as Record<string, unknown>;
+  return {
+    starter: Boolean(row.starter),
+    pro: Boolean(row.pro),
+  };
+}
+
+/** Midday `team.availablePlans` — OpenAPI helper; no dashboard call sites yet. */
+export async function fetchAvailablePlans(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<AvailablePlans> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/available-plans`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeAvailablePlans(await response.json());
+}
+
 async function throwRustApiError(response: Response): Promise<never> {
   let message = `Rust API request failed with HTTP ${response.status}`;
   try {

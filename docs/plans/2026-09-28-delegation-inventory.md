@@ -22,7 +22,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `team.teamInvites` | direct Rust | read · AP-13; dashboard calls `GET /api/v1/team/invites` |
 | `team.update` | direct Rust | **write** · name/currency/settings PUT `/api/v1/team` (AP-22); dashboard calls Rust directly |
 | `team.connectionStatus` | direct Rust | read · bank + inbox status summary (AP-26); dashboard calls `GET /api/v1/team/connection-status` |
-| `team.availablePlans` | yes | read · starter/pro flags (AP-50) |
+| `team.availablePlans` | direct Rust | read · starter/pro flags (AP-50); OpenAPI `GET /api/v1/team/available-plans`; dashboard helper ready; no UI call sites yet |
 | `team.acceptInvite` | direct Rust | **write** · join team from invite (AP-41); dashboard calls `POST /api/v1/team/invites/accept` |
 | `team.declineInvite` | direct Rust | **write** · delete invite by email (AP-41); dashboard calls `POST /api/v1/team/invites/decline` |
 | `team.deleteInvite` | direct Rust | **write** · owner cancels invite (AP-41); dashboard calls `DELETE /api/v1/team/invites/{id}` |
@@ -38,10 +38,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `notifications.updateStatus` | direct Rust | **write** · single activity status (AP-20 follow-on); dashboard calls `PUT /api/v1/notifications/:id/status` directly |
 | `notifications.updateAllStatus` | direct Rust | **write** · bulk status for current user (AP-21); dashboard calls `PUT /api/v1/notifications/status` directly |
 | `notifications.*` (other) | no | — |
-| `notificationSettings.get` | yes | read · user/team channel settings (AP-25); Rust route is typed in OpenAPI and remains available for non-screen callers |
+| `notificationSettings.get` | direct Rust | read · user/team channel settings (AP-25); dashboard helper calls `GET /api/v1/notification-settings`; settings UI uses getAll |
 | `notificationSettings.getAll` | direct Rust | read · catalog + settings merge (AP-52); dashboard settings screen calls `GET /api/v1/notification-settings/preferences` directly |
 | `notificationSettings.update` | direct Rust | **write** · single channel upsert (AP-28); dashboard settings screen calls `PUT /api/v1/notification-settings` directly |
-| `notificationSettings.bulkUpdate` | yes | **write** · bulk channel upserts (AP-28) |
+| `notificationSettings.bulkUpdate` | direct Rust | **write** · bulk channel upserts (AP-28); dashboard helper calls `PUT /api/v1/notification-settings/bulk`; no UI call sites yet |
 | `notificationSettings.*` (other) | no | — |
 | `bankAccounts.get` | direct Rust | read · `enabled`/`manual` filters; dashboard calls `GET /api/v1/bank-accounts` directly and preserves the old React Query cache key |
 | `bankAccounts.balances` | direct Rust | read · `get_team_bank_accounts_balances()` (Phase 10); dashboard client calls `GET /api/v1/bank-accounts/balances` directly |
@@ -139,8 +139,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `customers.cancelEnrichment` | direct Rust | **write** · clear enrichment_status (AP-48); dashboard calls `POST /api/v1/customers/{id}/cancel-enrichment` |
 | `customers.clearEnrichment` | direct Rust | **write** · null enrichment fields (AP-48); dashboard calls `POST /api/v1/customers/{id}/clear-enrichment` |
 | `customers.togglePortal` | direct Rust | **write** · portal_enabled + portal_id (AP-49); dashboard calls `POST /api/v1/customers/toggle-portal` |
-| `customers.getByPortalId` | yes | public read · portal customer + summary (AP-50) |
-| `customers.getPortalInvoices` | yes | public read · portal invoice list (AP-50) |
+| `customers.getByPortalId` | direct Rust | public read · portal customer + summary (AP-50); dashboard public portal calls `GET /api/v1/portal/{portal_id}` (no auth) |
+| `customers.getPortalInvoices` | direct Rust | public read · portal invoice list (AP-50); dashboard public portal calls `GET /api/v1/portal/{portal_id}/invoices` (no auth) |
 | `customers.enrich` | yes | **write** · set enrichment pending; enrich job stays Node (AP-59) — **hybrid, keep on tRPC** |
 | `customers.*` (other) | no | — |
 | `invoice.get` | direct Rust | read · list (Phase 4); dashboard infinite query calls `GET /api/v1/invoices` directly and preserves tRPC infinite query keys |
@@ -510,7 +510,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H6a/b/c/d DONE** (templates, attachments, oauthApplications SQL, switchTeam/leave). Next eligible: other non-gated façade-delegated satellites with dashboard call sites. Remains hybrid on tRPC: `oauthApplications.authorize`/`updateApprovalStatus` (Resend email), `invoiceRecurring.pause`/`delete` (BullMQ), `invoiceRecurring.create`/`update` (notifications/validation), `invoice.create` (send/schedule), `documents.delete` (storage), `transactionAttachments.processAttachment` (jobs). Remains gated: decrypt/encrypt, Resend, live OAuth provider exchange, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H7 DONE** (portal public reads + availablePlans/notificationSettings helpers). Next eligible: `apps.createPlatformLinkToken` + `inbox.create` (SQL writes with dashboard call sites). Remains hybrid on tRPC: `oauthApplications.authorize`/`updateApprovalStatus` (Resend email), `invoiceRecurring.pause`/`delete` (BullMQ), `invoiceRecurring.create`/`update` (notifications/validation), `invoice.create` (send/schedule), `documents.delete` (storage), `transactionAttachments.processAttachment` (jobs). Remains gated: decrypt/encrypt, Resend, live OAuth provider exchange, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

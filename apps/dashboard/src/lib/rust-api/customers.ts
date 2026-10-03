@@ -85,6 +85,136 @@ export function normalizeCustomerInvoiceSummary(
   return deepCamelCaseKeys(payload) as Record<string, unknown>;
 }
 
+export type PortalCustomerTeam = {
+  id: string;
+  name: string | null;
+  logoUrl: string | null;
+  baseCurrency: string | null;
+};
+
+export type PortalCustomer = {
+  id: string;
+  name: string;
+  email?: string | null;
+  website?: string | null;
+  teamId: string;
+  portalEnabled: boolean;
+  portalId: string;
+  team: PortalCustomerTeam;
+};
+
+export type PortalInvoiceSummary = {
+  totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  invoiceCount: number;
+  currency: string;
+};
+
+export type PortalCustomerById = {
+  customer: PortalCustomer;
+  summary: PortalInvoiceSummary;
+} | null;
+
+export type PortalInvoice = {
+  id: string;
+  invoiceNumber?: string | null;
+  status?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  dueDate?: string | null;
+  issueDate?: string | null;
+  token?: string | null;
+  paidAt?: string | null;
+  createdAt?: string | null;
+  [key: string]: unknown;
+};
+
+export type PortalInvoicesPage = {
+  data: PortalInvoice[];
+  meta: {
+    cursor?: string | null;
+  };
+};
+
+export type PortalInvoicesParams = {
+  cursor?: string | null;
+  pageSize?: number;
+};
+
+export function buildPortalInvoicesQuery(
+  params: PortalInvoicesParams = {},
+): string {
+  const search = new URLSearchParams();
+  if (params.cursor) search.set("cursor", params.cursor);
+  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
+export function normalizePortalCustomerById(
+  payload: unknown,
+): PortalCustomerById {
+  if (payload == null) return null;
+  return deepCamelCaseKeys(payload) as PortalCustomerById;
+}
+
+export function normalizePortalInvoicesPage(
+  payload: unknown,
+): PortalInvoicesPage {
+  const normalized = deepCamelCaseKeys(payload) as {
+    data?: PortalInvoice[];
+    meta?: { cursor?: string | null };
+  };
+  return {
+    data: normalized.data ?? [],
+    meta: {
+      cursor: normalized.meta?.cursor ?? null,
+    },
+  };
+}
+
+/** Public — no auth. Midday `customers.getByPortalId`. */
+export async function fetchCustomerByPortalId(
+  baseUrl: string,
+  portalId: string,
+): Promise<PortalCustomerById> {
+  const response = await fetch(
+    `${baseUrl}/api/v1/portal/${encodeURIComponent(portalId)}`,
+    { signal: AbortSignal.timeout(8_000) },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizePortalCustomerById(await response.json());
+}
+
+/** Public — no auth. Midday `customers.getPortalInvoices`. */
+export async function fetchPortalInvoices(
+  baseUrl: string,
+  portalId: string,
+  params: PortalInvoicesParams = {},
+): Promise<PortalInvoicesPage> {
+  const response = await fetch(
+    `${baseUrl}/api/v1/portal/${encodeURIComponent(portalId)}/invoices${buildPortalInvoicesQuery(params)}`,
+    { signal: AbortSignal.timeout(8_000) },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizePortalInvoicesPage(await response.json());
+}
+
 export async function fetchCustomersList(
   baseUrl: string,
   accessToken: string | null,

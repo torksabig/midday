@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  normalizeAvailablePlans,
   normalizeTeamConnectionStatus,
   normalizeTeamListItem,
   normalizeTeamMember,
@@ -174,4 +175,12 @@ test("normalizes team connection status payload", () => {
       },
     ],
   });
+});
+
+test("normalizes availablePlans flags", () => {
+  expect(normalizeAvailablePlans({ starter: true, pro: true })).toEqual({
+    starter: true,
+    pro: true,
+  });
+  expect(normalizeAvailablePlans({})).toEqual({ starter: false, pro: false });
 });
