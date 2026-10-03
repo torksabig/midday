@@ -122,7 +122,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/documents/{id}` directly (`-` + `filePath` for path-only opens) |
 | `documents.getRelatedDocuments` | direct Rust | read · `match_similar_documents_by_title()`; dashboard calls `GET /api/v1/documents/{id}/related` directly |
 | `documents.checkAttachments` | direct Rust | read · path token attachment check (AP-25); dashboard calls `GET /api/v1/documents/{id}/check-attachments` directly |
-| `documents.delete` | yes | **write** · DB + attachment cleanup (AP-26); **hybrid — storage remove stays on tRPC** |
+| `documents.delete` | yes | **write** · DB + attachment cleanup (AP-26); **hybrid — storage remove stays on tRPC** (2026-10-03: Next hybrid split skipped — Rust DELETE exists but not OpenAPI; no established dashboard storage-after-SQL pattern) |
 | `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) — **hybrid, keep on tRPC** |
 | `documents.processDocument` | yes | **write** · unsupported bulk status SQL; process-document jobs stay Node (AP-60) |
 | `documents.*` (other) | no | signed URLs (storage only, no SQL) |
@@ -510,7 +510,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H9 DONE** — public `invoice.getInvoiceByToken` cut over; `invoice.defaultSettings` inventory marked direct Rust. **Hardening queue exhausted** except hybrids/STOP/Stage 4: team.create/delete, accounting.export, oauth authorize/approve email, recurring pause/delete/create/update, documents.delete/reprocess, inbox delete/processAttachments, bankConnections delete/create, billing/Stripe, banking OAuth, decrypt, etc. Remains gated: decrypt/encrypt, Resend, live OAuth provider exchange, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H9 DONE + HARDENING EXHAUSTED + SMOKE-1 DONE (2026-10-03)** — local clone smoke: health/OpenAPI drift ok; by-token fail-closed 404; authed reads 200 for me/team/transactions/invoices/documents/overview. **No further easy cutover.** Remaining UI on tRPC = hybrids only (`documents.delete`/`inbox.delete*` storage, Trigger/BullMQ/Resend orchestrators) or STOP gates. `documents.delete` Next hybrid split **skipped** (DELETE not in OpenAPI; no established dashboard storage-after-SQL pattern). **User gates:** `smoke OK` / `STOP work` / **`decommission`** (Stage 4). AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path
