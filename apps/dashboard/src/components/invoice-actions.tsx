@@ -38,6 +38,7 @@ import {
   deleteInvoiceFromRust,
   updateInvoiceFromRust,
 } from "@/lib/rust-api/invoices-client";
+import { resumeInvoiceRecurringFromRust } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -209,27 +210,26 @@ export function InvoiceActions({
     }),
   );
 
-  const resumeSeriesMutation = useMutation(
-    trpc.invoiceRecurring.resume.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+  const resumeSeriesMutation = useMutation({
+    mutationFn: resumeInvoiceRecurringFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
+      });
+    },
+  });
 
   const handleDeleteInvoice = () => {
     track(LogEvents.InvoiceDeleted.name);

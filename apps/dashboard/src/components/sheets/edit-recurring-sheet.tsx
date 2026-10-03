@@ -33,6 +33,7 @@ import * as React from "react";
 import { FormatAmount } from "@/components/format-amount";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { invoiceRecurringByIdQueryOptions } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 
 const DAY_NAMES = [
@@ -145,10 +146,13 @@ export function EditRecurringSheet() {
   });
 
   // Fetch current recurring series data
-  const { data: recurring, isLoading } = useQuery({
-    ...trpc.invoiceRecurring.get.queryOptions({ id: editRecurringId! }),
-    enabled: isOpen,
-  });
+  const { data: recurring, isLoading } = useQuery(
+    invoiceRecurringByIdQueryOptions(
+      trpc.invoiceRecurring.get.queryKey({ id: editRecurringId! }),
+      editRecurringId!,
+      { enabled: isOpen },
+    ),
+  );
 
   // Sync local state when data loads
   React.useEffect(() => {

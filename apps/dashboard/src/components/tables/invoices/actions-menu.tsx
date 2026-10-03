@@ -40,6 +40,7 @@ import {
   duplicateInvoiceFromRust,
   updateInvoiceFromRust,
 } from "@/lib/rust-api/invoices-client";
+import { resumeInvoiceRecurringFromRust } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import type { Invoice } from "./columns";
@@ -222,23 +223,22 @@ export function ActionsMenu({ row }: Props) {
     }),
   );
 
-  const resumeSeriesMutation = useMutation(
-    trpc.invoiceRecurring.resume.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const resumeSeriesMutation = useMutation({
+    mutationFn: resumeInvoiceRecurringFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
+    },
+  });
 
   const handleCopyLink = async () => {
     copy(`${getUrl()}/i/${row.token}`);

@@ -19,6 +19,7 @@ import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
 import { invoiceByIdQueryOptions } from "@/lib/rust-api/invoices-client";
+import { invoiceRecurringUpcomingQueryOptions } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
 import { getWebsiteLogo } from "@/utils/logos";
@@ -51,12 +52,14 @@ export function InvoiceDetails() {
     typeof data?.invoiceRecurringId === "string"
       ? data.invoiceRecurringId
       : "";
+  const upcomingParams = {
+    id: recurringId,
+    limit: 5,
+  };
   const { data: upcomingInvoices } = useQuery(
-    trpc.invoiceRecurring.getUpcoming.queryOptions(
-      {
-        id: recurringId,
-        limit: 5,
-      },
+    invoiceRecurringUpcomingQueryOptions(
+      trpc.invoiceRecurring.getUpcoming.queryKey(upcomingParams),
+      upcomingParams,
       {
         enabled: Boolean(recurringId) && data?.recurring?.status === "active",
       },
