@@ -7,6 +7,7 @@ import { TableRow as BaseTableRow, TableCell } from "@midday/ui/table";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { revalidateAfterTeamChange } from "@/actions/revalidate-action";
+import { switchTeamFromRust } from "@/lib/rust-api/user-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -18,20 +19,20 @@ export function TableRow({ row }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const trpc = useTRPC();
 
-  const changeTeamMutation = useMutation(
-    trpc.user.switchTeam.mutationOptions({
-      onMutate: () => {
-        setIsLoading(true);
-      },
-      onSuccess: async () => {
-        await queryClient.invalidateQueries();
-        await revalidateAfterTeamChange();
-      },
-      onError: () => {
-        setIsLoading(false);
-      },
-    }),
-  );
+  const changeTeamMutation = useMutation({
+    mutationKey: trpc.user.switchTeam.mutationKey(),
+    mutationFn: switchTeamFromRust,
+    onMutate: () => {
+      setIsLoading(true);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries();
+      await revalidateAfterTeamChange();
+    },
+    onError: () => {
+      setIsLoading(false);
+    },
+  });
 
   return (
     <BaseTableRow key={row.id} className="hover:bg-transparent">

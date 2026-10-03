@@ -574,3 +574,44 @@ export async function deleteTeamMember(
 
   return response.json();
 }
+
+export type LeaveTeamInput = { teamId: string };
+
+async function throwRustApiError(response: Response): Promise<never> {
+  let message = `Rust API request failed with HTTP ${response.status}`;
+  try {
+    const body = (await response.json()) as {
+      error?: { message?: string };
+      message?: string;
+    };
+    const apiMessage = body.error?.message ?? body.message;
+    if (typeof apiMessage === "string" && apiMessage.trim()) {
+      message = apiMessage;
+    }
+  } catch {
+    // keep status fallback
+  }
+  throw new RustApiError(response.status, message);
+}
+
+export async function leaveTeam(
+  baseUrl: string,
+  accessToken: string | null,
+  input: LeaveTeamInput,
+): Promise<unknown> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/leave`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ teamId: input.teamId }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  return response.json();
+}

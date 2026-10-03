@@ -36,6 +36,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   deleteTeamMemberFromRust,
+  leaveTeamFromRust,
   updateTeamMemberFromRust,
 } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
@@ -111,13 +112,13 @@ export const columns: ColumnDef<TeamMember>[] = [
         },
       });
 
-      const leaveTeamMutation = useMutation(
-        trpc.team.leave.mutationOptions({
-          onSuccess: async () => {
-            router.push("/teams");
-          },
-        }),
-      );
+      const leaveTeamMutation = useMutation({
+        mutationKey: trpc.team.leave.mutationKey(),
+        mutationFn: leaveTeamFromRust,
+        onSuccess: async () => {
+          router.push("/teams");
+        },
+      });
 
       const updateMemberMutation = useMutation({
         mutationFn: updateTeamMemberFromRust,

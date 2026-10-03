@@ -18,6 +18,8 @@ import {
   fetchTeamList,
   fetchTeamMembers,
   fetchUserInvites,
+  leaveTeam,
+  type LeaveTeamInput,
   type TeamConnectionStatus,
   type TeamInvite,
   type TeamListItem,
@@ -129,4 +131,8 @@ export async function updateTeamMemberFromRust(input: UpdateTeamMemberInput) {
 
 export async function deleteTeamMemberFromRust(input: DeleteTeamMemberInput) {
   return deleteTeamMember(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function leaveTeamFromRust(input: LeaveTeamInput) {
+  return leaveTeam(getRustApiUrl(), await getAccessToken(), input);
 }

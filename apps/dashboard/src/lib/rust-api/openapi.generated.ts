@@ -1780,6 +1780,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/team/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["leaveTeam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/team/list": {
         parameters: {
             query?: never;
@@ -2206,6 +2222,22 @@ export interface paths {
         get: operations["getUserInvites"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/switch-team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["switchTeam"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2921,6 +2953,9 @@ export interface components {
             data: Record<string, never>[];
             meta: components["schemas"]["CustomersListMeta"];
         };
+        LeaveTeamBody: {
+            teamId: string;
+        };
         LegacyUser: {
             email?: string | null;
             id: string;
@@ -3191,6 +3226,9 @@ export interface components {
             assignedId?: string | null;
             entryId?: string | null;
             stop?: string | null;
+        };
+        SwitchTeamBody: {
+            teamId: string;
         };
         TagMutationResponse: {
             id: string;
@@ -8212,6 +8250,44 @@ export interface operations {
             };
         };
     };
+    leaveTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveTeamBody"];
+            };
+        };
+        responses: {
+            /** @description Left team membership (Redis team cache expires naturally) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Last remaining owner cannot leave */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getTeamList: {
         parameters: {
             query?: never;
@@ -9341,6 +9417,44 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    switchTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchTeamBody"];
+            };
+        };
+        responses: {
+            /** @description Switched active team (Redis team cache expires naturally) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller is not a member of the team */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

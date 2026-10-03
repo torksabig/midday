@@ -20,6 +20,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { revalidateAfterTeamChange } from "@/actions/revalidate-action";
 import { useUserQuery } from "@/hooks/use-user";
 import { teamListQueryOptions } from "@/lib/rust-api/team-client";
+import { switchTeamFromRust } from "@/lib/rust-api/user-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -54,15 +55,15 @@ export function TeamDropdown({ isExpanded = false }: Props) {
   const [isActive, setActive] = useState(false);
   const [isChangingTeam, setIsChangingTeam] = useState(false);
 
-  const changeTeamMutation = useMutation(
-    trpc.user.switchTeam.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries();
-        setIsChangingTeam(false);
-        await revalidateAfterTeamChange();
-      },
-    }),
-  );
+  const changeTeamMutation = useMutation({
+    mutationKey: trpc.user.switchTeam.mutationKey(),
+    mutationFn: switchTeamFromRust,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries();
+      setIsChangingTeam(false);
+      await revalidateAfterTeamChange();
+    },
+  });
 
   const { data: teams, isLoading: isTeamsLoading } = useQuery(
     teamListQueryOptions(trpc.team.list.queryKey()),

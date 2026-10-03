@@ -1,7 +1,13 @@
 "use client";
 
 import { getAccessToken } from "@/utils/session";
-import { type UpdateUserInput, updateUser } from "./user";
+import {
+  type SwitchTeamInput,
+  type SwitchTeamResult,
+  type UpdateUserInput,
+  switchTeam,
+  updateUser,
+} from "./user";
 
 function getRustApiUrl() {
   const url = process.env.NEXT_PUBLIC_RUST_API_URL;
@@ -14,4 +20,10 @@ function getRustApiUrl() {
 
 export async function updateUserFromRust(input: UpdateUserInput) {
   return updateUser(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function switchTeamFromRust(
+  input: SwitchTeamInput,
+): Promise<SwitchTeamResult> {
+  return switchTeam(getRustApiUrl(), await getAccessToken(), input);
 }

@@ -24,6 +24,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, FilterFn, Row } from "@tanstack/react-table";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { leaveTeamFromRust } from "@/lib/rust-api/team-client";
+import { switchTeamFromRust } from "@/lib/rust-api/user-client";
 import { useI18n } from "@/locales/client";
 import { useTRPC } from "@/trpc/client";
 
@@ -78,37 +80,37 @@ export const columns: ColumnDef<TeamListItem>[] = [
       const queryClient = useQueryClient();
       const router = useRouter();
 
-      const viewTeamMutation = useMutation(
-        trpc.user.switchTeam.mutationOptions({
-          onSuccess: () => {
-            queryClient.invalidateQueries();
-          },
-        }),
-      );
+      const viewTeamMutation = useMutation({
+        mutationKey: trpc.user.switchTeam.mutationKey(),
+        mutationFn: switchTeamFromRust,
+        onSuccess: () => {
+          queryClient.invalidateQueries();
+        },
+      });
 
-      const manageTeamMutation = useMutation(
-        trpc.user.switchTeam.mutationOptions({
-          onSuccess: () => {
-            queryClient.invalidateQueries();
-          },
-        }),
-      );
+      const manageTeamMutation = useMutation({
+        mutationKey: trpc.user.switchTeam.mutationKey(),
+        mutationFn: switchTeamFromRust,
+        onSuccess: () => {
+          queryClient.invalidateQueries();
+        },
+      });
 
-      const leaveTeamMutation = useMutation(
-        trpc.team.leave.mutationOptions({
-          onSuccess: async () => {
-            router.push("/teams");
-          },
-          onError: () => {
-            toast({
-              duration: 6000,
-              variant: "error",
-              title:
-                "You cannot leave since you are the only remaining owner of the team. Delete this team instead.",
-            });
-          },
-        }),
-      );
+      const leaveTeamMutation = useMutation({
+        mutationKey: trpc.team.leave.mutationKey(),
+        mutationFn: leaveTeamFromRust,
+        onSuccess: async () => {
+          router.push("/teams");
+        },
+        onError: () => {
+          toast({
+            duration: 6000,
+            variant: "error",
+            title:
+              "You cannot leave since you are the only remaining owner of the team. Delete this team instead.",
+          });
+        },
+      });
 
       return (
         <div className="flex justify-end">

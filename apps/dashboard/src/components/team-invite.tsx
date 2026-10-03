@@ -9,6 +9,7 @@ import {
   declineTeamInviteFromRust,
 } from "@/lib/rust-api/team-client";
 import type { UserInvite } from "@/lib/rust-api/team";
+import { switchTeamFromRust } from "@/lib/rust-api/user-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -20,14 +21,14 @@ export function TeamInvite({ invite }: Props) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const switchTeamMutation = useMutation(
-    trpc.user.switchTeam.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries();
-        router.push("/");
-      },
-    }),
-  );
+  const switchTeamMutation = useMutation({
+    mutationKey: trpc.user.switchTeam.mutationKey(),
+    mutationFn: switchTeamFromRust,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries();
+      router.push("/");
+    },
+  });
 
   const acceptInviteMutation = useMutation({
     mutationFn: acceptTeamInviteFromRust,
