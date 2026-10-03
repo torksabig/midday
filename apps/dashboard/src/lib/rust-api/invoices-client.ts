@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type AverageInvoiceSize,
   type DraftInvoiceInput,
   type DuplicateInvoiceInput,
   type Invoice,
@@ -16,11 +17,14 @@ import {
   type InvoicesList,
   type InvoicesListParams,
   type MostActiveClient,
+  type SearchInvoiceNumberHit,
   type TopRevenueClient,
   type UpdateInvoiceInput,
   deleteInvoice,
   draftInvoice,
   duplicateInvoice,
+  fetchInvoiceAverageDaysToPayment,
+  fetchInvoiceAverageInvoiceSize,
   fetchInvoiceById,
   fetchInvoiceInactiveClientsCount,
   fetchInvoiceMostActiveClient,
@@ -29,6 +33,7 @@ import {
   fetchInvoiceSummary,
   fetchInvoiceTopRevenueClient,
   fetchInvoicesList,
+  fetchSearchInvoiceNumber,
   updateInvoice,
 } from "./invoices";
 
@@ -119,6 +124,36 @@ export function invoiceNewCustomersCountQueryOptions(queryKey: QueryKey) {
     queryKey,
     queryFn: async () =>
       fetchInvoiceNewCustomersCount(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export function searchInvoiceNumberQueryOptions(
+  queryKey: QueryKey,
+  query: string,
+  options: { enabled?: boolean; gcTime?: number } = {},
+) {
+  return queryOptions<SearchInvoiceNumberHit>({
+    queryKey,
+    queryFn: async () =>
+      fetchSearchInvoiceNumber(getRustApiUrl(), await getAccessToken(), query),
+    enabled: options.enabled,
+    gcTime: options.gcTime,
+  });
+}
+
+export function invoiceAverageDaysToPaymentQueryOptions(queryKey: QueryKey) {
+  return queryOptions<number>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceAverageDaysToPayment(getRustApiUrl(), await getAccessToken()),
+  });
+}
+
+export function invoiceAverageInvoiceSizeQueryOptions(queryKey: QueryKey) {
+  return queryOptions<AverageInvoiceSize>({
+    queryKey,
+    queryFn: async () =>
+      fetchInvoiceAverageInvoiceSize(getRustApiUrl(), await getAccessToken()),
   });
 }
 

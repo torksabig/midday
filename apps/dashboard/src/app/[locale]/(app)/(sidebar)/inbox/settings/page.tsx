@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { InboxBlocklistSettings } from "@/components/inbox/inbox-blocklist-settings";
 import { InboxConnectedAccounts } from "@/components/inbox/inbox-connected-accounts";
 import { InboxEmailSettings } from "@/components/inbox/inbox-email-settings";
+import { inboxAccountsServerQueryOptions } from "@/lib/rust-api/inbox-accounts-server";
 import { inboxBlocklistServerQueryOptions } from "@/lib/rust-api/inbox-server";
 import { prefetch, trpc } from "@/trpc/server";
 
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  prefetch(trpc.inboxAccounts.get.queryOptions());
+  prefetch(inboxAccountsServerQueryOptions(trpc.inboxAccounts.get.queryKey()));
   prefetch(
     inboxBlocklistServerQueryOptions(trpc.inbox.blocklist.get.queryKey()),
   );

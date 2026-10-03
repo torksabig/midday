@@ -6,6 +6,7 @@ import { AppsSkeleton } from "@/components/apps.skeleton";
 import { AppsHeader } from "@/components/apps-header";
 import { ErrorFallback } from "@/components/error-fallback";
 import { appsServerQueryOptions } from "@/lib/rust-api/apps-server";
+import { inboxAccountsServerQueryOptions } from "@/lib/rust-api/inbox-accounts-server";
 import {
   batchPrefetch,
   getQueryClient,
@@ -24,7 +25,7 @@ export default async function Page() {
     appsServerQueryOptions(trpc.apps.get.queryKey()),
     trpc.oauthApplications.list.queryOptions(),
     trpc.oauthApplications.authorized.queryOptions(),
-    trpc.inboxAccounts.get.queryOptions(),
+    inboxAccountsServerQueryOptions(trpc.inboxAccounts.get.queryKey()),
     trpc.invoicePayments.stripeStatus.queryOptions(),
     trpc.connectors.list.queryOptions(),
   ] as Parameters<typeof batchPrefetch>[0]);

@@ -77,7 +77,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `oauthApplications.updateApprovalStatus` | yes | **write** · status SQL; review email stays Node (AP-61) |
 | `oauthApplications.authorize` | yes | **write** · auth-code SQL; install email stays Node (AP-62) |
 | `oauthApplications.*` (other) | no | — |
-| `inboxAccounts.get` | yes | read · connected inboxes (AP-16) |
+| `inboxAccounts.get` | direct Rust | read · connected inboxes (AP-16); dashboard calls `GET /api/v1/inbox-accounts` directly |
 | `inboxAccounts.delete` | yes | **write** · DB delete; Trigger `schedules.del` stays Node (AP-58) |
 | `inboxAccounts.sync` | yes | **write** · account row read SQL; Trigger sync stays Node (AP-60) |
 | `inboxAccounts.*` (other) | no | connect, OAuth exchange |
@@ -147,12 +147,12 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.getById` | direct Rust | read (Phase 4); dashboard calls `GET /api/v1/invoices/{id}` directly |
 | `invoice.getInvoiceByToken` | yes | public · token verified in API, read by id (Phase 6 slice 1) |
 | `invoice.paymentStatus` | direct Rust | read · weighted score (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/payment-status` directly |
-| `invoice.searchInvoiceNumber` | yes | read · ILIKE existence check (AP-25) |
+| `invoice.searchInvoiceNumber` | direct Rust | read · ILIKE existence check (AP-25); invoice form calls `GET /api/v1/invoices/search-number` directly |
 | `invoice.invoiceSummary` | direct Rust | read · FX rollup (Phase 5 slice 1); dashboard calls `GET /api/v1/invoices/summary` directly |
 | `invoice.mostActiveClient` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/most-active-client` directly |
 | `invoice.inactiveClientsCount` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/inactive-clients-count` directly |
-| `invoice.averageDaysToPayment` | yes | read · 30d dashboard metric (Phase 10) |
-| `invoice.averageInvoiceSize` | yes | read · 30d by currency (Phase 10) |
+| `invoice.averageDaysToPayment` | direct Rust | read · 30d dashboard metric; helpers wired (`GET /api/v1/invoices/metrics/average-days-to-payment`); no dashboard fetch sites yet |
+| `invoice.averageInvoiceSize` | direct Rust | read · 30d by currency; helpers wired (`GET /api/v1/invoices/metrics/average-invoice-size`); no dashboard fetch sites yet |
 | `invoice.topRevenueClient` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/top-revenue-client` directly |
 | `invoice.newCustomersCount` | direct Rust | read · 30d dashboard metric; customers page calls `GET /api/v1/invoices/metrics/new-customers-count` directly |
 | `invoice.update` | direct Rust | **write** · partial PUT status/paidAt/internalNote/scheduledAt (AP-14); dashboard calls `PUT /api/v1/invoices/{id}` directly |
@@ -510,7 +510,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-0 DONE**, **DC-1 DONE** (team members/list/update + user.update) → **DC-2** transactions reads → **DC-3+** writes / inbox / documents / customers / invoices. Façade Stage 3 SQL complete (AP-WORKER-1..10). Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H4 DONE** (invoice satellite reads + `inboxAccounts.get`). Next: OpenAPI+cutover for `invoiceProducts.*` / `reports.*` / `invoiceRecurring.*` or other non-gated satellites still on tRPC. Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

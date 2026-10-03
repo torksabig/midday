@@ -10,6 +10,7 @@ import { InboxViewSkeleton } from "@/components/inbox/inbox-skeleton";
 import { InboxView } from "@/components/inbox/inbox-view";
 import { loadInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { loadInboxParams } from "@/hooks/use-inbox-params";
+import { inboxAccountsServerQueryOptions } from "@/lib/rust-api/inbox-accounts-server";
 import { inboxServerInfiniteQueryOptions } from "@/lib/rust-api/inbox-server";
 import { getQueryClient, HydrateClient, trpc } from "@/trpc/server";
 
@@ -46,7 +47,9 @@ export default async function Page(props: Props) {
       )
       .catch(() => null),
     queryClient
-      .fetchQuery(trpc.inboxAccounts.get.queryOptions())
+      .fetchQuery(
+        inboxAccountsServerQueryOptions(trpc.inboxAccounts.get.queryKey()),
+      )
       .catch(() => null),
   ]);
 

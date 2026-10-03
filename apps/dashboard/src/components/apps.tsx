@@ -16,6 +16,7 @@ import { ConnectTelegram } from "@/components/inbox/connect-telegram";
 import { ConnectWhatsApp } from "@/components/inbox/connect-whatsapp";
 import { useUserQuery } from "@/hooks/use-user";
 import { appsQueryOptions } from "@/lib/rust-api/apps-client";
+import { inboxAccountsQueryOptions } from "@/lib/rust-api/inbox-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { isOAuthMessage } from "@/utils/oauth-message";
 import { UnifiedAppComponent } from "./unified-app";
@@ -61,7 +62,7 @@ export function Apps() {
 
   // Fetch inbox accounts for Gmail/Outlook status
   const { data: inboxAccounts } = useSuspenseQuery(
-    trpc.inboxAccounts.get.queryOptions(),
+    inboxAccountsQueryOptions(trpc.inboxAccounts.get.queryKey()),
   );
 
   // Fetch Stripe status for Stripe Payments app

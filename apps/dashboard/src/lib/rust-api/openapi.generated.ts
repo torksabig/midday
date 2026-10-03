@@ -516,6 +516,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inbox-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInboxAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inbox/blocklist": {
         parameters: {
             query?: never;
@@ -772,6 +788,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoices/metrics/average-days-to-payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceAverageDaysToPayment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/metrics/average-invoice-size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceAverageInvoiceSize"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/metrics/inactive-clients-count": {
         parameters: {
             query?: never;
@@ -844,6 +892,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getInvoicePaymentStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoices/search-number": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchInvoiceNumber"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1612,6 +1676,13 @@ export interface components {
             user: components["schemas"]["LegacyUser"];
             weekStartsOnMonday?: boolean | null;
         };
+        AverageInvoiceSizeRow: {
+            /** Format: double */
+            average_amount: number;
+            currency: string;
+            /** Format: int32 */
+            invoice_count: number;
+        };
         BankAccountBalanceRow: {
             /** Format: double */
             balance: number;
@@ -1905,6 +1976,14 @@ export interface components {
         };
         Health: {
             ok: boolean;
+        };
+        InboxAccountListItem: {
+            email: string;
+            errorMessage?: string | null;
+            id: string;
+            lastAccessed?: string | null;
+            provider: string;
+            status?: string | null;
         };
         InboxAccountNested: {
             email?: string | null;
@@ -2282,6 +2361,9 @@ export interface components {
             summary?: string | null;
             tag?: string | null;
             title?: string | null;
+        };
+        SearchInvoiceNumberHit: {
+            invoiceNumber: string;
         };
         StartTimerBody: {
             assignedId?: string | null;
@@ -4098,6 +4180,33 @@ export interface operations {
             };
         };
     };
+    listInboxAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Connected inbox accounts for the team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxAccountListItem"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInboxBlocklist: {
         parameters: {
             query?: never;
@@ -4746,6 +4855,60 @@ export interface operations {
             };
         };
     };
+    getInvoiceAverageDaysToPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Average days to payment past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceAverageInvoiceSize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Average invoice size by currency past 30 days */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AverageInvoiceSizeRow"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInvoiceInactiveClientsCount: {
         parameters: {
             query?: never;
@@ -4870,6 +5033,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentStatusResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    searchInvoiceNumber: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                q: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching invoice number if one exists */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["SearchInvoiceNumberHit"];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */

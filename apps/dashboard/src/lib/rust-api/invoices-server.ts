@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { getServerRequestContext } from "@/trpc/request-context";
 import {
+  type AverageInvoiceSize,
   type InvoicePaymentStatus,
   type InvoiceSummary,
   type InvoiceSummaryParams,
@@ -14,6 +15,8 @@ import {
   type InvoicesListParams,
   type MostActiveClient,
   type TopRevenueClient,
+  fetchInvoiceAverageDaysToPayment,
+  fetchInvoiceAverageInvoiceSize,
   fetchInvoiceInactiveClientsCount,
   fetchInvoiceMostActiveClient,
   fetchInvoiceNewCustomersCount,
@@ -132,6 +135,36 @@ export function invoiceNewCustomersCountServerQueryOptions(queryKey: QueryKey) {
     queryFn: async (): Promise<number> => {
       const { session } = await getServerRequestContext();
       return fetchInvoiceNewCustomersCount(
+        getRustApiUrl(),
+        session?.access_token ?? null,
+      );
+    },
+  });
+}
+
+export function invoiceAverageDaysToPaymentServerQueryOptions(
+  queryKey: QueryKey,
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<number> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceAverageDaysToPayment(
+        getRustApiUrl(),
+        session?.access_token ?? null,
+      );
+    },
+  });
+}
+
+export function invoiceAverageInvoiceSizeServerQueryOptions(
+  queryKey: QueryKey,
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<AverageInvoiceSize> => {
+      const { session } = await getServerRequestContext();
+      return fetchInvoiceAverageInvoiceSize(
         getRustApiUrl(),
         session?.access_token ?? null,
       );

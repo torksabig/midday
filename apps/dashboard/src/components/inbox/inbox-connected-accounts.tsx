@@ -28,6 +28,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useSyncStatus } from "@/hooks/use-sync-status";
+import { inboxAccountsQueryOptions } from "@/lib/rust-api/inbox-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { ConnectEmailModal } from "./connect-email-modal";
 import { ConnectGmail } from "./connect-gmail";
@@ -231,7 +232,9 @@ function InboxAccountItem({ account }: { account: InboxAccount }) {
 
 function InboxAccountsList() {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.inboxAccounts.get.queryOptions());
+  const { data } = useSuspenseQuery(
+    inboxAccountsQueryOptions(trpc.inboxAccounts.get.queryKey()),
+  );
 
   if (!data?.length) {
     return (
@@ -255,7 +258,9 @@ function InboxAccountsList() {
 
 export function InboxConnectedAccounts() {
   const trpc = useTRPC();
-  const { data } = useSuspenseQuery(trpc.inboxAccounts.get.queryOptions());
+  const { data } = useSuspenseQuery(
+    inboxAccountsQueryOptions(trpc.inboxAccounts.get.queryKey()),
+  );
 
   return (
     <Card>

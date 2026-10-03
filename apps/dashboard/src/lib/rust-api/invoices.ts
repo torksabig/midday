@@ -49,11 +49,19 @@ export type InvoicePaymentStatus = RouterOutputs["invoice"]["paymentStatus"];
 export type InvoiceSummary = RouterOutputs["invoice"]["invoiceSummary"];
 export type MostActiveClient = RouterOutputs["invoice"]["mostActiveClient"];
 export type TopRevenueClient = RouterOutputs["invoice"]["topRevenueClient"];
+export type SearchInvoiceNumberHit =
+  RouterOutputs["invoice"]["searchInvoiceNumber"];
+export type AverageInvoiceSize =
+  RouterOutputs["invoice"]["averageInvoiceSize"];
 
 type RawMostActiveClientResponse =
   components["schemas"]["MostActiveClientResponse"];
 type RawTopRevenueClientResponse =
   components["schemas"]["TopRevenueClientResponse"];
+type RawSearchInvoiceNumberHit =
+  components["schemas"]["SearchInvoiceNumberHit"];
+type RawAverageInvoiceSizeRow =
+  components["schemas"]["AverageInvoiceSizeRow"];
 
 export function normalizeMostActiveClient(
   payload: RawMostActiveClientResponse | null,
@@ -167,6 +175,100 @@ export async function fetchInvoiceNewCustomersCount(
   }
 
   return Number(await response.json());
+}
+
+export function normalizeSearchInvoiceNumberHit(
+  payload: RawSearchInvoiceNumberHit | null,
+): SearchInvoiceNumberHit {
+  if (payload == null) return null;
+  return { invoiceNumber: payload.invoiceNumber };
+}
+
+export function normalizeAverageInvoiceSize(
+  payload: RawAverageInvoiceSizeRow[],
+): AverageInvoiceSize {
+  return (payload ?? []).map((row) => ({
+    currency: row.currency,
+    averageAmount: row.average_amount,
+    invoiceCount: row.invoice_count,
+  })) as AverageInvoiceSize;
+}
+
+export async function fetchSearchInvoiceNumber(
+  baseUrl: string,
+  accessToken: string | null,
+  query: string,
+): Promise<SearchInvoiceNumberHit> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const url = new URL(`${baseUrl}/api/v1/invoices/search-number`);
+  url.searchParams.set("q", query);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeSearchInvoiceNumberHit(
+    (await response.json()) as RawSearchInvoiceNumberHit | null,
+  );
+}
+
+export async function fetchInvoiceAverageDaysToPayment(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<number> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/average-days-to-payment`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return Number(await response.json());
+}
+
+export async function fetchInvoiceAverageInvoiceSize(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<AverageInvoiceSize> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/metrics/average-invoice-size`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeAverageInvoiceSize(
+    (await response.json()) as RawAverageInvoiceSizeRow[],
+  );
 }
 
 function snakeToCamelKey(key: string): string {

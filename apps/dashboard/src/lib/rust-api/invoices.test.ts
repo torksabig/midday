@@ -4,10 +4,12 @@ import {
   buildInvoiceSummaryQuery,
   buildInvoicesListQuery,
   deepCamelCaseKeys,
+  normalizeAverageInvoiceSize,
   normalizeInvoicePaymentStatus,
   normalizeInvoiceSummary,
   normalizeInvoicesList,
   normalizeMostActiveClient,
+  normalizeSearchInvoiceNumberHit,
   normalizeTopRevenueClient,
 } from "./invoices";
 
@@ -174,4 +176,21 @@ test("invoice write helpers expose camelCase update/duplicate shapes", () => {
 
   expect(update.status).toBe("paid");
   expect(duplicate.invoiceNumber).toBe("INV-0002");
+});
+
+test("normalizes search invoice number and average invoice size", () => {
+  expect(
+    normalizeSearchInvoiceNumberHit({ invoiceNumber: "INV-0042" }),
+  ).toEqual({ invoiceNumber: "INV-0042" });
+  expect(normalizeSearchInvoiceNumberHit(null)).toBeNull();
+
+  expect(
+    normalizeAverageInvoiceSize([
+      { currency: "USD", average_amount: 1250.5, invoice_count: 4 },
+      { currency: "EUR", average_amount: 900, invoice_count: 2 },
+    ]),
+  ).toEqual([
+    { currency: "USD", averageAmount: 1250.5, invoiceCount: 4 },
+    { currency: "EUR", averageAmount: 900, invoiceCount: 2 },
+  ]);
 });

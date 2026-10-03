@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useTemplateUpdate } from "@/hooks/use-template-update";
+import { searchInvoiceNumberQueryOptions } from "@/lib/rust-api/invoices-client";
 import { useTRPC } from "@/trpc/client";
 import { Input } from "./input";
 import { LabelInput } from "./label-input";
@@ -30,10 +31,11 @@ export function InvoiceNo() {
   const { invoiceType } = useInvoiceParams();
 
   const { data } = useQuery(
-    trpc.invoice.searchInvoiceNumber.queryOptions(
-      {
+    searchInvoiceNumberQueryOptions(
+      trpc.invoice.searchInvoiceNumber.queryKey({
         query: invoiceNumber,
-      },
+      }),
+      invoiceNumber,
       {
         // Only search for invoice number if we are creating a new invoice
         enabled: invoiceType === "create" && invoiceNumber !== "",
