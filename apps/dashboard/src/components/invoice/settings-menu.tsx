@@ -41,6 +41,13 @@ import { addDays, parseISO } from "date-fns";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
+import {
+  createInvoiceTemplateFromRust,
+  deleteInvoiceTemplateFromRust,
+  invoiceTemplateCountQueryOptions,
+  setDefaultInvoiceTemplateFromRust,
+  upsertInvoiceTemplateFromRust,
+} from "@/lib/rust-api/invoice-templates-client";
 import { useTRPC } from "@/trpc/client";
 import { SelectCurrency } from "../select-currency";
 
@@ -196,113 +203,113 @@ export function SettingsMenu() {
 
   // Get template count to prevent deleting last template
   const { data: templateCount } = useQuery(
-    trpc.invoiceTemplate.count.queryOptions(),
+    invoiceTemplateCountQueryOptions(trpc.invoiceTemplate.count.queryKey()),
   );
 
   const isLastTemplate = templateCount === 1;
 
-  const updateTemplateMutation = useMutation(
-    trpc.invoiceTemplate.upsert.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Failed to update template",
-          variant: "error",
-        });
-      },
-    }),
-  );
+  const updateTemplateMutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.upsert.mutationKey(),
+    mutationFn: upsertInvoiceTemplateFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to update template",
+        variant: "error",
+      });
+    },
+  });
 
-  const setDefaultMutation = useMutation(
-    trpc.invoiceTemplate.setDefault.mutationOptions({
-      onSuccess: () => {
-        setValue("template.isDefault", true, { shouldDirty: true });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Failed to set default template",
-          variant: "error",
-        });
-      },
-    }),
-  );
+  const setDefaultMutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.setDefault.mutationKey(),
+    mutationFn: setDefaultInvoiceTemplateFromRust,
+    onSuccess: () => {
+      setValue("template.isDefault", true, { shouldDirty: true });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to set default template",
+        variant: "error",
+      });
+    },
+  });
 
-  const deleteTemplateMutation = useMutation(
-    trpc.invoiceTemplate.delete.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.count.queryKey(),
-        });
+  const deleteTemplateMutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.delete.mutationKey(),
+    mutationFn: deleteInvoiceTemplateFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.count.queryKey(),
+      });
 
-        // Switch to the new default template
-        if (data?.newDefault) {
-          setValue("template", data.newDefault, { shouldDirty: true });
-          // Sync invoice-level fields from the new template
-          setValue("fromDetails", data.newDefault.fromDetails ?? null, {
-            shouldDirty: true,
-          });
-          setValue("paymentDetails", data.newDefault.paymentDetails ?? null, {
-            shouldDirty: true,
-          });
-          setValue("noteDetails", data.newDefault.noteDetails ?? null, {
-            shouldDirty: true,
-          });
-        }
+      // Switch to the new default template
+      if (data?.newDefault) {
+        setValue("template", data.newDefault, { shouldDirty: true });
+        // Sync invoice-level fields from the new template
+        setValue("fromDetails", data.newDefault.fromDetails ?? null, {
+          shouldDirty: true,
+        });
+        setValue("paymentDetails", data.newDefault.paymentDetails ?? null, {
+          shouldDirty: true,
+        });
+        setValue("noteDetails", data.newDefault.noteDetails ?? null, {
+          shouldDirty: true,
+        });
+      }
 
-        setDeleteDialogOpen(false);
-      },
-      onError: () => {
-        toast({
-          title: "Failed to delete template",
-          variant: "error",
-        });
-      },
-    }),
-  );
+      setDeleteDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Failed to delete template",
+        variant: "error",
+      });
+    },
+  });
 
-  const duplicateTemplateMutation = useMutation(
-    trpc.invoiceTemplate.create.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.count.queryKey(),
-        });
+  const duplicateTemplateMutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.create.mutationKey(),
+    mutationFn: createInvoiceTemplateFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.count.queryKey(),
+      });
 
-        // Switch to the duplicated template
-        if (data) {
-          setValue("template", data, { shouldDirty: true });
-          // Sync invoice-level fields from the duplicated template
-          setValue("fromDetails", data.fromDetails ?? null, {
-            shouldDirty: true,
-          });
-          setValue("paymentDetails", data.paymentDetails ?? null, {
-            shouldDirty: true,
-          });
-          setValue("noteDetails", data.noteDetails ?? null, {
-            shouldDirty: true,
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          title: "Failed to duplicate template",
-          variant: "error",
+      // Switch to the duplicated template
+      if (data) {
+        setValue("template", data, { shouldDirty: true });
+        // Sync invoice-level fields from the duplicated template
+        setValue("fromDetails", data.fromDetails ?? null, {
+          shouldDirty: true,
         });
-      },
-    }),
-  );
+        setValue("paymentDetails", data.paymentDetails ?? null, {
+          shouldDirty: true,
+        });
+        setValue("noteDetails", data.noteDetails ?? null, {
+          shouldDirty: true,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Failed to duplicate template",
+        variant: "error",
+      });
+    },
+  });
 
   const handleSetDefault = () => {
     if (templateId) {

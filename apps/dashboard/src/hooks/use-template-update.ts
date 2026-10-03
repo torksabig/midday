@@ -2,6 +2,10 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
+import {
+  type UpsertInvoiceTemplateInput,
+  upsertInvoiceTemplateFromRust,
+} from "@/lib/rust-api/invoice-templates-client";
 import { useTRPC } from "@/trpc/client";
 
 /**
@@ -23,29 +27,29 @@ export function useTemplateUpdate() {
 
   const templateId = watch("template.id") as string | undefined;
 
-  const mutation = useMutation(
-    trpc.invoiceTemplate.upsert.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
+  const mutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.upsert.mutationKey(),
+    mutationFn: upsertInvoiceTemplateFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
 
-        // If a new template was created and the form still doesn't have a template ID,
-        // update the form to track the newly created template. We check the current form
-        // state (via getValues) rather than the mutation variables to avoid overwriting
-        // the user's selection if they switched templates while the mutation was in flight.
-        const currentTemplateId = getValues("template.id");
-        if (data?.id && !currentTemplateId) {
-          setValue("template.id", data.id);
-          setValue("template.name", data.name);
-          setValue("template.isDefault", data.isDefault);
-        }
-      },
-    }),
-  );
+      // If a new template was created and the form still doesn't have a template ID,
+      // update the form to track the newly created template. We check the current form
+      // state (via getValues) rather than the mutation variables to avoid overwriting
+      // the user's selection if they switched templates while the mutation was in flight.
+      const currentTemplateId = getValues("template.id");
+      if (data?.id && !currentTemplateId) {
+        setValue("template.id", data.id);
+        setValue("template.name", data.name);
+        setValue("template.isDefault", data.isDefault);
+      }
+    },
+  });
 
   const updateTemplate = (
-    data: Omit<Parameters<typeof mutation.mutate>[0], "id">,
+    data: Omit<UpsertInvoiceTemplateInput, "id">,
   ) => {
     mutation.mutate({
       id: templateId,

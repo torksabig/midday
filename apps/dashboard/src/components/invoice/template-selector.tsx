@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, parseISO } from "date-fns";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { invoiceTemplatesQueryOptions } from "@/lib/rust-api/invoice-templates-client";
 import { useTRPC } from "@/trpc/client";
 import { CreateTemplateDialog } from "./create-template-dialog";
 
@@ -27,7 +28,7 @@ export function TemplateSelector() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: templates, refetch } = useQuery(
-    trpc.invoiceTemplate.list.queryOptions(),
+    invoiceTemplatesQueryOptions(trpc.invoiceTemplate.list.queryKey()),
   );
 
   const currentTemplateId = watch("template.id");

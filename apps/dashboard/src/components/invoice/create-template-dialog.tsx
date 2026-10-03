@@ -24,6 +24,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
 import { z } from "zod/v3";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { createInvoiceTemplateFromRust } from "@/lib/rust-api/invoice-templates-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -48,31 +49,31 @@ export function CreateTemplateDialog({ open, onOpenChange, onCreated }: Props) {
     },
   });
 
-  const createTemplateMutation = useMutation(
-    trpc.invoiceTemplate.create.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.list.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceTemplate.count.queryKey(),
-        });
+  const createTemplateMutation = useMutation({
+    mutationKey: trpc.invoiceTemplate.create.mutationKey(),
+    mutationFn: createInvoiceTemplateFromRust,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.list.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceTemplate.count.queryKey(),
+      });
 
-        if (data) {
-          onCreated?.({ id: data.id, name: data.name });
-        }
+      if (data) {
+        onCreated?.({ id: data.id, name: data.name });
+      }
 
-        form.reset();
-        onOpenChange(false);
-      },
-      onError: () => {
-        toast({
-          title: "Failed to create template",
-          variant: "error",
-        });
-      },
-    }),
-  );
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({
+        title: "Failed to create template",
+        variant: "error",
+      });
+    },
+  });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     // Get current template settings from invoice form to copy to new template

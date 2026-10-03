@@ -868,6 +868,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoice-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInvoiceTemplates"];
+        put?: never;
+        post: operations["createInvoiceTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-templates/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["countInvoiceTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-templates/upsert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upsertInvoiceTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceTemplateById"];
+        put?: never;
+        post?: never;
+        delete: operations["deleteInvoiceTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-templates/{id}/set-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setDefaultInvoiceTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices": {
         parameters: {
             query?: never;
@@ -2177,6 +2257,56 @@ export interface components {
             type: string;
             value: string;
         };
+        CreateInvoiceTemplateBody: {
+            currency?: string | null;
+            customerLabel?: string | null;
+            dateFormat?: string | null;
+            deliveryType?: string | null;
+            descriptionLabel?: string | null;
+            discountLabel?: string | null;
+            dueDateLabel?: string | null;
+            emailBody?: string | null;
+            emailButtonText?: string | null;
+            emailHeading?: string | null;
+            emailSubject?: string | null;
+            fromDetails?: Record<string, never> | null;
+            fromLabel?: string | null;
+            includeDecimals?: boolean | null;
+            includeDiscount?: boolean | null;
+            includeLineItemTax?: boolean | null;
+            includePdf?: boolean | null;
+            includeQr?: boolean | null;
+            includeTax?: boolean | null;
+            includeUnits?: boolean | null;
+            includeVat?: boolean | null;
+            invoiceNoLabel?: string | null;
+            isDefault?: boolean | null;
+            issueDateLabel?: string | null;
+            lineItemTaxLabel?: string | null;
+            logoUrl?: string | null;
+            name: string;
+            noteDetails?: Record<string, never> | null;
+            noteLabel?: string | null;
+            paymentDetails?: Record<string, never> | null;
+            paymentEnabled?: boolean | null;
+            paymentLabel?: string | null;
+            /** Format: int32 */
+            paymentTermsDays?: number | null;
+            priceLabel?: string | null;
+            quantityLabel?: string | null;
+            sendCopy?: boolean | null;
+            size?: string | null;
+            subtotalLabel?: string | null;
+            taxLabel?: string | null;
+            /** Format: double */
+            taxRate?: number | null;
+            title?: string | null;
+            totalLabel?: string | null;
+            totalSummaryLabel?: string | null;
+            vatLabel?: string | null;
+            /** Format: double */
+            vatRate?: number | null;
+        };
         CreateProductBody: {
             currency?: string | null;
             description?: string | null;
@@ -2281,6 +2411,10 @@ export interface components {
         };
         DeclineInboxMatchResponse: {
             ok: boolean;
+        };
+        DeleteInvoiceTemplateResponse: {
+            deleted: components["schemas"]["InvoiceTemplate"];
+            newDefault?: null | components["schemas"]["InvoiceTemplate"];
         };
         DeleteTeamMemberBody: {
             teamId: string;
@@ -2551,6 +2685,63 @@ export interface components {
             invoice_count: number;
             /** Format: double */
             total_amount: number;
+        };
+        /**
+         * @description OpenAPI shape for Midday invoice templates (camelCase contract).
+         *     Runtime SQL still returns snake_case; dashboard clients deep-camelCase.
+         */
+        InvoiceTemplate: {
+            createdAt?: string | null;
+            currency?: string | null;
+            customerLabel?: string | null;
+            dateFormat?: string | null;
+            deliveryType?: string | null;
+            descriptionLabel?: string | null;
+            discountLabel?: string | null;
+            dueDateLabel?: string | null;
+            emailBody?: string | null;
+            emailButtonText?: string | null;
+            emailHeading?: string | null;
+            emailSubject?: string | null;
+            fromDetails?: Record<string, never> | null;
+            fromLabel?: string | null;
+            id: string;
+            includeDecimals?: boolean | null;
+            includeDiscount?: boolean | null;
+            includeLineItemTax?: boolean | null;
+            includePdf?: boolean | null;
+            includeQr?: boolean | null;
+            includeTax?: boolean | null;
+            includeUnits?: boolean | null;
+            includeVat?: boolean | null;
+            invoiceNoLabel?: string | null;
+            isDefault?: boolean | null;
+            issueDateLabel?: string | null;
+            lineItemTaxLabel?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
+            noteDetails?: Record<string, never> | null;
+            noteLabel?: string | null;
+            paymentDetails?: Record<string, never> | null;
+            paymentEnabled?: boolean | null;
+            paymentLabel?: string | null;
+            /** Format: int32 */
+            paymentTermsDays?: number | null;
+            priceLabel?: string | null;
+            quantityLabel?: string | null;
+            sendCopy?: boolean | null;
+            size?: string | null;
+            subtotalLabel?: string | null;
+            taxLabel?: string | null;
+            /** Format: double */
+            taxRate?: number | null;
+            teamId?: string | null;
+            title?: string | null;
+            totalLabel?: string | null;
+            totalSummaryLabel?: string | null;
+            vatLabel?: string | null;
+            /** Format: double */
+            vatRate?: number | null;
         };
         InvoicesListResponse: {
             data: Record<string, never>[];
@@ -3174,6 +3365,56 @@ export interface components {
             vatNumber?: string | null;
             website?: string | null;
             zip?: string | null;
+        };
+        UpsertInvoiceTemplateBody: {
+            currency?: string | null;
+            customerLabel?: string | null;
+            dateFormat?: string | null;
+            deliveryType?: string | null;
+            descriptionLabel?: string | null;
+            discountLabel?: string | null;
+            dueDateLabel?: string | null;
+            emailBody?: string | null;
+            emailButtonText?: string | null;
+            emailHeading?: string | null;
+            emailSubject?: string | null;
+            fromDetails?: Record<string, never> | null;
+            fromLabel?: string | null;
+            id?: string | null;
+            includeDecimals?: boolean | null;
+            includeDiscount?: boolean | null;
+            includeLineItemTax?: boolean | null;
+            includePdf?: boolean | null;
+            includeQr?: boolean | null;
+            includeTax?: boolean | null;
+            includeUnits?: boolean | null;
+            includeVat?: boolean | null;
+            invoiceNoLabel?: string | null;
+            issueDateLabel?: string | null;
+            lineItemTaxLabel?: string | null;
+            logoUrl?: string | null;
+            name?: string | null;
+            noteDetails?: Record<string, never> | null;
+            noteLabel?: string | null;
+            paymentDetails?: Record<string, never> | null;
+            paymentEnabled?: boolean | null;
+            paymentLabel?: string | null;
+            /** Format: int32 */
+            paymentTermsDays?: number | null;
+            priceLabel?: string | null;
+            quantityLabel?: string | null;
+            sendCopy?: boolean | null;
+            size?: string | null;
+            subtotalLabel?: string | null;
+            taxLabel?: string | null;
+            /** Format: double */
+            taxRate?: number | null;
+            title?: string | null;
+            totalLabel?: string | null;
+            totalSummaryLabel?: string | null;
+            vatLabel?: string | null;
+            /** Format: double */
+            vatRate?: number | null;
         };
         UpsertNotificationSettingBody: {
             channel: string;
@@ -5598,6 +5839,233 @@ export interface operations {
                 content?: never;
             };
             /** @description Recurring series not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInvoiceTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice templates for the team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTemplate"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createInvoiceTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInvoiceTemplateBody"];
+            };
+        };
+        responses: {
+            /** @description Created invoice template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTemplate"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    countInvoiceTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template count for the team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": number;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertInvoiceTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertInvoiceTemplateBody"];
+            };
+        };
+        responses: {
+            /** @description Upserted invoice template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTemplate"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice template not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceTemplateById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice template detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTemplate"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice template not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteInvoiceTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted template plus new default */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteInvoiceTemplateResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setDefaultInvoiceTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template marked as default */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceTemplate"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice template not found */
             404: {
                 headers: {
                     [name: string]: unknown;
