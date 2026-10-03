@@ -1140,6 +1140,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/account-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsAccountBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/burn-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsBurnRate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/expense": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsExpense"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/profit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsProfit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/public/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportByLinkId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/public/{link_id}/chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportChartByLinkId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsRevenue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/revenue-forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsRevenueForecast"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/runway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsRunway"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/spending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsSpending"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/tax-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getReportsTaxSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search/global": {
         parameters: {
             query?: never;
@@ -1739,6 +1931,9 @@ export interface components {
         AcceptTeamInviteBody: {
             id: string;
         };
+        AccountBalancesQuery: {
+            currency?: string | null;
+        };
         AuthenticatedViewer: {
             avatarUrl?: string | null;
             dateFormat?: string | null;
@@ -1929,6 +2124,13 @@ export interface components {
             taxRate?: number | null;
             unit?: string | null;
         };
+        CreateReportBody: {
+            currency?: string | null;
+            expireAt?: string | null;
+            from: string;
+            to: string;
+            type: string;
+        };
         CreateShortLinkBody: {
             expiresAt?: string | null;
             fileName?: string | null;
@@ -1959,6 +2161,16 @@ export interface components {
             date: string;
             name: string;
             note?: string | null;
+        };
+        CreatedReportResponse: {
+            createdAt?: string | null;
+            currency?: string | null;
+            expireAt?: string | null;
+            from?: string | null;
+            id: string;
+            linkId: string;
+            to?: string | null;
+            type?: string | null;
         };
         CustomerTagInputSchema: {
             id: string;
@@ -1992,6 +2204,12 @@ export interface components {
             stripeAccountId?: string | null;
             stripeConnectStatus?: string | null;
             subscriptionStatus?: string | null;
+        };
+        DateRangeQuery: {
+            currency?: string | null;
+            from: string;
+            revenueType?: string | null;
+            to: string;
         };
         DeclineInboxMatchBody: {
             inboxId: string;
@@ -2468,6 +2686,19 @@ export interface components {
             /** Format: int32 */
             score: number;
         };
+        PublicReportResponse: {
+            createdAt?: string | null;
+            currency?: string | null;
+            expireAt?: string | null;
+            from?: string | null;
+            id: string;
+            linkId?: string | null;
+            teamId?: string | null;
+            teamLogoUrl?: string | null;
+            teamName?: string | null;
+            to?: string | null;
+            type?: string | null;
+        };
         ReconnectBankConnectionBody: {
             expiresAt?: string | null;
             newReferenceId: string;
@@ -2481,6 +2712,17 @@ export interface components {
             summary?: string | null;
             tag?: string | null;
             title?: string | null;
+        };
+        RevenueForecastQuery: {
+            currency?: string | null;
+            /** Format: int32 */
+            forecastMonths?: number;
+            from: string;
+            revenueType?: string | null;
+            to: string;
+        };
+        RunwayQuery: {
+            currency?: string | null;
         };
         SaveLineItemAsProductBody: {
             currency?: string | null;
@@ -2517,6 +2759,14 @@ export interface components {
             id: string;
             name: string;
             teamId: string;
+        };
+        TaxSummaryQuery: {
+            categorySlug?: string | null;
+            currency?: string | null;
+            from: string;
+            taxType?: string | null;
+            to: string;
+            type: string;
         };
         TeamListItem: {
             canceledAt?: string | null;
@@ -5876,6 +6126,375 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverviewSummary"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReportBody"];
+            };
+        };
+        responses: {
+            /** @description Created shareable report row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedReportResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsAccountBalances: {
+        parameters: {
+            query?: {
+                currency?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cash account balances */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsBurnRate: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Monthly burn-rate series */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsExpense: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Expense report with recurring split */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsProfit: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Profit chart YoY payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportByLinkId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public report link id */
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public report metadata or null */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": null | components["schemas"]["PublicReportResponse"];
+                };
+            };
+        };
+    };
+    getReportChartByLinkId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public report link id */
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public report chart payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Report missing or expired */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsRevenue: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revenue chart YoY payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsRevenueForecast: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                forecastMonths?: number;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bottom-up revenue forecast */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsRunway: {
+        parameters: {
+            query?: {
+                currency?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Runway months and median burn */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsSpending: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                revenueType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category spending breakdown */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getReportsTaxSummary: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                currency?: string;
+                type: string;
+                categorySlug?: string;
+                taxType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tax summary rollup */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */

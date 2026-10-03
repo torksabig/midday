@@ -4,6 +4,7 @@ import { Icons } from "@midday/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatedNumber } from "@/components/animated-number";
 import { StackedBarChart } from "@/components/charts/stacked-bar-chart";
+import { reportsExpenseQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -26,12 +27,16 @@ export function ExpensesCard({
 }: ExpensesCardProps) {
   const trpc = useTRPC();
 
+  const expenseParams = {
+    from,
+    to,
+    currency: currency,
+  };
   const { data: expenseData, isPending } = useQuery(
-    trpc.reports.expense.queryOptions({
-      from,
-      to,
-      currency: currency,
-    }),
+    reportsExpenseQueryOptions(
+      trpc.reports.expense.queryKey(expenseParams),
+      expenseParams,
+    ),
   );
 
   const averageExpense = expenseData?.summary?.averageExpense ?? 0;

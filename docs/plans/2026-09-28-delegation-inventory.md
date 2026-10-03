@@ -10,7 +10,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 
 | Procedure path | Delegated? | Notes |
 | --- | --- | --- |
-| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update + user.invites, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview/create + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers) plus update/match/confirmMatch/declineMatch/unmatch + blocklist get/create/delete, documents get/getById/getRelatedDocuments/checkAttachments, customers get/getById/getInvoiceSummary plus upsert/delete/togglePortal/cancelEnrichment/clearEnrichment, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount plus draft/update/delete/duplicate, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, search.global, invoiceProducts get/getById/create/updateProduct/delete/incrementUsage/saveLineItemAsProduct, and team invites/connectionStatus + accept/decline/deleteInvite + updateMember/deleteMember. Hybrid stays on tRPC: `inbox.delete`/`deleteMany` (storage remove), `team.invite` (Trigger email), `customers.enrich` (Trigger job), `invoice.create` (send/schedule Trigger), `documents.delete` (vault storage), `documents.reprocessDocument` (process-document job), gated decrypt, `bankConnections.delete` (Trigger teardown). |
+| **Direct dashboard cutover** | **reads + writes** | Dashboard now calls Rust directly for overview, identity/team shell (current + members + list + update), user update + user.invites, invoice defaults, notifications (+ status), notification settings preferences/update, categories list/getById/create/update/delete, bank accounts list/create/update/delete/balances/currencies/transaction-count, bank connections get/reconnect, tags list/create/update/delete, transaction-tag assignment create/delete, transactions list/getById/review-count plus update/updateMany/deleteMany/moveToReview/create + getSimilarTransactions/searchTransactionMatch, inbox get/getById/checkAttachments (+ search/getByStatus helpers) plus update/match/confirmMatch/declineMatch/unmatch + blocklist get/create/delete, documents get/getById/getRelatedDocuments/checkAttachments, customers get/getById/getInvoiceSummary plus upsert/delete/togglePortal/cancelEnrichment/clearEnrichment, invoices get/getById/paymentStatus/invoiceSummary + mostActiveClient/inactiveClientsCount/topRevenueClient/newCustomersCount plus draft/update/delete/duplicate, trackerEntries getTimerStatus/getCurrentTimer/startTimer/stopTimer/byRange/byDate/getBillableHours/upsert/delete, trackerProjects get/getById/upsert/delete, documentTags get/create/delete, documentTagAssignments create/delete, institutions get/updateUsage, shortLinks.get, apiKeys get/delete, apps get/disconnect/update, search.global, invoiceProducts get/getById/create/updateProduct/delete/incrementUsage/saveLineItemAsProduct, reports revenue/profit/burnRate/runway/expense/spending/taxSummary/getAccountBalances/revenueForecast/getByLinkId/getChartDataByLinkId/create, and team invites/connectionStatus + accept/decline/deleteInvite + updateMember/deleteMember. Hybrid stays on tRPC: `inbox.delete`/`deleteMany` (storage remove), `team.invite` (Trigger email), `customers.enrich` (Trigger job), `invoice.create` (send/schedule Trigger), `documents.delete` (vault storage), `documents.reprocessDocument` (process-document job), gated decrypt, `bankConnections.delete` (Trigger teardown). |
 | `user.me` | direct Rust | read · identity; dashboard calls `GET /api/v1/auth/me` with the Supabase session JWT; update/switch/delete mutations stay on the temporary path |
 | `user.update` | direct Rust | **write** · preference fields PUT `/api/v1/user` (AP-21); dashboard calls Rust directly; no Supabase admin / email |
 | `user.switchTeam` | yes | **write** · DB switch + cache invalidate Node (AP-52) |
@@ -188,18 +188,18 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `accounting.*` (other) | no | getAccounts (external provider) |
 | `search.global` | direct Rust | read · `global_search()` RPC; cmd-k + layout prefetch call `GET /api/v1/search/global` directly |
 | `search.attachments` | yes | read · inbox ILIKE + invoice list (Phase 5 slice 4) |
-| `reports.revenue` | yes | read · chart YoY (Phase 5 slice 3) |
-| `reports.profit` | yes | read · chart YoY |
-| `reports.burnRate` | yes | read · monthly burn |
-| `reports.runway` | yes | read · median burn × cash |
-| `reports.expense` | yes | read · recurring split |
-| `reports.spending` | yes | read · category breakdown |
-| `reports.taxSummary` | yes | read · VAT-style rollup |
-| `reports.getAccountBalances` | yes | read · cash accounts |
-| `reports.revenueForecast` | yes | read · bottom-up forecast (Phase 5 slice 4) |
-| `reports.getByLinkId` | yes | public share · no auth (Phase 5 slice 4) |
-| `reports.getChartDataByLinkId` | yes | public chart · no auth (Phase 5 slice 4) |
-| `reports.create` | yes | **write** · insert share link; shortUrl in Node (AP-40) |
+| `reports.revenue` | direct Rust | read · chart YoY; dashboard calls `GET /api/v1/reports/revenue` |
+| `reports.profit` | direct Rust | read · chart YoY; dashboard calls `GET /api/v1/reports/profit` |
+| `reports.burnRate` | direct Rust | read · monthly burn; dashboard calls `GET /api/v1/reports/burn-rate` |
+| `reports.runway` | direct Rust | read · median burn × cash; dashboard calls `GET /api/v1/reports/runway` |
+| `reports.expense` | direct Rust | read · recurring split; dashboard calls `GET /api/v1/reports/expense` |
+| `reports.spending` | direct Rust | read · category breakdown; dashboard calls `GET /api/v1/reports/spending` |
+| `reports.taxSummary` | direct Rust | read · VAT-style rollup; OpenAPI + client ready (invalidate-only UI sites) |
+| `reports.getAccountBalances` | direct Rust | read · cash accounts; dashboard calls `GET /api/v1/reports/account-balances` |
+| `reports.revenueForecast` | direct Rust | read · bottom-up forecast; dashboard calls `GET /api/v1/reports/revenue-forecast` |
+| `reports.getByLinkId` | direct Rust | public share · no auth; dashboard calls `GET /api/v1/reports/public/{linkId}` |
+| `reports.getChartDataByLinkId` | direct Rust | public chart · no auth; dashboard calls `GET /api/v1/reports/public/{linkId}/chart` |
+| `reports.create` | direct Rust | **write** · insert share link (`linkId`); dashboard builds `/r/{linkId}` client-side |
 | `tags.get` | direct Rust | read · transaction tag list (Phase 11); dashboard calls `GET /api/v1/tags` directly and preserves the old React Query cache key |
 | `tags.create` | direct Rust | **write** · insert tag (AP-22); dashboard calls `POST /api/v1/tags` directly and preserves the old React Query cache key |
 | `tags.update` | direct Rust | **write** · rename tag (AP-22); dashboard calls `PUT /api/v1/tags/:id` directly and preserves the old React Query cache key |
@@ -510,7 +510,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
 | AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H5a DONE** (`invoiceProducts.*` OpenAPI + dashboard cutover; upsert helper ready, no UI sites). Next: `reports.*` SQL reads + `invoiceRecurring` SQL pieces. Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
+**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H5b DONE** (`reports.*` SQL reads + create). Next: `invoiceRecurring` SQL pieces (list/get/getUpcoming/resume; leave pause/delete hybrid for BullMQ). Remains gated: decrypt/encrypt, Resend, OAuth, Stripe/Polar, accounting provider HTTP, Stage 4 decommission. AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

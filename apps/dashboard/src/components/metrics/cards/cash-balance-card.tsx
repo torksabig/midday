@@ -7,6 +7,7 @@ import {
   CashBalanceDonutChart,
   grayShades,
 } from "@/components/charts/cash-balance-donut-chart";
+import { reportsAccountBalancesQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -24,8 +25,12 @@ export function CashBalanceCard({
 }: CashBalanceCardProps) {
   const trpc = useTRPC();
 
+  const balanceParams = { currency };
   const { data, isPending } = useQuery(
-    trpc.reports.getAccountBalances.queryOptions({ currency }),
+    reportsAccountBalancesQueryOptions(
+      trpc.reports.getAccountBalances.queryKey(balanceParams),
+      balanceParams,
+    ),
   );
 
   const totalBalance = data?.result?.totalBalance ?? 0;

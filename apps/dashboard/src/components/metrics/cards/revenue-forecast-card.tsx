@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { formatChartMonth } from "@/components/charts/chart-utils";
 import { RevenueForecastChart } from "@/components/charts/revenue-forecast-chart";
+import { reportsRevenueForecastQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -30,14 +31,18 @@ export function RevenueForecastCard({
 }: RevenueForecastCardProps) {
   const trpc = useTRPC();
 
+  const forecastParams = {
+    from,
+    to,
+    forecastMonths: 6,
+    currency: currency,
+    revenueType,
+  };
   const { data: revenueForecastData } = useQuery(
-    trpc.reports.revenueForecast.queryOptions({
-      from,
-      to,
-      forecastMonths: 6,
-      currency: currency,
-      revenueType,
-    }),
+    reportsRevenueForecastQueryOptions(
+      trpc.reports.revenueForecast.queryKey(forecastParams),
+      forecastParams,
+    ),
   );
 
   // Transform revenue forecast data with enhanced fields

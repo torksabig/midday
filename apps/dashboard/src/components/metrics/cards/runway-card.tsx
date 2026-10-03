@@ -7,6 +7,10 @@ import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RunwayChart } from "@/components/charts/runway-chart";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  reportsAccountBalancesQueryOptions,
+  reportsRunwayQueryOptions,
+} from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -39,16 +43,20 @@ export function RunwayCard({
     };
   }, []);
 
+  const runwayParams = { currency: currency };
   const { data: runwayData, isPending: isRunwayPending } = useQuery(
-    trpc.reports.runway.queryOptions({
-      currency: currency,
-    }),
+    reportsRunwayQueryOptions(
+      trpc.reports.runway.queryKey(runwayParams),
+      runwayParams,
+    ),
   );
 
+  const balanceParams = { currency: currency };
   const { data: cashBalanceData, isPending: isBalancePending } = useQuery(
-    trpc.reports.getAccountBalances.queryOptions({
-      currency: currency,
-    }),
+    reportsAccountBalancesQueryOptions(
+      trpc.reports.getAccountBalances.queryKey(balanceParams),
+      balanceParams,
+    ),
   );
 
   const isAnyPending = isRunwayPending || isBalancePending;

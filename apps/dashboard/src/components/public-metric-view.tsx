@@ -18,6 +18,7 @@ import { RevenueForecastChart } from "@/components/charts/revenue-forecast-chart
 import { RunwayChart } from "@/components/charts/runway-chart";
 import { StackedBarChart } from "@/components/charts/stacked-bar-chart";
 import type { ReportType } from "@/components/metrics/utils/chart-types";
+import { reportChartByLinkIdQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 
@@ -95,7 +96,10 @@ function BurnRateChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const burnRateData =
@@ -168,7 +172,10 @@ function MonthlyRevenueChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const revenueData =
@@ -246,7 +253,10 @@ function ProfitChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const profitData =
@@ -305,7 +315,10 @@ function ExpensesChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const expenseData =
@@ -363,7 +376,10 @@ function RevenueForecastChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const revenueForecastData =
@@ -456,7 +472,10 @@ function RunwayChartView({ linkId }: { linkId: string }) {
   const hasInitializedRef = useRef<boolean>(false);
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const runwayChartResponse =
@@ -580,7 +599,10 @@ function CategoryExpensesChartView({ linkId }: { linkId: string }) {
   const trpc = useTRPC();
 
   const { data: chartData } = useQuery(
-    trpc.reports.getChartDataByLinkId.queryOptions({ linkId }),
+    reportChartByLinkIdQueryOptions(
+      trpc.reports.getChartDataByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   const spendingData =

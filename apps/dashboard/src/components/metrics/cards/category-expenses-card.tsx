@@ -7,6 +7,7 @@ import {
   CategoryExpenseDonutChart,
   grayShades,
 } from "@/components/charts/category-expense-donut-chart";
+import { reportsSpendingQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
@@ -30,13 +31,17 @@ export function CategoryExpensesCard({
 }: CategoryExpensesCardProps) {
   const trpc = useTRPC();
 
+  const spendingParams = {
+    from,
+    to,
+    currency: currency,
+  };
   // Get spending data for categories
   const { data: spendingData, isPending } = useQuery(
-    trpc.reports.spending.queryOptions({
-      from,
-      to,
-      currency: currency,
-    }),
+    reportsSpendingQueryOptions(
+      trpc.reports.spending.queryKey(spendingParams),
+      spendingParams,
+    ),
   );
 
   const categoryDonutChartData = useMemo(() => {

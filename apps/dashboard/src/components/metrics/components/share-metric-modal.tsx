@@ -23,7 +23,7 @@ import { FaXTwitter } from "react-icons/fa6";
 import { CopyInput } from "@/components/copy-input";
 import { OpenURL } from "@/components/open-url";
 import { useUserQuery } from "@/hooks/use-user";
-import { useTRPC } from "@/trpc/client";
+import { createReportFromRust } from "@/lib/rust-api/reports-client";
 import { getUrl } from "@/utils/environment";
 import type { ReportType } from "../utils/chart-types";
 
@@ -45,14 +45,13 @@ export function ShareMetricModal({
   currency,
 }: ShareMetricModalProps) {
   const { data: user } = useUserQuery();
-  const trpc = useTRPC();
   const [expireAt, setExpireAt] = useState<Date | undefined>(
     addDays(new Date(), 30),
   );
 
-  const createReportMutation = useMutation(
-    trpc.reports.create.mutationOptions(),
-  );
+  const createReportMutation = useMutation({
+    mutationFn: createReportFromRust,
+  });
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {

@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { BurnRateChart } from "@/components/charts/burn-rate-chart";
 import { formatChartMonth } from "@/components/charts/chart-utils";
+import { reportsBurnRateQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -27,12 +28,16 @@ export function BurnRateCard({
 }: BurnRateCardProps) {
   const trpc = useTRPC();
 
+  const burnRateParams = {
+    from,
+    to,
+    currency: currency,
+  };
   const { data: burnRateData } = useQuery(
-    trpc.reports.burnRate.queryOptions({
-      from,
-      to,
-      currency: currency,
-    }),
+    reportsBurnRateQueryOptions(
+      trpc.reports.burnRate.queryKey(burnRateParams),
+      burnRateParams,
+    ),
   );
 
   // Transform burn rate data

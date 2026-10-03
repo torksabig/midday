@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { formatChartMonth } from "@/components/charts/chart-utils";
 import { MonthlyRevenueChart } from "@/components/charts/monthly-revenue-chart";
+import { reportsRevenueQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -29,13 +30,17 @@ export function MonthlyRevenueCard({
 }: MonthlyRevenueCardProps) {
   const trpc = useTRPC();
 
+  const revenueParams = {
+    from,
+    to,
+    currency: currency,
+    revenueType,
+  };
   const { data: revenueData } = useQuery(
-    trpc.reports.revenue.queryOptions({
-      from,
-      to,
-      currency: currency,
-      revenueType,
-    }),
+    reportsRevenueQueryOptions(
+      trpc.reports.revenue.queryKey(revenueParams),
+      revenueParams,
+    ),
   );
 
   // Transform revenue data

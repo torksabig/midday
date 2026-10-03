@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 import { getChartDisplayName } from "@/components/metrics/utils/chart-types";
+import { reportByLinkIdServerQueryOptions } from "@/lib/rust-api/reports-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 export const contentType = "image/png";
@@ -20,7 +21,10 @@ export default async function Image({ params }: Props) {
   const queryClient = getQueryClient();
 
   const report = await queryClient.fetchQuery(
-    trpc.reports.getByLinkId.queryOptions({ linkId }),
+    reportByLinkIdServerQueryOptions(
+      trpc.reports.getByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   if (!report) {

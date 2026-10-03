@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { AnimatedNumber } from "@/components/animated-number";
 import { formatChartMonth } from "@/components/charts/chart-utils";
 import { ProfitChart } from "@/components/charts/profit-chart";
+import { reportsProfitQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { ChartFadeIn } from "../components/chart-loading-overlay";
 import { DragIndicator } from "../components/drag-indicator";
@@ -30,13 +31,17 @@ export function ProfitCard({
 }: ProfitCardProps) {
   const trpc = useTRPC();
 
+  const profitParams = {
+    from,
+    to,
+    currency: currency,
+    revenueType,
+  };
   const { data: profitData } = useQuery(
-    trpc.reports.profit.queryOptions({
-      from,
-      to,
-      currency: currency,
-      revenueType,
-    }),
+    reportsProfitQueryOptions(
+      trpc.reports.profit.queryKey(profitParams),
+      profitParams,
+    ),
   );
 
   // Transform profit data

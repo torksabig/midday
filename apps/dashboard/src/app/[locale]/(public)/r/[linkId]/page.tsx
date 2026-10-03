@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getChartDisplayName } from "@/components/metrics/utils/chart-types";
 import { PublicMetricView } from "@/components/public-metric-view";
+import { reportByLinkIdServerQueryOptions } from "@/lib/rust-api/reports-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 // Cache the page for 1 hour (3600 seconds)
@@ -20,7 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const queryClient = getQueryClient();
 
   const report = await queryClient.fetchQuery(
-    trpc.reports.getByLinkId.queryOptions({ linkId }),
+    reportByLinkIdServerQueryOptions(
+      trpc.reports.getByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   if (!report) {
@@ -60,7 +64,10 @@ export default async function Page({ params }: Props) {
   const queryClient = getQueryClient();
 
   const report = await queryClient.fetchQuery(
-    trpc.reports.getByLinkId.queryOptions({ linkId }),
+    reportByLinkIdServerQueryOptions(
+      trpc.reports.getByLinkId.queryKey({ linkId }),
+      linkId,
+    ),
   );
 
   if (!report) {
