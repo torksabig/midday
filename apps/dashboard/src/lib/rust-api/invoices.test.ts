@@ -5,6 +5,7 @@ import {
   buildInvoicesListQuery,
   deepCamelCaseKeys,
   normalizeAverageInvoiceSize,
+  normalizeInvoiceDetail,
   normalizeInvoicePaymentStatus,
   normalizeInvoiceSummary,
   normalizeInvoicesList,
@@ -176,6 +177,34 @@ test("invoice write helpers expose camelCase update/duplicate shapes", () => {
 
   expect(update.status).toBe("paid");
   expect(duplicate.invoiceNumber).toBe("INV-0002");
+});
+
+test("normalizes public invoice-by-token detail payload", () => {
+  const invoice = normalizeInvoiceDetail({
+    id: "inv-1",
+    invoice_number: "INV-0001",
+    status: "unpaid",
+    customer: {
+      portal_enabled: true,
+      portal_id: "portal-1",
+      billing_email: "a@example.com",
+    },
+    team: { name: "Acme", stripe_connected: true },
+    template: { size: "a4", payment_enabled: true },
+  });
+
+  expect(invoice).toMatchObject({
+    id: "inv-1",
+    invoiceNumber: "INV-0001",
+    status: "unpaid",
+    customer: {
+      portalEnabled: true,
+      portalId: "portal-1",
+      billingEmail: "a@example.com",
+    },
+    team: { name: "Acme", stripeConnected: true },
+    template: { size: "a4", paymentEnabled: true },
+  });
 });
 
 test("normalizes search invoice number and average invoice size", () => {

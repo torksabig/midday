@@ -430,6 +430,28 @@ export async function fetchInvoiceById(
   return normalizeInvoiceDetail(await response.json());
 }
 
+/** Public — no auth. Midday `invoice.getInvoiceByToken` (JWT verified on Rust). */
+export async function fetchInvoiceByToken(
+  baseUrl: string,
+  token: string,
+): Promise<Invoice | null> {
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoices/by-token/${encodeURIComponent(token)}`,
+    { signal: AbortSignal.timeout(8_000) },
+  );
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return normalizeInvoiceDetail(await response.json());
+}
+
 export async function fetchInvoicePaymentStatus(
   baseUrl: string,
   accessToken: string | null,

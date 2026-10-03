@@ -1,5 +1,6 @@
 import { isValidLogoUrl, OgTemplate } from "@midday/invoice";
 import { ImageResponse } from "next/og";
+import { invoiceByTokenServerQueryOptions } from "@/lib/rust-api/invoices-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 import { getWebsiteLogo } from "@/utils/logos";
 
@@ -14,9 +15,10 @@ export default async function Image({ params }: Props) {
   const queryClient = getQueryClient();
 
   const invoice = await queryClient.fetchQuery(
-    trpc.invoice.getInvoiceByToken.queryOptions({
+    invoiceByTokenServerQueryOptions(
+      trpc.invoice.getInvoiceByToken.queryKey({ token }),
       token,
-    }),
+    ),
   );
 
   if (!invoice) {

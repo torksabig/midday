@@ -8,6 +8,7 @@ import {
 import { getServerRequestContext } from "@/trpc/request-context";
 import {
   type AverageInvoiceSize,
+  type Invoice,
   type InvoicePaymentStatus,
   type InvoiceSummary,
   type InvoiceSummaryParams,
@@ -17,6 +18,7 @@ import {
   type TopRevenueClient,
   fetchInvoiceAverageDaysToPayment,
   fetchInvoiceAverageInvoiceSize,
+  fetchInvoiceByToken,
   fetchInvoiceInactiveClientsCount,
   fetchInvoiceMostActiveClient,
   fetchInvoiceNewCustomersCount,
@@ -169,5 +171,17 @@ export function invoiceAverageInvoiceSizeServerQueryOptions(
         session?.access_token ?? null,
       );
     },
+  });
+}
+
+/** Public — no auth. Midday `invoice.getInvoiceByToken`. */
+export function invoiceByTokenServerQueryOptions(
+  queryKey: QueryKey,
+  token: string,
+) {
+  return queryOptions({
+    queryKey,
+    queryFn: async (): Promise<Invoice | null> =>
+      fetchInvoiceByToken(getRustApiUrl(), token),
   });
 }

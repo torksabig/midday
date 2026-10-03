@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { SearchParams } from "nuqs";
 import { InvoiceViewWrapper } from "@/components/invoice-view-wrapper";
+import { invoiceByTokenServerQueryOptions } from "@/lib/rust-api/invoices-server";
 import { getQueryClient, trpc } from "@/trpc/server";
 
 export async function generateMetadata(props: {
@@ -15,9 +16,12 @@ export async function generateMetadata(props: {
 
   try {
     const invoice = await queryClient.fetchQuery(
-      trpc.invoice.getInvoiceByToken.queryOptions({
-        token: params.token,
-      }),
+      invoiceByTokenServerQueryOptions(
+        trpc.invoice.getInvoiceByToken.queryKey({
+          token: params.token,
+        }),
+        params.token,
+      ),
     );
 
     if (!invoice) {
@@ -91,9 +95,12 @@ export default async function Page(props: Props) {
   const queryClient = getQueryClient();
 
   const invoice = await queryClient.fetchQuery(
-    trpc.invoice.getInvoiceByToken.queryOptions({
-      token: params.token,
-    }),
+    invoiceByTokenServerQueryOptions(
+      trpc.invoice.getInvoiceByToken.queryKey({
+        token: params.token,
+      }),
+      params.token,
+    ),
   );
 
   if (!invoice) {
