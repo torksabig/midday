@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFormContext } from "react-hook-form";
+import { saveLineItemAsProductFromRust } from "@/lib/rust-api/invoice-products-client";
 import { useTRPC } from "@/trpc/client";
 import { Input } from "./input";
 
@@ -27,16 +28,14 @@ export function ProductAwareUnitInput({
   const currency = watch("template.currency");
 
   // Mutation for saving line item as product
-  const saveLineItemAsProductMutation = useMutation(
-    trpc.invoiceProducts.saveLineItemAsProduct.mutationOptions({
-      onSuccess: () => {
-        // Invalidate products query to get fresh data
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const saveLineItemAsProductMutation = useMutation({
+    mutationFn: saveLineItemAsProductFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+    },
+  });
 
   const handleUnitBlur = () => {
     // Only save if we have a productId (meaning this line item references an existing product)

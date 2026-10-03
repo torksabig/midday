@@ -29,7 +29,14 @@ export class RustApiError extends Error {
     super(message);
     this.name = "RustApiError";
     this.data = {
-      code: status === 401 ? "UNAUTHORIZED" : "INTERNAL_SERVER_ERROR",
+      code:
+        status === 401
+          ? "UNAUTHORIZED"
+          : status === 409
+            ? "CONFLICT"
+            : status === 404
+              ? "NOT_FOUND"
+              : "INTERNAL_SERVER_ERROR",
     };
   }
 }

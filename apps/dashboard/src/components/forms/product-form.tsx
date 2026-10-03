@@ -22,6 +22,11 @@ import { SelectCurrency } from "@/components/select-currency";
 import { useProductParams } from "@/hooks/use-product-params";
 import { useTeamQuery } from "@/hooks/use-team";
 import { useZodForm } from "@/hooks/use-zod-form";
+import {
+  createInvoiceProductFromRust,
+  updateInvoiceProductFromRust,
+} from "@/lib/rust-api/invoice-products-client";
+import { RustApiError } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -60,61 +65,56 @@ export function ProductForm({ data, defaultCurrency }: Props) {
     },
   });
 
-  const createProductMutation = useMutation(
-    trpc.invoiceProducts.create.mutationOptions({
-      onSuccess: () => {
+  const createProductMutation = useMutation({
+    mutationFn: createInvoiceProductFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+      setParams(null);
+    },
+    onError: (error) => {
+      let message = error.message;
+
+      if (error instanceof RustApiError && error.data?.code === "CONFLICT") {
+        message =
+          "A product with this name already exists. Please choose a different name.";
+      }
+
+      form.setError("name", {
+        type: "manual",
+        message,
+      });
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: updateInvoiceProductFromRust,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+      if (result?.id) {
         queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
+          queryKey: trpc.invoiceProducts.getById.queryKey({ id: result.id }),
         });
-        setParams(null);
-      },
-      onError: (error) => {
-        // Handle different error types based on tRPC error codes
-        let message = error.message;
+      }
+      setParams(null);
+    },
+    onError: (error) => {
+      let message = error.message;
 
-        if (error.data?.code === "CONFLICT") {
-          message =
-            "A product with this name already exists. Please choose a different name.";
-        }
+      if (error instanceof RustApiError && error.data?.code === "CONFLICT") {
+        message =
+          "A product with this name already exists. Please choose a different name.";
+      }
 
-        form.setError("name", {
-          type: "manual",
-          message,
-        });
-      },
-    }),
-  );
-
-  const updateProductMutation = useMutation(
-    trpc.invoiceProducts.updateProduct.mutationOptions({
-      onSuccess: (result) => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
-        });
-        // Invalidate the specific product query
-        if (result?.id) {
-          queryClient.invalidateQueries({
-            queryKey: trpc.invoiceProducts.getById.queryKey({ id: result.id }),
-          });
-        }
-        setParams(null);
-      },
-      onError: (error) => {
-        // Handle different error types based on tRPC error codes
-        let message = error.message;
-
-        if (error.data?.code === "CONFLICT") {
-          message =
-            "A product with this name already exists. Please choose a different name.";
-        }
-
-        form.setError("name", {
-          type: "manual",
-          message,
-        });
-      },
-    }),
-  );
+      form.setError("name", {
+        type: "manual",
+        message,
+      });
+    },
+  });
 
   const onSubmit = (values: FormData) => {
     const { id, ...productData } = values;

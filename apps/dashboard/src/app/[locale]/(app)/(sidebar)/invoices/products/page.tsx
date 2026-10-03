@@ -4,28 +4,36 @@ import { Suspense } from "react";
 import { ErrorFallback } from "@/components/error-fallback";
 import { ProductsSkeleton } from "@/components/tables/products/skeleton";
 import { DataTable } from "@/components/tables/products/table";
-import { prefetch, trpc } from "@/trpc/server";
+import { invoiceProductsServerQueryOptions } from "@/lib/rust-api/invoice-products-server";
+import { batchPrefetch, HydrateClient, trpc } from "@/trpc/server";
 
 export const metadata: Metadata = {
   title: "Products | Midday",
 };
 
 export default function Page() {
-  prefetch(
-    trpc.invoiceProducts.get.queryOptions({
-      sortBy: "recent",
-      limit: 100,
-      includeInactive: true,
-    }),
-  );
+  const listParams = {
+    sortBy: "recent" as const,
+    limit: 100,
+    includeInactive: true,
+  };
+
+  batchPrefetch([
+    invoiceProductsServerQueryOptions(
+      trpc.invoiceProducts.get.queryKey(listParams),
+      listParams,
+    ),
+  ] as Parameters<typeof batchPrefetch>[0]);
 
   return (
-    <div className="max-w-screen-lg">
-      <ErrorBoundary errorComponent={ErrorFallback}>
-        <Suspense fallback={<ProductsSkeleton />}>
-          <DataTable />
-        </Suspense>
-      </ErrorBoundary>
-    </div>
+    <HydrateClient>
+      <div className="max-w-screen-lg">
+        <ErrorBoundary errorComponent={ErrorFallback}>
+          <Suspense fallback={<ProductsSkeleton />}>
+            <DataTable />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+    </HydrateClient>
   );
 }

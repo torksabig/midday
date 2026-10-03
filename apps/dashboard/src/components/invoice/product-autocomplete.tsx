@@ -13,6 +13,11 @@ import {
 } from "react";
 import { useFormContext } from "react-hook-form";
 import { useProductParams } from "@/hooks/use-product-params";
+import {
+  incrementInvoiceProductUsageFromRust,
+  invoiceProductsQueryOptions,
+  saveLineItemAsProductFromRust,
+} from "@/lib/rust-api/invoice-products-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 
@@ -70,60 +75,51 @@ export function ProductAutocomplete({
   const maximumFractionDigits = includeDecimals ? 2 : 0;
 
   // Mutation for saving line item as product
-  const saveLineItemAsProductMutation = useMutation(
-    trpc.invoiceProducts.saveLineItemAsProduct.mutationOptions({
-      onSuccess: (result) => {
-        // Invalidate products query to get fresh data
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
+  const saveLineItemAsProductMutation = useMutation({
+    mutationFn: saveLineItemAsProductFromRust,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+
+      if (result.shouldClearProductId) {
+        setValue(`lineItems.${index}.productId`, undefined, {
+          shouldValidate: true,
+          shouldDirty: true,
         });
 
-        if (result.shouldClearProductId) {
-          // Clear the old product reference (name was removed or changed)
-          setValue(`lineItems.${index}.productId`, undefined, {
-            shouldValidate: true,
-            shouldDirty: true,
-          });
-
-          // If we found/created a new product, set the new reference
-          if (result.product) {
-            setValue(`lineItems.${index}.productId`, result.product.id, {
-              shouldValidate: true,
-              shouldDirty: true,
-            });
-          }
-        } else if (result.product && !currentProductId) {
-          // Set the product reference if we saved/found a product
+        if (result.product) {
           setValue(`lineItems.${index}.productId`, result.product.id, {
             shouldValidate: true,
             shouldDirty: true,
           });
         }
-      },
-    }),
-  );
+      } else if (result.product && !currentProductId) {
+        setValue(`lineItems.${index}.productId`, result.product.id, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
+      }
+    },
+  });
 
   // Mutation for incrementing usage count when product is selected
-  const incrementUsageMutation = useMutation(
-    trpc.invoiceProducts.incrementUsage.mutationOptions({
-      onSuccess: () => {
-        // Invalidate products query to get fresh usage counts
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const incrementUsageMutation = useMutation({
+    mutationFn: incrementInvoiceProductUsageFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+    },
+  });
 
   // Get all products for client-side filtering
+  const listParams = { currency };
   const { data: allProducts = [] } = useQuery(
-    trpc.invoiceProducts.get.queryOptions(
-      {
-        currency,
-      },
-      {
-        staleTime: 300000, // Cache for 5 minutes
-      },
+    invoiceProductsQueryOptions(
+      trpc.invoiceProducts.get.queryKey(listParams),
+      listParams,
+      { staleTime: 300000 },
     ),
   );
 

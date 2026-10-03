@@ -22,6 +22,10 @@ import { Sheet, SheetContent, SheetHeader } from "@midday/ui/sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useProductParams } from "@/hooks/use-product-params";
 import { useTeamQuery } from "@/hooks/use-team";
+import {
+  deleteInvoiceProductFromRust,
+  invoiceProductByIdQueryOptions,
+} from "@/lib/rust-api/invoice-products-client";
 import { useTRPC } from "@/trpc/client";
 import { ProductForm } from "../forms/product-form";
 
@@ -34,34 +38,30 @@ export function ProductEditSheet() {
 
   const isOpen = Boolean(productId);
 
-  const { data: product } = useQuery(
-    trpc.invoiceProducts.getById.queryOptions(
-      { id: productId! },
-      {
-        enabled: isOpen,
-        placeholderData: () => {
-          const pages = queryClient
-            .getQueriesData({ queryKey: trpc.invoiceProducts.get.queryKey() })
-            // @ts-expect-error
-            .flatMap(([, data]) => data?.pages ?? [])
-            .flatMap((page) => page.data ?? []);
-
-          return pages.find((d) => d.id === productId);
-        },
-      },
+  const { data: product } = useQuery({
+    ...invoiceProductByIdQueryOptions(
+      trpc.invoiceProducts.getById.queryKey({ id: productId! }),
+      productId!,
+      { enabled: isOpen },
     ),
-  );
+    placeholderData: () => {
+      const lists = queryClient
+        .getQueriesData({ queryKey: trpc.invoiceProducts.get.queryKey() })
+        .flatMap(([, data]) => (Array.isArray(data) ? data : []));
 
-  const deleteProductMutation = useMutation(
-    trpc.invoiceProducts.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
-        });
-        setParams(null);
-      },
-    }),
-  );
+      return lists.find((d) => d.id === productId);
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteInvoiceProductFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+      setParams(null);
+    },
+  });
 
   return (
     <Sheet open={isOpen} onOpenChange={() => setParams(null)}>

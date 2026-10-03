@@ -22,6 +22,10 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useProductParams } from "@/hooks/use-product-params";
+import {
+  deleteInvoiceProductFromRust,
+  invoiceProductsQueryOptions,
+} from "@/lib/rust-api/invoice-products-client";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "./columns";
 import { Header } from "./header";
@@ -31,23 +35,27 @@ export function DataTable() {
   const queryClient = useQueryClient();
   const { setParams } = useProductParams();
 
+  const listParams = {
+    sortBy: "recent" as const,
+    limit: 100,
+    includeInactive: true,
+  };
+
   const { data } = useSuspenseQuery(
-    trpc.invoiceProducts.get.queryOptions({
-      sortBy: "recent",
-      limit: 100,
-      includeInactive: true,
-    }),
+    invoiceProductsQueryOptions(
+      trpc.invoiceProducts.get.queryKey(listParams),
+      listParams,
+    ),
   );
 
-  const deleteProductMutation = useMutation(
-    trpc.invoiceProducts.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceProducts.get.queryKey(),
-        });
-      },
-    }),
-  );
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteInvoiceProductFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceProducts.get.queryKey(),
+      });
+    },
+  });
 
   const table = useReactTable({
     data: data ?? [],

@@ -724,6 +724,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/invoice-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInvoiceProducts"];
+        put?: never;
+        post: operations["createInvoiceProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-products/save-line-item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["saveLineItemAsProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-products/upsert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["upsertInvoiceProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInvoiceProductById"];
+        put: operations["updateInvoiceProduct"];
+        post?: never;
+        delete: operations["deleteInvoiceProduct"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-products/{id}/increment-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["incrementInvoiceProductUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices": {
         parameters: {
             query?: never;
@@ -1838,6 +1918,17 @@ export interface components {
             type: string;
             value: string;
         };
+        CreateProductBody: {
+            currency?: string | null;
+            description?: string | null;
+            isActive?: boolean | null;
+            name: string;
+            /** Format: double */
+            price?: number | null;
+            /** Format: double */
+            taxRate?: number | null;
+            unit?: string | null;
+        };
         CreateShortLinkBody: {
             expiresAt?: string | null;
             fileName?: string | null;
@@ -2140,6 +2231,28 @@ export interface components {
             locale?: string | null;
             timezone?: string | null;
         };
+        InvoiceProduct: {
+            createdAt?: string | null;
+            createdBy?: string | null;
+            currency?: string | null;
+            description?: string | null;
+            id: string;
+            isActive?: boolean | null;
+            lastUsedAt?: string | null;
+            name: string;
+            /** Format: double */
+            price?: number | null;
+            /** Format: double */
+            taxRate?: number | null;
+            teamId?: string | null;
+            unit?: string | null;
+            updatedAt?: string | null;
+            /** Format: int64 */
+            usageCount?: number | null;
+        };
+        InvoiceProductSuccessResponse: {
+            success: boolean;
+        };
         InvoiceSummaryBreakdownRow: {
             /** Format: double */
             converted_amount: number;
@@ -2165,6 +2278,13 @@ export interface components {
             email?: string | null;
             id: string;
             name?: string | null;
+        };
+        ListProductsQuery: {
+            currency?: string | null;
+            includeInactive?: boolean | null;
+            /** Format: int64 */
+            limit?: number | null;
+            sortBy?: string | null;
         };
         MatchInboxBody: {
             transactionId: string;
@@ -2361,6 +2481,18 @@ export interface components {
             summary?: string | null;
             tag?: string | null;
             title?: string | null;
+        };
+        SaveLineItemAsProductBody: {
+            currency?: string | null;
+            name: string;
+            /** Format: double */
+            price?: number | null;
+            productId?: string | null;
+            unit?: string | null;
+        };
+        SaveLineItemAsProductResponse: {
+            product?: null | components["schemas"]["InvoiceProduct"];
+            shouldClearProductId: boolean;
         };
         SearchInvoiceNumberHit: {
             invoiceNumber: string;
@@ -2624,6 +2756,17 @@ export interface components {
         UpdateNotificationStatusBody: {
             status: string;
         };
+        UpdateProductBody: {
+            currency?: string | null;
+            description?: string | null;
+            isActive?: boolean | null;
+            name?: string | null;
+            /** Format: double */
+            price?: number | null;
+            /** Format: double */
+            taxRate?: number | null;
+            unit?: string | null;
+        };
         UpdateTagBody: {
             name: string;
         };
@@ -2711,6 +2854,16 @@ export interface components {
             channel: string;
             enabled: boolean;
             notificationType: string;
+        };
+        UpsertProductBody: {
+            currency?: string | null;
+            description?: string | null;
+            name: string;
+            /** Format: double */
+            price?: number | null;
+            /** Format: double */
+            taxRate?: number | null;
+            unit?: string | null;
         };
         UpsertTrackerEntriesBody: {
             assignedId?: string | null;
@@ -4713,6 +4866,269 @@ export interface operations {
             };
             /** @description Institution not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listInvoiceProducts: {
+        parameters: {
+            query?: {
+                sortBy?: string;
+                limit?: number;
+                includeInactive?: boolean;
+                currency?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice products for the team */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProduct"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createInvoiceProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductBody"];
+            };
+        };
+        responses: {
+            /** @description Created invoice product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProduct"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    saveLineItemAsProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveLineItemAsProductBody"];
+            };
+        };
+        responses: {
+            /** @description Saved or cleared line-item product link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SaveLineItemAsProductResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertInvoiceProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertProductBody"];
+            };
+        };
+        responses: {
+            /** @description Upserted invoice product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProduct"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getInvoiceProductById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice product id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice product detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProduct"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateInvoiceProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice product id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductBody"];
+            };
+        };
+        responses: {
+            /** @description Updated invoice product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProduct"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invoice product not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteInvoiceProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice product id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the product was deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": boolean;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    incrementInvoiceProductUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Invoice product id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage incremented */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProductSuccessResponse"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
