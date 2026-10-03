@@ -1,3 +1,4 @@
+import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
@@ -10,6 +11,14 @@ export type GlobalSearchParams = {
   itemsPerTableLimit?: number | null;
   relevanceThreshold?: number | null;
 };
+
+export type SearchAttachmentsParams = {
+  q?: string | null;
+  transactionId?: string | null;
+  limit?: number | null;
+};
+
+export type SearchAttachmentsResult = RouterOutputs["search"]["attachments"];
 
 /** Matches façade / tRPC shape (`created_at` stays snake_case). */
 export type GlobalSearchRow = {
@@ -78,4 +87,59 @@ export async function fetchGlobalSearch(
   return normalizeGlobalSearchRows(
     (await response.json()) as RawGlobalSearchRow[],
   );
+}
+
+export function buildSearchAttachmentsQuery(
+  params: SearchAttachmentsParams,
+): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.transactionId) search.set("transactionId", params.transactionId);
+  if (params.limit != null) search.set("limit", String(params.limit));
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+function snakeToCamelKey(key: string): string {
+  return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+export function deepCamelCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(deepCamelCaseKeys);
+  }
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [
+        snakeToCamelKey(key),
+        deepCamelCaseKeys(nested),
+      ]),
+    );
+  }
+  return value;
+}
+
+export async function fetchSearchAttachments(
+  baseUrl: string,
+  accessToken: string | null,
+  params: SearchAttachmentsParams = {},
+): Promise<SearchAttachmentsResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/search/attachments${buildSearchAttachmentsQuery(params)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as SearchAttachmentsResult;
 }

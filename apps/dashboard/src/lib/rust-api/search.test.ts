@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   buildGlobalSearchQuery,
+  buildSearchAttachmentsQuery,
   normalizeGlobalSearchRows,
 } from "./search";
 
@@ -41,4 +42,15 @@ test("normalizeGlobalSearchRows keeps created_at snake_case", () => {
       data: { amount: 12 },
     },
   ]);
+});
+
+test("buildSearchAttachmentsQuery encodes camelCase filters", () => {
+  expect(buildSearchAttachmentsQuery({})).toBe("");
+  expect(
+    buildSearchAttachmentsQuery({
+      q: "receipt",
+      transactionId: "tx-1",
+      limit: 30,
+    }),
+  ).toBe("?q=receipt&transactionId=tx-1&limit=30");
 });

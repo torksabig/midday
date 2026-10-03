@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useDebounceValue } from "usehooks-ts";
 import { useDocumentParams } from "@/hooks/use-document-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { searchAttachmentsQueryOptions } from "@/lib/rust-api/search-client";
 import { useTRPC } from "@/trpc/client";
 import { FilePreview } from "./file-preview";
 import { FormatAmount } from "./format-amount";
@@ -38,15 +39,20 @@ export function SelectAttachment({
 
   const trpc = useTRPC();
 
+  const attachmentSearchParams = {
+    q: debouncedValue.length > 0 ? debouncedValue : undefined,
+    transactionId,
+    limit: debouncedValue.length > 0 ? 30 : 3,
+  };
+
   // Only fetch suggestions when user is actively searching (not just on focus)
-  const { data: items, isLoading } = useQuery({
-    ...trpc.search.attachments.queryOptions({
-      q: debouncedValue.length > 0 ? debouncedValue : undefined,
-      transactionId,
-      limit: debouncedValue.length > 0 ? 30 : 3,
-    }),
-    enabled: Boolean(debouncedValue.length > 0 || transactionId), // Enable for search OR suggestions
-  });
+  const { data: items, isLoading } = useQuery(
+    searchAttachmentsQueryOptions(
+      trpc.search.attachments.queryKey(attachmentSearchParams),
+      attachmentSearchParams,
+      { enabled: Boolean(debouncedValue.length > 0 || transactionId) },
+    ),
+  );
 
   const handleOnSelect = (item: Attachment) => {
     onSelect(item);

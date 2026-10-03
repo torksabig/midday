@@ -5,7 +5,10 @@ import { getAccessToken } from "@/utils/session";
 import {
   type GlobalSearchParams,
   type GlobalSearchRow,
+  type SearchAttachmentsParams,
+  type SearchAttachmentsResult,
   fetchGlobalSearch,
+  fetchSearchAttachments,
 } from "./search";
 
 function getRustApiUrl() {
@@ -25,5 +28,18 @@ export function globalSearchQueryOptions(
     queryKey,
     queryFn: async () =>
       fetchGlobalSearch(getRustApiUrl(), await getAccessToken(), params),
+  });
+}
+
+export function searchAttachmentsQueryOptions(
+  queryKey: QueryKey,
+  params: SearchAttachmentsParams = {},
+  options: { enabled?: boolean } = {},
+) {
+  return queryOptions<SearchAttachmentsResult>({
+    queryKey,
+    queryFn: async () =>
+      fetchSearchAttachments(getRustApiUrl(), await getAccessToken(), params),
+    enabled: options.enabled,
   });
 }

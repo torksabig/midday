@@ -1476,6 +1476,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["searchAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search/global": {
         parameters: {
             query?: never;
@@ -1876,6 +1892,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transaction-attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTransactionAttachments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transaction-attachments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteTransactionAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transaction-tags": {
         parameters: {
             query?: never;
@@ -2078,6 +2126,14 @@ export interface components {
         AccountBalancesQuery: {
             currency?: string | null;
         };
+        AttachmentInput: {
+            name: string;
+            path: string[];
+            /** Format: double */
+            size: number;
+            transactionId?: string | null;
+            type: string;
+        };
         AuthenticatedViewer: {
             avatarUrl?: string | null;
             dateFormat?: string | null;
@@ -2233,6 +2289,9 @@ export interface components {
             inboxId: string;
             suggestionId: string;
             transactionId: string;
+        };
+        CreateAttachmentsBody: {
+            attachments: components["schemas"]["AttachmentInput"][];
         };
         CreateBankAccountBody: {
             currency?: string | null;
@@ -2998,6 +3057,12 @@ export interface components {
             product?: null | components["schemas"]["InvoiceProduct"];
             shouldClearProductId: boolean;
         };
+        SearchAttachmentsQuery: {
+            /** Format: int64 */
+            limit?: number;
+            q?: string | null;
+            transactionId?: string | null;
+        };
         SearchInvoiceNumberHit: {
             invoiceNumber: string;
         };
@@ -3082,6 +3147,17 @@ export interface components {
         TrackerProjectTagInput: {
             id: string;
             value?: string | null;
+        };
+        TransactionAttachment: {
+            createdAt?: string | null;
+            id: string;
+            name?: string | null;
+            path?: string[] | null;
+            /** Format: double */
+            size?: number | null;
+            teamId?: string | null;
+            transactionId?: string | null;
+            type?: string | null;
         };
         TransactionDeletedId: {
             id: string;
@@ -7194,6 +7270,37 @@ export interface operations {
             };
         };
     };
+    searchAttachments: {
+        parameters: {
+            query?: {
+                q?: string;
+                transactionId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inbox + invoice attachment search hits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getSearchGlobal: {
         parameters: {
             query?: {
@@ -8222,6 +8329,74 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTransactionAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAttachmentsBody"];
+            };
+        };
+        responses: {
+            /** @description Created transaction attachments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionAttachment"][];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteTransactionAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Attachment id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted attachment row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionAttachment"];
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Attachment not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

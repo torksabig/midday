@@ -13,8 +13,12 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useUpload } from "@/hooks/use-upload";
 import { useUserQuery } from "@/hooks/use-user";
-import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
 import { updateInvoiceFromRust } from "@/lib/rust-api/invoices-client";
+import {
+  createTransactionAttachmentsFromRust,
+  deleteTransactionAttachmentFromRust,
+} from "@/lib/rust-api/transaction-attachments-client";
+import { transactionByIdQueryOptions } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 import { type Attachment, AttachmentItem } from "./attachment-item";
@@ -57,47 +61,47 @@ export function TransactionAttachments({
     trpc.transactionAttachments.processAttachment.mutationOptions(),
   );
 
-  const createAttachmentsMutation = useMutation(
-    trpc.transactionAttachments.createMany.mutationOptions({
-      onSuccess: () => {
-        // invalidate the transaction list query
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
+  const createAttachmentsMutation = useMutation({
+    mutationKey: trpc.transactionAttachments.createMany.mutationKey(),
+    mutationFn: createTransactionAttachmentsFromRust,
+    onSuccess: () => {
+      // invalidate the transaction list query
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id }),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id }),
+      });
 
-        // Start polling for tax information
-        if (
-          pollingTransaction?.taxRate !== pollingTransaction?.category?.taxRate
-        ) {
-          setPollingForTax(true);
-        }
-      },
-    }),
-  );
+      // Start polling for tax information
+      if (
+        pollingTransaction?.taxRate !== pollingTransaction?.category?.taxRate
+      ) {
+        setPollingForTax(true);
+      }
+    },
+  });
 
-  const deleteattachmentMutation = useMutation(
-    trpc.transactionAttachments.delete.mutationOptions({
-      onSuccess: () => {
-        // invalidate the transaction details query
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.getById.queryKey({ id }),
-        });
+  const deleteattachmentMutation = useMutation({
+    mutationKey: trpc.transactionAttachments.delete.mutationKey(),
+    mutationFn: deleteTransactionAttachmentFromRust,
+    onSuccess: () => {
+      // invalidate the transaction details query
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.getById.queryKey({ id }),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.transactions.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.transactions.get.infiniteQueryKey(),
+      });
 
-        // Invalidate inbox queries since inbox items may be connected to this attachment
-        queryClient.invalidateQueries({
-          queryKey: trpc.inbox.get.infiniteQueryKey(),
-        });
-      },
-    }),
-  );
+      // Invalidate inbox queries since inbox items may be connected to this attachment
+      queryClient.invalidateQueries({
+        queryKey: trpc.inbox.get.infiniteQueryKey(),
+      });
+    },
+  });
 
   const updateInvoiceMutation = useMutation({
     mutationFn: updateInvoiceFromRust,
