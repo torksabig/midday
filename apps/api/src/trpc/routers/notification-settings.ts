@@ -4,101 +4,63 @@ import {
   updateNotificationSettingSchema,
 } from "@api/schemas/notification-settings";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateNotificationSettingsGet,
   tryDelegateNotificationSettingsUpdate,
   tryDelegateNotificationSettingsBulkUpdate,
   tryDelegateNotificationPreferences,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
-import {
-  bulkUpdateNotificationSettings,
-  getNotificationSettings,
-  getUserNotificationPreferences,
-  upsertNotificationSetting,
-} from "@midday/db/queries";
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const notificationSettingsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getNotificationSettingsSchema.optional())
-    .query(async ({ ctx: { db, session, teamId, accessToken }, input = {} }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateNotificationSettingsGet(
-          {
-            notificationType: input.notificationType,
-            channel: input.channel,
-          },
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
-      }
-
-      return getNotificationSettings(db, {
-        userId: session.user.id,
-        teamId: teamId!,
-        ...input,
-      });
-    }),
-
-  // Get all notification types with their current settings for the user
-  getAll: protectedProcedure.query(async ({ ctx: { db, session, teamId, accessToken } }) => {
-    if (shouldDelegateToReplacementBackend()) {
-      const delegated = await tryDelegateNotificationPreferences(accessToken);
+    .query(async ({ ctx: { accessToken }, input = {} }) => {
+      const delegated = await tryDelegateNotificationSettingsGet(
+        {
+          notificationType: input.notificationType,
+          channel: input.channel,
+        },
+        accessToken,
+      );
       if (delegated) {
         return delegated;
       }
-      assertLegacyIdentityFallbackAllowed();
-    }
-
-    return getUserNotificationPreferences(db, session.user.id, teamId!);
-  }),
-
-  // Update a single notification setting
-  update: protectedProcedure
-    .input(updateNotificationSettingSchema)
-    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateNotificationSettingsUpdate(
-          input,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.setting;
-        }
-        assertLegacyIdentityFallbackAllowed();
-      }
-
-      return upsertNotificationSetting(db, {
-        userId: session.user.id,
-        teamId: teamId!,
-        ...input,
-      });
+      return assertNoLegacyFallback("notificationSettings.get");
     }),
 
-  // Bulk update multiple notification settings
+  getAll: protectedProcedure.query(async ({ ctx: { accessToken } }) => {
+    const delegated = await tryDelegateNotificationPreferences(accessToken);
+    if (delegated) {
+      return delegated;
+    }
+    return assertNoLegacyFallback("notificationSettings.getAll");
+  }),
+
+  update: protectedProcedure
+    .input(updateNotificationSettingSchema)
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateNotificationSettingsUpdate(
+        input,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.setting;
+      }
+      return assertNoLegacyFallback("notificationSettings.update");
+    }),
+
   bulkUpdate: protectedProcedure
     .input(bulkUpdateNotificationSettingsSchema)
-    .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateNotificationSettingsBulkUpdate(
-          input.updates,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.settings;
-        }
-        assertLegacyIdentityFallbackAllowed();
-      }
-
-      return bulkUpdateNotificationSettings(
-        db,
-        session.user.id,
-        teamId!,
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateNotificationSettingsBulkUpdate(
         input.updates,
+        accessToken,
       );
+      if (delegated.delegated) {
+        return delegated.settings;
+      }
+      return assertNoLegacyFallback("notificationSettings.bulkUpdate");
     }),
 });

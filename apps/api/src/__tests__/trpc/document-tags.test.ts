@@ -8,109 +8,48 @@ const TAG_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
 const createCaller = createCallerFactory(documentTagsRouter);
 
-function forceLegacyBackend() {
-  process.env.MIDDAY_BACKEND_MODE = "legacy";
-  delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
-}
-
-describe("tRPC: documentTags.get", () => {
+describe("tRPC: documentTags Stage 4 fail-closed", () => {
   beforeEach(() => {
-    forceLegacyBackend();
+    process.env.MIDDAY_BACKEND_MODE = "replacement";
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
     mocks.getDocumentTags.mockReset();
-    mocks.getDocumentTags.mockImplementation(() => Promise.resolve([]));
+    mocks.createDocumentTag.mockReset();
+    mocks.createDocumentTagEmbedding.mockReset();
+    mocks.deleteDocumentTag.mockReset();
   });
 
-  test("returns tag list for team", async () => {
-    const caller = createCaller(createTestContext());
-    const result = await caller.get();
-
-    expect(result).toEqual([]);
-    expect(mocks.getDocumentTags).toHaveBeenCalledWith(
-      expect.anything(),
-      "test-team-id",
-    );
-  });
-
-  test("rejects without session", async () => {
+  test("get rejects without session", async () => {
     const ctx = createTestContext();
     const caller = createCaller({ ...ctx, session: null });
 
     await expect(caller.get()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
-});
 
-describe("tRPC: documentTags.create", () => {
-  beforeEach(() => {
-    forceLegacyBackend();
-    mocks.createDocumentTag.mockReset();
-    mocks.createDocumentTagEmbedding.mockReset();
-    mocks.createDocumentTag.mockImplementation(() =>
-      Promise.resolve({
-        id: TAG_ID,
-        name: "Important",
-        slug: "important",
-      }),
-    );
-    mocks.createDocumentTagEmbedding.mockImplementation(() =>
-      Promise.resolve({}),
-    );
-  });
-
-  test("creates tag, embeds name, and returns row", async () => {
+  test("get does not call Drizzle when replacement API is down", async () => {
     const caller = createCaller(createTestContext());
-    const result = await caller.create({ name: "Important" });
 
-    expect(result).toEqual({
-      id: TAG_ID,
-      name: "Important",
-      slug: "important",
+    await expect(caller.get()).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
     });
-    expect(mocks.createDocumentTag).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        teamId: "test-team-id",
-        name: "Important",
-        slug: "important",
-      }),
-    );
-    expect(mocks.createDocumentTagEmbedding).toHaveBeenCalled();
+    expect(mocks.getDocumentTags).not.toHaveBeenCalled();
   });
 
-  test("skips embedding when insert returns no row", async () => {
-    mocks.createDocumentTag.mockImplementation(() => Promise.resolve(null));
-
+  test("create does not call Drizzle when replacement API is down", async () => {
     const caller = createCaller(createTestContext());
-    expect(await caller.create({ name: "Important" })).toBeNull();
+
+    await expect(caller.create({ name: "Important" })).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    expect(mocks.createDocumentTag).not.toHaveBeenCalled();
     expect(mocks.createDocumentTagEmbedding).not.toHaveBeenCalled();
   });
-});
 
-describe("tRPC: documentTags.delete", () => {
-  beforeEach(() => {
-    forceLegacyBackend();
-    mocks.deleteDocumentTag.mockReset();
-    mocks.deleteDocumentTag.mockImplementation(() =>
-      Promise.resolve({ id: TAG_ID }),
-    );
-  });
-
-  test("deletes tag and returns id", async () => {
+  test("delete does not call Drizzle when replacement API is down", async () => {
     const caller = createCaller(createTestContext());
-    const result = await caller.delete({ id: TAG_ID });
 
-    expect(result).toEqual({ id: TAG_ID });
-    expect(mocks.deleteDocumentTag).toHaveBeenCalledWith(expect.anything(), {
-      id: TAG_ID,
-      teamId: "test-team-id",
+    await expect(caller.delete({ id: TAG_ID })).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
     });
-  });
-
-  test("returns undefined when no row matched", async () => {
-    mocks.deleteDocumentTag.mockImplementation(() =>
-      Promise.resolve(undefined),
-    );
-
-    const caller = createCaller(createTestContext());
-    expect(await caller.delete({ id: TAG_ID })).toBeUndefined();
+    expect(mocks.deleteDocumentTag).not.toHaveBeenCalled();
   });
 });

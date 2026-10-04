@@ -9,7 +9,7 @@ import {
   upsertTrackerEntriesSchema,
 } from "@api/schemas/tracker-entries";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateTrackerBillableHours,
   tryDelegateTrackerCurrentTimer,
   tryDelegateTrackerEntriesByDate,
@@ -21,224 +21,144 @@ import {
   tryDelegateTrackerTimerStatus,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
-import {
-  deleteTrackerEntry,
-  getBillableHours,
-  getCurrentTimer,
-  getTimerStatus,
-  getTrackerRecordsByDate,
-  getTrackerRecordsByRange,
-  startTimer,
-  stopTimer,
-  upsertTrackerEntries,
-} from "@midday/db/queries";
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const trackerEntriesRouter = createTRPCRouter({
   getBillableHours: protectedProcedure
     .input(getBillableHoursSchema)
-    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerBillableHours(
-          {
-            date: input.date,
-            view: input.view,
-            weekStartsOnMonday: input.weekStartsOnMonday,
-          },
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTrackerBillableHours(
+        {
+          date: input.date,
+          view: input.view,
+          weekStartsOnMonday: input.weekStartsOnMonday,
+        },
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
       }
-
-      return getBillableHours(db, {
-        teamId: teamId!,
-        date: input.date,
-        view: input.view,
-        weekStartsOnMonday: input.weekStartsOnMonday,
-      });
+      return assertNoLegacyFallback("trackerEntries.getBillableHours");
     }),
 
   byDate: protectedProcedure
     .input(getTrackerRecordsByDateSchema)
-    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerEntriesByDate(
-          { date: input.date },
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTrackerEntriesByDate(
+        { date: input.date },
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
       }
-
-      return getTrackerRecordsByDate(db, {
-        date: input.date,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("trackerEntries.byDate");
     }),
 
   byRange: protectedProcedure
     .input(getTrackerRecordsByRangeSchema)
-    .query(async ({ input, ctx: { db, session, teamId, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerEntriesByRange(
-          {
-            from: input.from,
-            to: input.to,
-            projectId: input.projectId,
-          },
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ input, ctx: { accessToken } }) => {
+      const delegated = await tryDelegateTrackerEntriesByRange(
+        {
+          from: input.from,
+          to: input.to,
+          projectId: input.projectId,
+        },
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
       }
-
-      return getTrackerRecordsByRange(db, {
-        teamId: teamId!,
-        userId: session.user.id,
-        ...input,
-      });
+      return assertNoLegacyFallback("trackerEntries.byRange");
     }),
 
   upsert: protectedProcedure
     .input(upsertTrackerEntriesSchema)
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerEntriesUpsert(
-          input,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.entries;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTrackerEntriesUpsert(
+        input,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.entries;
       }
-
-      return upsertTrackerEntries(db, {
-        ...input,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("trackerEntries.upsert");
     }),
 
   delete: protectedProcedure
     .input(deleteTrackerEntrySchema)
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerEntryDelete(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.result;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTrackerEntryDelete(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.result;
       }
-
-      return deleteTrackerEntry(db, {
-        teamId: teamId!,
-        id: input.id,
-      });
+      return assertNoLegacyFallback("trackerEntries.delete");
     }),
 
-  // Timer procedures
   startTimer: protectedProcedure
     .input(startTimerSchema)
-    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+    .mutation(async ({ ctx: { session, accessToken }, input }) => {
       const assignedId = input.assignedId ?? session.user.id;
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerStartTimer(
-          {
-            projectId: input.projectId,
-            assignedId,
-            description: input.description,
-            start: input.start,
-          },
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.entry;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateTrackerStartTimer(
+        {
+          projectId: input.projectId,
+          assignedId,
+          description: input.description,
+          start: input.start,
+        },
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.entry;
       }
-
-      return startTimer(db, {
-        teamId: teamId!,
-        assignedId,
-        ...input,
-      });
+      return assertNoLegacyFallback("trackerEntries.startTimer");
     }),
 
   stopTimer: protectedProcedure
     .input(stopTimerSchema)
-    .mutation(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+    .mutation(async ({ ctx: { session, accessToken }, input }) => {
       const assignedId = input.assignedId ?? session.user.id;
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerStopTimer(
-          {
-            entryId: input.entryId,
-            assignedId,
-            stop: input.stop,
-          },
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.entry;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateTrackerStopTimer(
+        {
+          entryId: input.entryId,
+          assignedId,
+          stop: input.stop,
+        },
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.entry;
       }
-
-      return stopTimer(db, {
-        teamId: teamId!,
-        assignedId,
-        ...input,
-      });
+      return assertNoLegacyFallback("trackerEntries.stopTimer");
     }),
 
   getCurrentTimer: protectedProcedure
     .input(getCurrentTimerSchema.optional())
-    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+    .query(async ({ ctx: { session, accessToken }, input }) => {
       const assignedId = input?.assignedId ?? session.user.id;
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerCurrentTimer(
-          { assignedId },
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.timer;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateTrackerCurrentTimer(
+        { assignedId },
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.timer;
       }
-
-      return getCurrentTimer(db, {
-        teamId: teamId!,
-        assignedId,
-      });
+      return assertNoLegacyFallback("trackerEntries.getCurrentTimer");
     }),
 
   getTimerStatus: protectedProcedure
     .input(getCurrentTimerSchema.optional())
-    .query(async ({ ctx: { db, teamId, session, accessToken }, input }) => {
+    .query(async ({ ctx: { session, accessToken }, input }) => {
       const assignedId = input?.assignedId ?? session.user.id;
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTrackerTimerStatus(
-          { assignedId },
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateTrackerTimerStatus(
+        { assignedId },
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
       }
-
-      return getTimerStatus(db, {
-        teamId: teamId!,
-        assignedId,
-      });
+      return assertNoLegacyFallback("trackerEntries.getTimerStatus");
     }),
 });

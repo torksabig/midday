@@ -6,7 +6,7 @@ import {
   updateTransactionCategorySchema,
 } from "@api/schemas/transaction-categories";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateTransactionCategoriesGet,
   tryDelegateTransactionCategoriesGetById,
   tryDelegateTransactionCategoryCreate,
@@ -14,120 +14,76 @@ import {
   tryDelegateTransactionCategoryDelete,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
-import {
-  createTransactionCategory,
-  deleteTransactionCategory,
-  getCategories,
-  getCategoryById,
-  updateTransactionCategory,
-} from "@midday/db/queries";
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const transactionCategoriesRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getCategoriesSchema)
-    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTransactionCategoriesGet(
-          accessToken,
-        );
-        if (delegated) {
-          if (input?.limit != null && delegated.length > input.limit) {
-            return delegated.slice(0, input.limit);
-          }
-          return delegated;
+    .query(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTransactionCategoriesGet(accessToken);
+      if (delegated) {
+        if (input?.limit != null && delegated.length > input.limit) {
+          return delegated.slice(0, input.limit);
         }
-        assertLegacyIdentityFallbackAllowed();
+        return delegated;
       }
-
-      const data = await getCategories(db, {
-        teamId: teamId!,
-        limit: input?.limit,
-      });
-
-      return data;
+      return assertNoLegacyFallback("transactionCategories.get");
     }),
 
   getById: protectedProcedure
     .input(getCategoryByIdSchema)
-    .query(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTransactionCategoriesGetById(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.category ?? null;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ input, ctx: { accessToken } }) => {
+      const delegated = await tryDelegateTransactionCategoriesGetById(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.category ?? null;
       }
-
-      return getCategoryById(db, { id: input.id, teamId: teamId! });
+      return assertNoLegacyFallback("transactionCategories.getById");
     }),
 
   create: protectedProcedure
     .input(createTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTransactionCategoryCreate(
-          input,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.category;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ input, ctx: { accessToken } }) => {
+      const delegated = await tryDelegateTransactionCategoryCreate(
+        input,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.category;
       }
-
-      return createTransactionCategory(db, {
-        teamId: teamId!,
-        userId: session.user.id,
-        ...input,
-      });
+      return assertNoLegacyFallback("transactionCategories.create");
     }),
 
   update: protectedProcedure
     .input(updateTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const { id, ...rest } = input;
-        const delegated = await tryDelegateTransactionCategoryUpdate(
-          id,
-          {
-            ...rest,
-            clearParent: rest.parentId === null,
-          },
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.category;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ input, ctx: { accessToken } }) => {
+      const { id, ...rest } = input;
+      const delegated = await tryDelegateTransactionCategoryUpdate(
+        id,
+        {
+          ...rest,
+          clearParent: rest.parentId === null,
+        },
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.category;
       }
-
-      return updateTransactionCategory(db, {
-        ...input,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("transactionCategories.update");
     }),
 
   delete: protectedProcedure
     .input(deleteTransactionCategorySchema)
-    .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTransactionCategoryDelete(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.category;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ input, ctx: { accessToken } }) => {
+      const delegated = await tryDelegateTransactionCategoryDelete(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.category;
       }
-
-      return deleteTransactionCategory(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("transactionCategories.delete");
     }),
 });

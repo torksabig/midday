@@ -1,61 +1,41 @@
 import { upsertInvoiceTemplateSchema } from "@api/schemas/invoice";
 import {
-  assertLegacyIdentityFallbackAllowed,
-  tryDelegateInvoiceTemplatesList,
-  tryDelegateInvoiceTemplateGet,
+  assertNoLegacyFallback,
   tryDelegateInvoiceTemplateCount,
   tryDelegateInvoiceTemplateCreate,
-  tryDelegateInvoiceTemplateUpsert,
-  tryDelegateInvoiceTemplateSetDefault,
   tryDelegateInvoiceTemplateDelete,
+  tryDelegateInvoiceTemplateGet,
+  tryDelegateInvoiceTemplateSetDefault,
+  tryDelegateInvoiceTemplateUpsert,
+  tryDelegateInvoiceTemplatesList,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { parseInputValue } from "@api/utils/parse";
-import {
-  createInvoiceTemplate,
-  deleteInvoiceTemplate,
-  getInvoiceTemplateById,
-  getInvoiceTemplateCount,
-  getInvoiceTemplates,
-  setDefaultTemplate,
-  upsertInvoiceTemplate,
-} from "@midday/db/queries";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { z } from "zod";
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const invoiceTemplateRouter = createTRPCRouter({
-  // List all templates for the team
-  list: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
-    if (shouldDelegateToReplacementBackend()) {
-      const delegated = await tryDelegateInvoiceTemplatesList(accessToken);
-      if (delegated) {
-        return delegated;
-      }
-      assertLegacyIdentityFallbackAllowed();
+  list: protectedProcedure.query(async ({ ctx: { accessToken } }) => {
+    const delegated = await tryDelegateInvoiceTemplatesList(accessToken);
+    if (delegated) {
+      return delegated;
     }
-
-    return getInvoiceTemplates(db, teamId!);
+    return assertNoLegacyFallback("invoiceTemplate.list");
   }),
 
-  // Get a single template by ID
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInvoiceTemplateGet(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.template;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateInvoiceTemplateGet(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.template;
       }
-
-      return getInvoiceTemplateById(db, { id: input.id, teamId: teamId! });
+      return assertNoLegacyFallback("invoiceTemplate.get");
     }),
 
-  // Create a new template
   create: protectedProcedure
     .input(
       upsertInvoiceTemplateSchema.extend({
@@ -63,7 +43,7 @@ export const invoiceTemplateRouter = createTRPCRouter({
         isDefault: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+    .mutation(async ({ ctx: { accessToken }, input }) => {
       const payload = {
         ...input,
         fromDetails: parseInputValue(input.fromDetails),
@@ -71,32 +51,24 @@ export const invoiceTemplateRouter = createTRPCRouter({
         noteDetails: parseInputValue(input.noteDetails),
       };
 
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInvoiceTemplateCreate(
-          payload as Record<string, unknown>,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.template;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateInvoiceTemplateCreate(
+        payload as Record<string, unknown>,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.template;
       }
-
-      return createInvoiceTemplate(db, {
-        ...payload,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("invoiceTemplate.create");
     }),
 
-  // Upsert a template - updates by ID if provided, or updates/creates default template
   upsert: protectedProcedure
     .input(
       upsertInvoiceTemplateSchema.extend({
-        id: z.string().uuid().optional(), // Optional - if not provided, upserts the default template
+        id: z.string().uuid().optional(),
         name: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
+    .mutation(async ({ ctx: { accessToken }, input }) => {
       const payload = {
         ...input,
         fromDetails: parseInputValue(input.fromDetails),
@@ -104,72 +76,50 @@ export const invoiceTemplateRouter = createTRPCRouter({
         noteDetails: parseInputValue(input.noteDetails),
       };
 
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInvoiceTemplateUpsert(
-          payload as Record<string, unknown>,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.template;
-        }
-        assertLegacyIdentityFallbackAllowed();
+      const delegated = await tryDelegateInvoiceTemplateUpsert(
+        payload as Record<string, unknown>,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.template;
       }
-
-      return upsertInvoiceTemplate(db, {
-        ...payload,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("invoiceTemplate.upsert");
     }),
 
-  // Set a template as the default
   setDefault: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInvoiceTemplateSetDefault(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          if (!delegated.template) {
-            throw new Error("Template not found");
-          }
-          return delegated.template;
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateInvoiceTemplateSetDefault(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        if (!delegated.template) {
+          throw new Error("Template not found");
         }
-        assertLegacyIdentityFallbackAllowed();
+        return delegated.template;
       }
-
-      return setDefaultTemplate(db, { id: input.id, teamId: teamId! });
+      return assertNoLegacyFallback("invoiceTemplate.setDefault");
     }),
 
-  // Delete a template (returns the new default to switch to)
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInvoiceTemplateDelete(
-          input.id,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.result;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateInvoiceTemplateDelete(
+        input.id,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.result;
       }
-
-      return deleteInvoiceTemplate(db, { id: input.id, teamId: teamId! });
+      return assertNoLegacyFallback("invoiceTemplate.delete");
     }),
 
-  // Get template count for the team
-  count: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
-    if (shouldDelegateToReplacementBackend()) {
-      const delegated = await tryDelegateInvoiceTemplateCount(accessToken);
-      if (delegated != null) {
-        return delegated;
-      }
-      assertLegacyIdentityFallbackAllowed();
+  count: protectedProcedure.query(async ({ ctx: { accessToken } }) => {
+    const delegated = await tryDelegateInvoiceTemplateCount(accessToken);
+    if (delegated != null) {
+      return delegated;
     }
-
-    return getInvoiceTemplateCount(db, teamId!);
+    return assertNoLegacyFallback("invoiceTemplate.count");
   }),
 });

@@ -4,84 +4,55 @@ import {
   updateTagSchema,
 } from "@api/schemas/tags";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateTagCreate,
   tryDelegateTagDelete,
   tryDelegateTagUpdate,
   tryDelegateTagsGet,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
-import { createTag, deleteTag, getTags, updateTag } from "@midday/db/queries";
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const tagsRouter = createTRPCRouter({
-  get: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
-    if (shouldDelegateToReplacementBackend()) {
-      const delegated = await tryDelegateTagsGet(accessToken);
-      if (delegated) {
-        return delegated;
-      }
-      assertLegacyIdentityFallbackAllowed();
+  get: protectedProcedure.query(async ({ ctx: { accessToken } }) => {
+    const delegated = await tryDelegateTagsGet(accessToken);
+    if (delegated) {
+      return delegated;
     }
-
-    return getTags(db, {
-      teamId: teamId!,
-    });
+    return assertNoLegacyFallback("tags.get");
   }),
 
   create: protectedProcedure
     .input(createTagSchema)
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTagCreate(input.name, accessToken);
-        if (delegated.delegated) {
-          return delegated.tag;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTagCreate(input.name, accessToken);
+      if (delegated.delegated) {
+        return delegated.tag;
       }
-
-      return createTag(db, {
-        teamId: teamId!,
-        name: input.name,
-      });
+      return assertNoLegacyFallback("tags.create");
     }),
 
   delete: protectedProcedure
     .input(deleteTagSchema)
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTagDelete(input.id, accessToken);
-        if (delegated.delegated) {
-          return delegated.tag;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTagDelete(input.id, accessToken);
+      if (delegated.delegated) {
+        return delegated.tag;
       }
-
-      return deleteTag(db, {
-        id: input.id,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("tags.delete");
     }),
 
   update: protectedProcedure
     .input(updateTagSchema)
-    .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateTagUpdate(
-          input.id,
-          input.name,
-          accessToken,
-        );
-        if (delegated.delegated) {
-          return delegated.tag;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .mutation(async ({ ctx: { accessToken }, input }) => {
+      const delegated = await tryDelegateTagUpdate(
+        input.id,
+        input.name,
+        accessToken,
+      );
+      if (delegated.delegated) {
+        return delegated.tag;
       }
-
-      return updateTag(db, {
-        id: input.id,
-        name: input.name,
-        teamId: teamId!,
-      });
+      return assertNoLegacyFallback("tags.update");
     }),
 });

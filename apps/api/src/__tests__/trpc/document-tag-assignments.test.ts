@@ -9,42 +9,15 @@ const TAG_ID = "c3d4e5f6-a7b8-9012-cdef-123456789012";
 
 const createCaller = createCallerFactory(documentTagAssignmentsRouter);
 
-function forceLegacyBackend() {
-  process.env.MIDDAY_BACKEND_MODE = "legacy";
-  delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
-}
-
-describe("tRPC: documentTagAssignments.create", () => {
+describe("tRPC: documentTagAssignments Stage 4 fail-closed", () => {
   beforeEach(() => {
-    forceLegacyBackend();
+    process.env.MIDDAY_BACKEND_MODE = "replacement";
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
     mocks.createDocumentTagAssignment.mockReset();
-    mocks.createDocumentTagAssignment.mockImplementation(() =>
-      Promise.resolve({
-        documentId: DOCUMENT_ID,
-        tagId: TAG_ID,
-      }),
-    );
+    mocks.deleteDocumentTagAssignment.mockReset();
   });
 
-  test("creates assignment for document and tag", async () => {
-    const caller = createCaller(createTestContext());
-    const result = await caller.create({
-      documentId: DOCUMENT_ID,
-      tagId: TAG_ID,
-    });
-
-    expect(result).toMatchObject({ documentId: DOCUMENT_ID, tagId: TAG_ID });
-    expect(mocks.createDocumentTagAssignment).toHaveBeenCalledWith(
-      expect.anything(),
-      {
-        documentId: DOCUMENT_ID,
-        tagId: TAG_ID,
-        teamId: "test-team-id",
-      },
-    );
-  });
-
-  test("rejects without session", async () => {
+  test("create rejects without session", async () => {
     const ctx = createTestContext();
     const caller = createCaller({ ...ctx, session: null });
 
@@ -52,41 +25,31 @@ describe("tRPC: documentTagAssignments.create", () => {
       caller.create({ documentId: DOCUMENT_ID, tagId: TAG_ID }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
-});
 
-describe("tRPC: documentTagAssignments.delete", () => {
-  beforeEach(() => {
-    forceLegacyBackend();
-    mocks.deleteDocumentTagAssignment.mockReset();
-    mocks.deleteDocumentTagAssignment.mockImplementation(() =>
-      Promise.resolve({}),
-    );
-  });
-
-  test("deletes assignment", async () => {
+  test("create does not call Drizzle when replacement API is down", async () => {
     const caller = createCaller(createTestContext());
-    const result = await caller.delete({
-      documentId: DOCUMENT_ID,
-      tagId: TAG_ID,
-    });
 
-    expect(result).toMatchObject({});
-    expect(mocks.deleteDocumentTagAssignment).toHaveBeenCalledWith(
-      expect.anything(),
-      {
-        documentId: DOCUMENT_ID,
-        tagId: TAG_ID,
-        teamId: "test-team-id",
-      },
-    );
+    await expect(
+      caller.create({ documentId: DOCUMENT_ID, tagId: TAG_ID }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    expect(mocks.createDocumentTagAssignment).not.toHaveBeenCalled();
   });
 
-  test("rejects without session", async () => {
+  test("delete rejects without session", async () => {
     const ctx = createTestContext();
     const caller = createCaller({ ...ctx, session: null });
 
     await expect(
       caller.delete({ documentId: DOCUMENT_ID, tagId: TAG_ID }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  test("delete does not call Drizzle when replacement API is down", async () => {
+    const caller = createCaller(createTestContext());
+
+    await expect(
+      caller.delete({ documentId: DOCUMENT_ID, tagId: TAG_ID }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    expect(mocks.deleteDocumentTagAssignment).not.toHaveBeenCalled();
   });
 });

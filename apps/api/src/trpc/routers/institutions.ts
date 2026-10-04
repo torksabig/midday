@@ -1,21 +1,12 @@
-import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import {
-  assertLegacyIdentityFallbackAllowed,
+  assertNoLegacyFallback,
   tryDelegateInstitutionsGet,
   tryDelegateInstitutionGetById,
   tryDelegateInstitutionUpdateUsage,
 } from "@api/services/replacement-delegation";
-import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
-import {
-  getInstitutionById,
-  getInstitutions,
-  updateInstitutionUsage,
-} from "@midday/db/queries";
-import { createLoggerWithContext } from "@midday/logger";
+import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
-const logger = createLoggerWithContext("trpc:institutions");
 
 const getInstitutionsSchema = z.object({
   q: z.string().optional(),
@@ -32,50 +23,27 @@ const getInstitutionByIdSchema = z.object({
 
 const updateUsageSchema = z.object({ id: z.string() });
 
+/** Stage 4: dashboard uses Rust directly; keep AppRouter for queryKey/RouterOutputs only. */
 export const institutionsRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInstitutionsSchema)
-    .query(async ({ input, ctx: { db, accessToken } }) => {
+    .query(async ({ input, ctx: { accessToken } }) => {
       try {
-        if (shouldDelegateToReplacementBackend()) {
-          const delegated = await tryDelegateInstitutionsGet(
-            {
-              countryCode: input.countryCode,
-              q: input.q,
-              limit: input.limit,
-              excludeProviders: input.excludeProviders,
-            },
-            accessToken,
-          );
-          if (delegated) {
-            return delegated;
-          }
-          assertLegacyIdentityFallbackAllowed();
+        const delegated = await tryDelegateInstitutionsGet(
+          {
+            countryCode: input.countryCode,
+            q: input.q,
+            limit: input.limit,
+            excludeProviders: input.excludeProviders,
+          },
+          accessToken,
+        );
+        if (delegated) {
+          return delegated;
         }
-
-        const results = await getInstitutions(db, {
-          countryCode: input.countryCode,
-          q: input.q,
-          limit: input.limit,
-          excludeProviders: input.excludeProviders,
-        });
-
-        return results.map((institution) => ({
-          id: institution.id,
-          name: institution.name,
-          logo: institution.logo ?? null,
-          popularity: institution.popularity,
-          availableHistory: institution.availableHistory ?? null,
-          maximumConsentValidity: institution.maximumConsentValidity ?? null,
-          provider: institution.provider,
-          type: (institution.type as "personal" | "business" | null) ?? null,
-          country: institution.countries?.[0] ?? null,
-        }));
+        return assertNoLegacyFallback("institutions.get");
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        logger.error("Failed to get institutions", {
-          error: error instanceof Error ? error.message : String(error),
-        });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to get institutions",
@@ -85,82 +53,31 @@ export const institutionsRouter = createTRPCRouter({
 
   getById: protectedProcedure
     .input(getInstitutionByIdSchema)
-    .query(async ({ input, ctx: { db, accessToken } }) => {
-      if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateInstitutionGetById(
-          input.id,
-          accessToken,
-        );
-        if (delegated) {
-          return delegated;
-        }
-        assertLegacyIdentityFallbackAllowed();
+    .query(async ({ input, ctx: { accessToken } }) => {
+      const delegated = await tryDelegateInstitutionGetById(
+        input.id,
+        accessToken,
+      );
+      if (delegated) {
+        return delegated;
       }
-
-      const result = await getInstitutionById(db, { id: input.id });
-
-      if (!result) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Institution not found",
-        });
-      }
-
-      return {
-        id: result.id,
-        name: result.name,
-        logo: result.logo ?? null,
-        provider: result.provider,
-        availableHistory: result.availableHistory ?? null,
-        maximumConsentValidity: result.maximumConsentValidity ?? null,
-        popularity: result.popularity,
-        type: (result.type as "personal" | "business" | null) ?? null,
-        country: result.countries?.[0] ?? undefined,
-      };
+      return assertNoLegacyFallback("institutions.getById");
     }),
 
   updateUsage: protectedProcedure
     .input(updateUsageSchema)
-    .mutation(async ({ input, ctx: { db, accessToken } }) => {
+    .mutation(async ({ input, ctx: { accessToken } }) => {
       try {
-        if (shouldDelegateToReplacementBackend()) {
-          const delegated = await tryDelegateInstitutionUpdateUsage(
-            input.id,
-            accessToken,
-          );
-          if (delegated.delegated) {
-            return delegated.result;
-          }
-          assertLegacyIdentityFallbackAllowed();
+        const delegated = await tryDelegateInstitutionUpdateUsage(
+          input.id,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.result;
         }
-
-        const result = await updateInstitutionUsage(db, { id: input.id });
-
-        if (!result) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Institution not found",
-          });
-        }
-
-        return {
-          data: {
-            id: result.id,
-            name: result.name,
-            logo: result.logo ?? null,
-            availableHistory: result.availableHistory ?? null,
-            maximumConsentValidity: result.maximumConsentValidity ?? null,
-            popularity: result.popularity,
-            provider: result.provider,
-            type: result.type ?? null,
-            country: result.countries?.[0] ?? undefined,
-          },
-        };
+        return assertNoLegacyFallback("institutions.updateUsage");
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        logger.error("Failed to update institution usage", {
-          error: error instanceof Error ? error.message : String(error),
-        });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update institution usage",
