@@ -508,9 +508,9 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-60 | DONE | `documents.processDocument` SQL + `accounting.export` app lookup + `team.invite` SQL + `inboxAccounts.sync` SQL (jobs/email stay Node) | write |
 | AP-61 | DONE | `team.delete` SQL + `oauthApplications.updateApprovalStatus` SQL (jobs/email stay Node) | write |
 | AP-62 | DONE | `team.create` SQL + `oauthApplications.authorize` SQL (tax helpers / install email stay Node) | write |
-| AP-STAGE4 | PENDING | Delete `apps/api` + `replacement-backend` — **user must say decommission** | delete |
+| AP-STAGE4 | PARTIAL | Incremental decommission after user **decommission** (2026-10-04): dead-façade routers fail-closed; residual Node kept — [stage4 residual](./2026-10-04-stage4-residual-node.md) | delete |
 
-**Next slice (direct dashboard cutover):** Follow [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). **DC-H9 DONE + HARDENING EXHAUSTED + SMOKE-1 DONE (2026-10-03)** — local clone smoke: health/OpenAPI drift ok; by-token fail-closed 404; authed reads 200 for me/team/transactions/invoices/documents/overview. **No further easy cutover.** Remaining UI on tRPC = hybrids only (`documents.delete`/`inbox.delete*` storage, Trigger/BullMQ/Resend orchestrators) or STOP gates. `documents.delete` Next hybrid split **skipped** (DELETE not in OpenAPI; no established dashboard storage-after-SQL pattern). **User gates:** `smoke OK` / `STOP work` / **`decommission`** (Stage 4). AP-15 remains BLOCKED.
+**Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path
@@ -531,6 +531,6 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 - `transactions.generateCsvMapping` — Anthropic AI only
 - `jobs.getStatus` — BullMQ not Postgres
 - `documents.signedUrl(s)` — Supabase storage only (no SQL)
-- Stage 4 delete `apps/api` — blocked · user must say decommission
+- Stage 4 full delete `apps/api` — deferred · residual hybrids/STOP documented in [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md)
 
-**Façade autopilot AP-12–62 + AP-STAGE3 + AP-WORKER-1..10** complete (AP-15 BLOCKED). **Active loop:** direct-cutover DC-* in [`2026-10-02-autopilot-direct-cutover.md`](./2026-10-02-autopilot-direct-cutover.md). Stage 4 gated on explicit decommission.
+**Façade autopilot AP-12–62 + AP-STAGE3 + AP-WORKER-1..10** complete (AP-15 BLOCKED). **DC-STAGE4 PARTIAL** after user decommission (2026-10-04).

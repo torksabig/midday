@@ -133,7 +133,7 @@ Optional **short-term** `MIDDAY_BACKEND_MODE=dual` is allowed only to compare Ru
 | **1 — Identity & first domains** | JWKS on Rust; `user.me`, `team.current`, next read-heavy routers on Rust | Drizzle + router code for those domains in `apps/api`; demo-only delegation paths |
 | **2 — Core product domains** | Transactions, inbox, documents, invoices, metrics, banking adapters in Rust | Matching `packages/*` service modules, `packages/db` tables usage from API, Supabase service-role calls for those features |
 | **3 — Async & integrations** | Rust workers/queues; bank connectors; exports | `apps/worker`, `packages/jobs`, `packages/job-client`, Trigger/BullMQ producers in Node |
-| **4 — Shell removal** | All procedures Rust-backed or dashboard-native client | **`apps/api`**, **`packages/replacement-backend`**, **`packages/db`**, **`packages/supabase`** (if fully replaced), remaining legacy domain packages |
+| **4 — Shell removal** | All procedures Rust-backed or dashboard-native client | **Incremental (2026-10-04):** dead-façade tRPC routers fail-closed; default mode `replacement`; residual Node kept for hybrids/STOP/`/files`/`/chat` — [stage4 residual](./2026-10-04-stage4-residual-node.md). **Full delete later:** `apps/api`, `packages/replacement-backend`, `packages/db`, `packages/supabase` (if fully replaced) |
 
 ---
 

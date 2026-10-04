@@ -24,7 +24,7 @@ When the user (or a Cursor Automation / Loop / hook) points an agent at **this f
 | Implement decrypt / encrypt / Resend / live OAuth / Stripe / accounting-provider as wholes | **No** — STOP |
 | Wire `bankConnections.create` / `addAccounts` (encrypt) | **No** — STOP |
 | Move `bankConnections.delete` off tRPC (Trigger teardown is Node-owned) | **No** — leave on tRPC |
-| Stage 4: delete `apps/api` / `packages/replacement-backend` / `packages/db` | **No** until user one-shot **“decommission”** |
+| Stage 4: full delete `apps/api` / `packages/replacement-backend` / `packages/db` | **No** while residual hybrids/STOP remain — see [stage4 residual](./2026-10-04-stage4-residual-node.md). Incremental fail-closed of dead façades is approved after **decommission**. |
 
 **Batch size:** one slice (table below) per iteration; prefer 1–6 related procedures, not a whole product area in one commit.
 
@@ -113,7 +113,7 @@ Incomplete OpenAPI-only or client-only work is **not** DONE; finish wiring or le
 | **DC-H9** | **DONE** | `invoice.getInvoiceByToken` (+ inventory: `invoice.defaultSettings`) | Done 2026-10-03. Route: `GET /api/v1/invoices/by-token/{token}` (JWT verify with `INVOICE_JWT_SECRET` on clone; fail-closed 404). Public `/i/[token]` page + OG image cut over; query keys preserved. `invoice.defaultSettings` already wired via `default-settings-data` — inventory marked direct Rust. |
 | **HARDENING** | **EXHAUSTED** | No remaining easy non-hybrid / non-STOP `| yes |` rows with dashboard UI on tRPC | Remaining UI tRPC callers are hybrids (Trigger/BullMQ/storage/jobs), STOP gates (decrypt/encrypt/Resend/OAuth/Stripe/billing/accounting HTTP), or Stage 4. **Do not invent workarounds.** |
 | **SMOKE-1** | **DONE** | Local clone smoke of critical direct-Rust paths (2026-10-03) | Against local `:8787` + Midday Postgres tunnel: `GET /health` ok; checked-in OpenAPI drift ok (145 paths); `by-token` garbage + valid-JWT-missing-row → **404** fail-closed; unauth `auth/me` → **401**; authed **200** for `auth/me`, `team/current`, `transactions`, `invoices`, `documents`, `overview/summary`. Dashboard client unit tests (invoices/documents/overview/transactions) pass. No real invoice `token` row in local DB — public `/i/[token]` E2E still needs a real token. Hybrid split `documents.delete` **skipped** (Rust SQL DELETE exists but **not** in OpenAPI; no established Next storage-after-SQL pattern; keep tRPC). |
-| **DC-STAGE4** | **GATED** | Delete `apps/api` + `replacement-backend` (+ scheduled package removals) | **Only** when user says **decommission**. |
+| **DC-STAGE4** | **PARTIAL** | Incremental decommission (user **`decommission`** 2026-10-04) | Dead-façade routers fail-closed (no Drizzle); default `MIDDAY_BACKEND_MODE=replacement`; residual Node kept for hybrids/STOP/`/files`/`/chat`. Canonical residual inventory: [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). Full delete of `apps/api` + `replacement-backend` still deferred. |
 
 ### Post-hardening — remaining hybrids (keep on tRPC) + user gates
 
@@ -244,4 +244,4 @@ Focused retest after clone timer duration fix (`517d9f4`) + notifications query 
 | Tracker start/stop duration | **PASS** — stop returns sane seconds (e.g. 3s); UI discards &lt;1m entries by design |
 | Inbox file upload → row | **PASS** — `POST /api/v1/inbox` creates row; local vault TUS now uses `NEXT_PUBLIC_SUPABASE_URL` + seeded `vault` bucket/RLS |
 
-Still **no Stage 4 / decommission**.
+**DC-STAGE4 PARTIAL (2026-10-04):** User **`decommission`** executed as incremental safe teardown — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md).
