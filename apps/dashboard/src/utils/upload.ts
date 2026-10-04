@@ -9,6 +9,23 @@ type ResumableUploadParmas = {
   onProgress?: (bytesUploaded: number, bytesTotal: number) => void;
 };
 
+function getResumableUploadEndpoint() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  if (supabaseUrl) {
+    return `${supabaseUrl}/storage/v1/upload/resumable`;
+  }
+
+  // Fallback for builds that only inject the hosted project id.
+  const supabaseId = process.env.NEXT_PUBLIC_SUPABASE_ID;
+  if (supabaseId) {
+    return `https://${supabaseId}.supabase.co/storage/v1/upload/resumable`;
+  }
+
+  throw new Error(
+    "Missing NEXT_PUBLIC_SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_ID) for resumable uploads",
+  );
+}
+
 export async function resumableUpload(
   client: SupabaseClient,
   { file, path, bucket, onProgress }: ResumableUploadParmas,
@@ -23,7 +40,7 @@ export async function resumableUpload(
 
   return new Promise((resolve, reject) => {
     const upload = new tus.Upload(file, {
-      endpoint: `https://${process.env.NEXT_PUBLIC_SUPABASE_ID}.supabase.co/storage/v1/upload/resumable`,
+      endpoint: getResumableUploadEndpoint(),
       retryDelays: [0, 3000, 5000, 10000],
       headers: {
         authorization: `Bearer ${session?.access_token}`,

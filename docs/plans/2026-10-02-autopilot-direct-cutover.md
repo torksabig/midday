@@ -242,6 +242,6 @@ Focused retest after clone timer duration fix (`517d9f4`) + notifications query 
 |------|--------|
 | Tags create + assign on transaction sheet | **PASS** — MultipleSelector now opens on type; SelectTags Enter/onCreate persists `tags` + `transaction_tags` |
 | Tracker start/stop duration | **PASS** — stop returns sane seconds (e.g. 3s); UI discards &lt;1m entries by design |
-| Inbox file upload → row | **PASS** — `POST /api/v1/inbox` creates row; vault blob upload may still hang locally |
+| Inbox file upload → row | **PASS** — `POST /api/v1/inbox` creates row; local vault TUS now uses `NEXT_PUBLIC_SUPABASE_URL` + seeded `vault` bucket/RLS |
 
 Still **no Stage 4 / decommission**.
