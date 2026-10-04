@@ -47,10 +47,12 @@ function buildNotificationsListQuery(params: NotificationsListParams): string {
   if (params.cursor) search.set("cursor", params.cursor);
   if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
   if (params.status) {
+    // Clone/axum Query uses serde_urlencoded, which rejects repeated keys for Vec.
+    // Send a single comma-separated value instead of `status=a&status=b`.
     const statuses = Array.isArray(params.status)
       ? params.status
       : [params.status];
-    for (const status of statuses) search.append("status", status);
+    search.set("status", statuses.join(","));
   }
   if (params.userId) search.set("userId", params.userId);
   if (params.priority != null) search.set("priority", String(params.priority));
