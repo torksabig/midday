@@ -1,37 +1,21 @@
 # @midday/replacement-backend
 
-**Temporary cutover package** — REST client and response mappers used while `apps/api` tRPC procedures fetch the Rust replacement API (sibling [`fintech/clone`](../../../clone)).
+**Temporary cutover package** — REST client and response mappers used while residual `apps/api` tRPC procedures fetch the Rust replacement API (sibling [`fintech/clone`](../../../clone)).
 
-**End state:** delete this package together with `apps/api` when either (a) all tRPC routers are served from Rust-native handlers with no Node business logic, or (b) the dashboard calls Rust directly and no longer needs a tRPC boundary.
+**Stage 4 (2026-10-04):** Partial decommission — dead-façade routers are fail-closed; dashboard cut-over screens call Rust directly. This package remains only for **residual hybrid** tRPC SQL delegation inside `apps/api`. Full delete waits until hybrids/STOP/`/files`/`/chat` are gone — see [`docs/plans/2026-10-04-stage4-residual-node.md`](../../docs/plans/2026-10-04-stage4-residual-node.md).
 
-Do **not** treat `MIDDAY_BACKEND_MODE` or this SDK as permanent architecture. See the canonical plan: [`docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md`](../../docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md). To advance slices without repeated “continue”, use [`docs/plans/2026-09-28-autopilot-migration-continuation.md`](../../docs/plans/2026-09-28-autopilot-migration-continuation.md).
-
-**Phase 1 (identity):** Supabase JWKS validation on the clone API and session JWT passthrough (replacing demo delegation). Until JWKS lands, demo env vars below support smoke tests only.
+Do **not** treat `MIDDAY_BACKEND_MODE` or this SDK as permanent architecture. Canonical plan: [`docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md`](../../docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md). Autopilot: [`docs/plans/2026-10-02-autopilot-direct-cutover.md`](../../docs/plans/2026-10-02-autopilot-direct-cutover.md).
 
 ## Env
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `MIDDAY_BACKEND_MODE` | `legacy` | **Deprecated cutover aid:** `legacy` \| `dual` \| `replacement` — remove when legacy API is deleted |
+| `MIDDAY_BACKEND_MODE` | `replacement` | Stage 4 default. `legacy` \| `dual` only for debugging residual Node |
 | `REPLACEMENT_API_URL` | `http://127.0.0.1:8787` | Replacement API base URL |
 | `REPLACEMENT_DELEGATION_TOKEN` | — | Bearer JWT for `apps/api` delegation (optional) |
 | `REPLACEMENT_DELEGATION_USE_DEMO` | — | Set `true` / `1` to use clone `POST /api/v1/auth/demo` for smoke only |
 
-Set `MIDDAY_BACKEND_MODE` on **`apps/api`** (and dashboard for `/api/replacement/status` probes).
-
-## tRPC → REST mapping (Phase 2)
-
-| tRPC procedure | Replacement REST | Notes |
-|----------------|------------------|-------|
-| `user.me` | `GET /api/v1/auth/me` + `GET /api/v1/settings` | Mapped to legacy shape; `fileKey` from encryption |
-| `team.current` | `GET /api/v1/team/current` | Currency from settings; other fields defaulted |
-| `transactions.get` | `GET /api/v1/transactions` | Paginated `{ meta, data }`; Postgres when Supabase JWT + `MIDDAY_DATABASE_URL`. Filters: Phase 2b–2d plus **2e** `assignees`, `attachments`, `recurring`, `type`, `manual`, `amount`/`amountRange`. List rows include attachments/tags JSON. Dual fallback only for FTS-style `q` vs ILIKE mismatch edge cases. |
-| `transactions.getReviewCount` | `GET /api/v1/transactions/review-count` | Integer count; ready-for-export semantics (fulfilled, not exported/archived/excluded, not synced) |
-| `transactions.getById` | `GET /api/v1/transactions/{id}` | Detail shape + pending match suggestion; team-scoped |
-| `transactionCategories.get` | `GET /api/v1/categories` | Parent/child tree from `transaction_categories` when Supabase + `MIDDAY_DATABASE_URL`; clone SQLite demo shape otherwise |
-| `bankAccounts.get` | `GET /api/v1/bank-accounts` | Team-scoped list + `bank_connection` join (no `access_token`); query `enabled`, `manual` |
-
-When `MIDDAY_BACKEND_MODE` is `dual` or `replacement`, `apps/api` tries delegation first (if a bearer is available), then falls back to legacy Postgres on failure or missing token. **Target:** no fallback—delete legacy once Rust passes contract tests.
+Set `MIDDAY_BACKEND_MODE` on **`apps/api`** (and dashboard for `/api/replacement/status` probes). Dashboard product data uses `NEXT_PUBLIC_RUST_API_URL`, not this mode.
 
 ## Dev: replacement API
 
@@ -51,19 +35,9 @@ With clone API running and demo delegation enabled:
 bash scripts/smoke-replacement-delegation.sh
 ```
 
-Dashboard dual-mode probe:
+Dashboard probe:
 
 ```bash
-# apps/dashboard/.env: MIDDAY_BACKEND_MODE=dual
+# apps/dashboard/.env: MIDDAY_BACKEND_MODE=replacement
 curl -s http://localhost:3001/api/replacement/status | jq
-```
-
-API delegation (requires `apps/api` env):
-
-```bash
-export MIDDAY_BACKEND_MODE=dual
-export REPLACEMENT_DELEGATION_USE_DEMO=true
-export REPLACEMENT_API_URL=http://127.0.0.1:8787
-# then call user.me via tRPC with a valid Supabase session, or run:
-bun test apps/api/src/__tests__/trpc/user-replacement-delegation.test.ts
 ```

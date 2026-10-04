@@ -22,7 +22,7 @@ process.env.RESEND_AUDIENCE_ID =
   process.env.RESEND_AUDIENCE_ID || "aud_test_resend_audience";
 process.env.FILE_KEY_SECRET = process.env.FILE_KEY_SECRET || "test-secret";
 process.env.MIDDAY_BACKEND_MODE =
-  process.env.MIDDAY_BACKEND_MODE || "legacy";
+  process.env.MIDDAY_BACKEND_MODE || "replacement";
 process.env.INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || "test-internal";
 process.env.PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID || "test";
 process.env.PLAID_SECRET = process.env.PLAID_SECRET || "test";

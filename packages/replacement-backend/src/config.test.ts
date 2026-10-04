@@ -13,10 +13,11 @@ afterEach(() => {
 });
 
 describe("replacement backend config", () => {
-  test("defaults to legacy mode", () => {
+  test("defaults to replacement mode (Stage 4)", () => {
     delete process.env.MIDDAY_BACKEND_MODE;
-    expect(getBackendMode()).toBe("legacy");
-    expect(shouldProbeReplacementBackend()).toBe(false);
+    expect(getBackendMode()).toBe("replacement");
+    expect(shouldProbeReplacementBackend()).toBe(true);
+    expect(shouldDelegateToReplacementBackend()).toBe(true);
   });
 
   test("dual mode enables probing", () => {
@@ -27,7 +28,7 @@ describe("replacement backend config", () => {
   });
 
   test("legacy mode does not delegate", () => {
-    delete process.env.MIDDAY_BACKEND_MODE;
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     expect(shouldDelegateToReplacementBackend()).toBe(false);
   });
 

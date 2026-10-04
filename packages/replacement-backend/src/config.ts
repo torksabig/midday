@@ -4,11 +4,13 @@ const BACKEND_MODES: BackendMode[] = ["legacy", "dual", "replacement"];
 
 /** How the dashboard/API should treat the replacement Rust stack. */
 export function getBackendMode(): BackendMode {
-  const raw = (process.env.MIDDAY_BACKEND_MODE ?? "legacy").toLowerCase();
+  // Stage 4 (2026-10-04): default to replacement — cut-over stack expects clone Axum.
+  // Set MIDDAY_BACKEND_MODE=legacy|dual only for temporary debugging of residual Node.
+  const raw = (process.env.MIDDAY_BACKEND_MODE ?? "replacement").toLowerCase();
   if (BACKEND_MODES.includes(raw as BackendMode)) {
     return raw as BackendMode;
   }
-  return "legacy";
+  return "replacement";
 }
 
 /** Base URL for the clean-room replacement API (sibling `clone` by default). */
