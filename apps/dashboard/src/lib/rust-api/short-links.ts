@@ -4,6 +4,8 @@ export type ShortLink = {
   id?: string;
   shortId?: string;
   url?: string | null;
+  shortUrl?: string | null;
+  originalUrl?: string | null;
   teamId?: string | null;
   userId?: string | null;
   createdAt?: string | null;
@@ -95,5 +97,50 @@ export async function createShortLinkForUrl(
     );
   }
 
-  return deepCamelCaseKeys(await response.json()) as ShortLink;
+  return withShortUrl(deepCamelCaseKeys(await response.json()) as ShortLink);
+}
+
+export type CreateShortLinkForDocumentInput = {
+  documentId?: string;
+  filePath?: string;
+  expireIn?: number;
+};
+
+function withShortUrl(link: ShortLink): ShortLink {
+  if (link.shortUrl || !link.shortId) return link;
+  if (typeof window !== "undefined") {
+    return { ...link, shortUrl: `${window.location.origin}/s/${link.shortId}` };
+  }
+  return link;
+}
+
+export async function createShortLinkForDocument(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreateShortLinkForDocumentInput,
+): Promise<ShortLink> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/short-links/for-document`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      documentId: input.documentId,
+      filePath: input.filePath,
+      expireIn: input.expireIn ?? 3600,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return withShortUrl(deepCamelCaseKeys(await response.json()) as ShortLink);
 }

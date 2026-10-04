@@ -8,6 +8,8 @@ import { useCopyToClipboard } from "usehooks-ts";
 import { useDocumentParams } from "@/hooks/use-document-params";
 import { useFileUrl } from "@/hooks/use-file-url";
 import { downloadFile } from "@/lib/download";
+import { deleteDocumentFromRust } from "@/lib/rust-api/documents-client";
+import { createShortLinkForDocumentFromRust } from "@/lib/rust-api/short-links-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -33,42 +35,40 @@ export function DocumentActions({ showDelete = false, filePath }: Props) {
       : null,
   );
 
-  const shortLinkMutation = useMutation(
-    trpc.shortLinks.createForDocument.mutationOptions({
-      onMutate: () => {
-        setIsCopied(true);
-      },
-      onSuccess: (data) => {
-        if (data?.shortUrl) {
-          copy(data.shortUrl);
+  const shortLinkMutation = useMutation({
+    mutationFn: createShortLinkForDocumentFromRust,
+    onMutate: () => {
+      setIsCopied(true);
+    },
+    onSuccess: (data) => {
+      if (data?.shortUrl) {
+        copy(String(data.shortUrl));
 
-          setTimeout(() => {
-            setIsCopied(false);
-          }, 3000);
-        }
-      },
-    }),
-  );
+        setTimeout(() => {
+          setIsCopied(false);
+        }, 3000);
+      }
+    },
+  });
 
-  const deleteDocumentMutation = useMutation(
-    trpc.documents.delete.mutationOptions({
-      onSuccess: () => {
-        setParams({ documentId: null });
+  const deleteDocumentMutation = useMutation({
+    mutationFn: (input: { id: string }) => deleteDocumentFromRust(input.id),
+    onSuccess: () => {
+      setParams({ documentId: null });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
+    },
+  });
 
   return (
     <div className="flex flex-row">

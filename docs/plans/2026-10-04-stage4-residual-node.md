@@ -9,13 +9,14 @@
 | Process | Port | Role |
 |---------|------|------|
 | Supabase (local) | `54321` | Auth + Postgres + vault storage |
-| **clone** Axum API | `8787` | Durable product logic (cut-over screens) |
+| **clone** Axum API | `8787` | Durable product logic (cut-over screens) + vault `/files/proxy|download/file` |
 | **apps/dashboard** | `3001` | Frozen UI — direct Rust via `NEXT_PUBLIC_RUST_API_URL` |
-| **apps/api** (minimal Node) | `3003` | Residual tRPC + `/files/*` + `/chat` + OAuth callbacks |
+| **apps/api** (minimal Node) | `3003` | Residual tRPC + invoice PDF `/files/download/invoice` + `/chat` + OAuth callbacks |
 
 ```bash
 # 1) Clone API
 cd ../clone && cargo run -p clone-api   # :8787
+# Require: FILE_KEY_SECRET (same as Midday), SUPABASE_URL, SUPABASE_SECRET_KEY
 
 # 2) Midday API (residual Node) — require replacement mode
 cd apps/api
@@ -30,7 +31,7 @@ cd apps/dashboard
 bun run dev                             # :3001
 ```
 
-Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, vault delete, invoice send, etc.) still hit `NEXT_PUBLIC_API_URL/trpc` (and `/files`, `/chat`).
+Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoice send, etc.) still hit `NEXT_PUBLIC_API_URL/trpc` (and invoice PDF `/files/download/invoice`, `/chat`).
 
 ## What Stage 4 removed vs kept
 
@@ -47,14 +48,22 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, vault 
 - Default `MIDDAY_BACKEND_MODE` → **`replacement`** (legacy dual/Drizzle no longer the default cutover path).
 - Env/docs updated so the run path is **dashboard + clone + minimal Node**.
 
+### Migrated off residual Node (2026-10-04 files/hybrid slice)
+
+| Capability | Now |
+|------------|-----|
+| `GET /files/proxy`, `GET /files/download/file` | **Rust** (`clone` root routes) — dashboard uses `NEXT_PUBLIC_RUST_API_URL`; Node thins to forward-to-Rust |
+| `documents.delete` | **Rust direct** — SQL + vault storage remove |
+| `inbox.delete` / `deleteMany` | **Rust direct** — SQL + vault storage remove (storage errors logged, non-fatal) |
+| `shortLinks.createForDocument` | **Rust direct** — signed URL + short_links insert |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
 
 | Procedure | Why Node |
 |-----------|----------|
-| `documents.delete` / `reprocessDocument` / `processDocument` | Vault storage + process-document jobs |
-| `inbox.delete` / `deleteMany` | Storage remove after SQL |
+| `documents.reprocessDocument` / `processDocument` | process-document jobs |
 | `inbox.processAttachments` / `retryMatching` | Jobs |
 | `team.invite` / `create` / `delete` | Trigger email / multi-table / delete-team job |
 | `team.updateBaseCurrency` / `exportAllData` | Trigger jobs |
@@ -65,7 +74,6 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, vault 
 | `customers.enrich` | Trigger enrich job |
 | `inboxAccounts.sync` / `delete` | Trigger schedules |
 | `transactionAttachments.processAttachment` | Jobs |
-| `shortLinks.createForDocument` | Signed URL / storage orchestration |
 | `accounting.export` | Export job (+ provider HTTP gated) |
 | `transactions.import` / `export` / `generateCsvMapping` | Jobs / AI |
 
@@ -80,13 +88,14 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, vault 
 | Composio | `connectors.*` |
 | Stripe / Polar | `billing.*`, `invoicePayments.*` |
 | Admin email | `user.delete`, `apiKeys.upsert` |
-| Storage-only | `documents.signedUrls` |
+| Storage-only | `documents.signedUrls` (batch signed URLs for zip download) |
 | Job status | `jobs.getStatus` |
+| Invoice PDF bytes | `GET /files/download/invoice` (React PDF render) |
 
 #### Non-tRPC `apps/api` surfaces
 
 - `POST /chat`
-- `GET /files/download/*`, `GET /files/proxy`
+- `GET /files/download/invoice` (PDF) — vault proxy/file download owned by Rust; Node forwards if hit
 - Gmail/Outlook OAuth redirect URIs on `:3003`
 
 #### Internal non-dashboard tRPC
@@ -98,20 +107,28 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, vault 
 Full deletion of `apps/api`, `packages/replacement-backend`, `packages/db` waits until:
 
 1. Every §KEEP hybrid/STOP procedure is Rust-owned **or** explicitly retired with a migration note in product UX.
-2. `/files` + `/chat` + OAuth callbacks moved or replaced.
+2. Invoice PDF `/files/download/invoice` + `/chat` + OAuth callbacks moved or replaced.
 3. Jobs/worker no longer call Node tRPC banking.
 
 Until then, `@midday/replacement-backend` remains for residual hybrid SQL delegation only.
 
 ## Migration notes (capability status)
 
-| Capability | Status after Stage 4 partial |
-|------------|------------------------------|
-| Overview / tx / inbox reads / invoices SQL / tracker / reports / tags / categories | **Rust direct** — Node façade fail-closed if accidentally called |
+| Capability | Status after Stage 4 files/hybrid slice |
+|------------|----------------------------------------|
+| Overview / tx / inbox reads / invoices SQL / tracker / reports / tags / categories | **Rust direct** |
+| Vault proxy / vault file download | **Rust direct** |
+| Vault delete / inbox delete / document short-link | **Rust direct** |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
 | Billing / Stripe invoice payments | **Node** — STOP |
-| Vault delete / inbox delete / document reprocess | **Node** — hybrid |
-| Invoice send / remind / recurring pause-delete | **Node** — hybrid |
+| Invoice PDF download (render) | **Node** — STOP / non-tRPC |
+| Document reprocess / invoice send / remind / recurring pause-delete | **Node** — hybrid |
 | Team invite email / create team / delete team | **Node** — hybrid |
+
+### Next recommended residual slice
+
+1. **`documents.reprocessDocument` / `processDocument`** — already have Rust worker SQL; wire dashboard → Rust + keep job enqueue in Node *or* move enqueue if a clean path exists.  
+2. Or **invoice PDF** (`/files/download/invoice`) — largest remaining non-tRPC file surface (React PDF); requires porting `@midday/invoice` render or a new Rust PDF path.  
+3. Or **`documents.signedUrls`** — storage-only STOP; can move to Rust with service role once zip download callers cut over.
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

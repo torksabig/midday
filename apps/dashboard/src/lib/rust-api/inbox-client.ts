@@ -16,7 +16,10 @@ import {
   type CreatedInboxItem,
   declineInboxMatch,
   type DeclineInboxMatchInput,
+  type DeletedInboxItem,
   deleteInboxBlocklist,
+  deleteInboxItem,
+  deleteInboxItemsMany,
   fetchInboxBlocklist,
   fetchInboxById,
   fetchInboxByStatus,
@@ -151,6 +154,16 @@ export async function createInboxBlocklistFromRust(
 
 export async function deleteInboxBlocklistFromRust(id: string) {
   return deleteInboxBlocklist(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function deleteInboxFromRust(id: string): Promise<DeletedInboxItem> {
+  return deleteInboxItem(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function deleteInboxManyFromRust(
+  ids: string[],
+): Promise<DeletedInboxItem[]> {
+  return deleteInboxItemsMany(getRustApiUrl(), await getAccessToken(), ids);
 }
 
 export async function createInboxItemFromRust(

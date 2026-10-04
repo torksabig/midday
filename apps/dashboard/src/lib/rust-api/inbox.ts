@@ -757,6 +757,82 @@ export async function createInboxBlocklist(
   );
 }
 
+export type DeletedInboxItem = {
+  id: string;
+  filePath: string[] | null;
+};
+
+export async function deleteInboxItem(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<DeletedInboxItem> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/inbox/${encodeURIComponent(id)}/delete`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const row = deepCamelCaseKeysInbox(await response.json()) as Record<
+    string,
+    unknown
+  >;
+  return {
+    id: String(row.id),
+    filePath: Array.isArray(row.filePath) ? (row.filePath as string[]) : null,
+  };
+}
+
+export async function deleteInboxItemsMany(
+  baseUrl: string,
+  accessToken: string | null,
+  ids: string[],
+): Promise<DeletedInboxItem[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/inbox/delete-many`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(ids),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as unknown[];
+  return payload.map((entry) => {
+    const row = deepCamelCaseKeysInbox(entry) as Record<string, unknown>;
+    return {
+      id: String(row.id),
+      filePath: Array.isArray(row.filePath) ? (row.filePath as string[]) : null,
+    };
+  });
+}
+
 export async function deleteInboxBlocklist(
   baseUrl: string,
   accessToken: string | null,

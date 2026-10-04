@@ -24,6 +24,7 @@ import { revalidateInbox } from "@/actions/revalidate-action";
 import { Portal } from "@/components/portal";
 import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
+import { deleteInboxManyFromRust } from "@/lib/rust-api/inbox-client";
 import { useInboxStore } from "@/store/inbox";
 import { useTRPC } from "@/trpc/client";
 
@@ -50,9 +51,9 @@ export function InboxBulkActions() {
     }
   }, [selectedCount]);
 
-  const deleteInboxMutation = useMutation(
-    trpc.inbox.deleteMany.mutationOptions({
-      onMutate: async () => {
+  const deleteInboxMutation = useMutation({
+    mutationFn: (ids: string[]) => deleteInboxManyFromRust(ids),
+    onMutate: async () => {
         // Cancel outgoing refetches
         await queryClient.cancelQueries({
           queryKey: trpc.inbox.get.infiniteQueryKey(),
@@ -132,8 +133,7 @@ export function InboxBulkActions() {
           );
         }
       },
-    }),
-  );
+  });
 
   if (selectedCount === 0) {
     return null;

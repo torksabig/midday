@@ -26,7 +26,11 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
-import { documentsInfiniteQueryOptions } from "@/lib/rust-api/documents-client";
+import {
+  deleteDocumentFromRust,
+  documentsInfiniteQueryOptions,
+} from "@/lib/rust-api/documents-client";
+import { createShortLinkForDocumentFromRust } from "@/lib/rust-api/short-links-client";
 import { useDocumentsStore } from "@/store/vault";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS } from "@/utils/table-configs";
@@ -122,34 +126,32 @@ export function DataTable({ initialSettings }: Props) {
     },
   });
 
-  const deleteDocumentMutation = useMutation(
-    trpc.documents.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
+  const deleteDocumentMutation = useMutation({
+    mutationFn: (input: { id: string }) => deleteDocumentFromRust(input.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.queryKey(),
+      });
 
-        // Invalidate global search
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
-      },
-    }),
-  );
+      // Invalidate global search
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
+    },
+  });
 
-  const shortLinkMutation = useMutation(
-    trpc.shortLinks.createForDocument.mutationOptions({
-      onSuccess: (data) => {
-        if (data?.shortUrl) {
-          copy(data.shortUrl);
-        }
-      },
-    }),
-  );
+  const shortLinkMutation = useMutation({
+    mutationFn: createShortLinkForDocumentFromRust,
+    onSuccess: (data) => {
+      if (data?.shortUrl) {
+        copy(String(data.shortUrl));
+      }
+    },
+  });
 
   const documents = baseDocuments;
 

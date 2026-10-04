@@ -11,6 +11,7 @@ import { FormatAmount } from "@/components/format-amount";
 import { InboxActions } from "@/components/inbox/inbox-actions";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { getVaultFilesApiUrl } from "@/lib/files-api-url";
 import { inboxByIdQueryOptions } from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 import { getWebsiteLogo } from "@/utils/logos";
@@ -125,7 +126,7 @@ export function InboxSheetDetails() {
           <div className="h-full flex items-center justify-center">
             <FileViewer
               mimeType={data.contentType}
-              url={`${process.env.NEXT_PUBLIC_API_URL}/files/proxy?filePath=vault/${data.filePath.join("/")}`}
+              url={`${getVaultFilesApiUrl()}/files/proxy?filePath=vault/${data.filePath.join("/")}`}
               maxWidth={565}
             />
           </div>

@@ -7,8 +7,10 @@ import {
 } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type DeletedDocument,
   type DocumentCheckAttachments,
   type DocumentDetail,
+  deleteDocument,
   type DocumentsList,
   type DocumentsListParams,
   fetchDocumentById,
@@ -25,6 +27,10 @@ function getRustApiUrl() {
   if (process.env.NODE_ENV !== "production") return "http://127.0.0.1:8787";
 
   throw new Error("NEXT_PUBLIC_RUST_API_URL must be configured");
+}
+
+export async function deleteDocumentFromRust(id: string): Promise<DeletedDocument> {
+  return deleteDocument(getRustApiUrl(), await getAccessToken(), id);
 }
 
 export function documentsInfiniteQueryOptions(

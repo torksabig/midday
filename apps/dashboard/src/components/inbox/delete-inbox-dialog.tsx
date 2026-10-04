@@ -19,7 +19,10 @@ import { useState } from "react";
 import { revalidateInbox } from "@/actions/revalidate-action";
 import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
-import { inboxCheckAttachmentsQueryOptions } from "@/lib/rust-api/inbox-client";
+import {
+  deleteInboxFromRust,
+  inboxCheckAttachmentsQueryOptions,
+} from "@/lib/rust-api/inbox-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -54,9 +57,9 @@ export function DeleteInboxDialog({
     ),
   );
 
-  const deleteInboxMutation = useMutation(
-    trpc.inbox.delete.mutationOptions({
-      onMutate: async () => {
+  const deleteInboxMutation = useMutation({
+    mutationFn: (input: { id: string }) => deleteInboxFromRust(input.id),
+    onMutate: async () => {
         setIsDeleting(true);
 
         // Cancel outgoing refetches
@@ -163,8 +166,7 @@ export function DeleteInboxDialog({
           queryKey: trpc.inbox.get.infiniteQueryKey(),
         });
       },
-    }),
-  );
+  });
 
   const handleDelete = () => {
     track(LogEvents.InboxItemDeleted.name);

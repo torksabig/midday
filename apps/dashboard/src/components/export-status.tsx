@@ -17,6 +17,7 @@ import { useFileUrl } from "@/hooks/use-file-url";
 import { useJobStatus } from "@/hooks/use-job-status";
 import { useSuccessSound } from "@/hooks/use-success-sound";
 import { downloadFile } from "@/lib/download";
+import { createShortLinkForDocumentFromRust } from "@/lib/rust-api/short-links-client";
 import { useExportStore } from "@/store/export";
 import { useTRPC } from "@/trpc/client";
 
@@ -98,26 +99,25 @@ export function ExportStatus() {
       ? (result as ExportResult)
       : undefined;
 
-  const shareFileMutation = useMutation(
-    trpc.shortLinks.createForDocument.mutationOptions({
-      onError: () => {
-        toast({
-          duration: 2500,
-          variant: "error",
-          title: "Something went wrong please try again.",
-        });
-      },
-      onSuccess: ({ shortUrl }) => {
-        copy(shortUrl ?? "");
+  const shareFileMutation = useMutation({
+    mutationFn: createShortLinkForDocumentFromRust,
+    onError: () => {
+      toast({
+        duration: 2500,
+        variant: "error",
+        title: "Something went wrong please try again.",
+      });
+    },
+    onSuccess: ({ shortUrl }) => {
+      copy(String(shortUrl ?? ""));
 
-        toast({
-          duration: 2500,
-          title: "Copied URL to clipboard.",
-          variant: "success",
-        });
-      },
-    }),
-  );
+      toast({
+        duration: 2500,
+        title: "Copied URL to clipboard.",
+        variant: "success",
+      });
+    },
+  });
 
   const handleOnDownload = useCallback(() => {
     if (toastId) {

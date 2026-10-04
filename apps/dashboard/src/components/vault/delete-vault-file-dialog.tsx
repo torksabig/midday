@@ -15,7 +15,10 @@ import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { documentCheckAttachmentsQueryOptions } from "@/lib/rust-api/documents-client";
+import {
+  deleteDocumentFromRust,
+  documentCheckAttachmentsQueryOptions,
+} from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -47,30 +50,29 @@ export function DeleteVaultFileDialog({
     ),
   );
 
-  const deleteDocumentMutation = useMutation(
-    trpc.documents.delete.mutationOptions({
-      onMutate: () => {
-        setIsDeleting(true);
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
+  const deleteDocumentMutation = useMutation({
+    mutationFn: (input: { id: string }) => deleteDocumentFromRust(input.id),
+    onMutate: () => {
+      setIsDeleting(true);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
 
-        onOpenChange(false);
-      },
-      onError: () => {
-        setIsDeleting(false);
-      },
-      onSettled: () => {
-        setIsDeleting(false);
-      },
-    }),
-  );
+      onOpenChange(false);
+    },
+    onError: () => {
+      setIsDeleting(false);
+    },
+    onSettled: () => {
+      setIsDeleting(false);
+    },
+  });
 
   const handleDelete = () => {
     track(LogEvents.VaultFileDeleted.name);

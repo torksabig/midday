@@ -2,7 +2,7 @@
 
 **Temporary cutover package** — REST client and response mappers used while residual `apps/api` tRPC procedures fetch the Rust replacement API (sibling [`fintech/clone`](../../../clone)).
 
-**Stage 4 (2026-10-04):** Partial decommission — dead-façade routers are fail-closed; dashboard cut-over screens call Rust directly. This package remains only for **residual hybrid** tRPC SQL delegation inside `apps/api`. Full delete waits until hybrids/STOP/`/files`/`/chat` are gone — see [`docs/plans/2026-10-04-stage4-residual-node.md`](../../docs/plans/2026-10-04-stage4-residual-node.md).
+**Stage 4 (2026-10-04):** Partial decommission — dead-façade routers are fail-closed; vault files + document/inbox delete + document short-links call Rust directly. This package remains only for **residual hybrid** tRPC SQL delegation inside `apps/api`. Full delete waits until hybrids/STOP/invoice PDF/`/chat` are gone — see [`docs/plans/2026-10-04-stage4-residual-node.md`](../../docs/plans/2026-10-04-stage4-residual-node.md).
 
 Do **not** treat `MIDDAY_BACKEND_MODE` or this SDK as permanent architecture. Canonical plan: [`docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md`](../../docs/plans/2026-09-28-clean-rust-replacement-no-proxy.md). Autopilot: [`docs/plans/2026-10-02-autopilot-direct-cutover.md`](../../docs/plans/2026-10-02-autopilot-direct-cutover.md).
 

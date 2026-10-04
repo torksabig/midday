@@ -310,3 +310,43 @@ export async function fetchDocumentCheckAttachments(
 
   return normalizeDocumentCheckAttachments(await response.json());
 }
+
+export type DeletedDocument = {
+  id: string;
+  pathTokens: string[] | null;
+};
+
+export async function deleteDocument(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<DeletedDocument> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/documents/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const row = deepCamelCaseKeys(await response.json()) as Record<
+    string,
+    unknown
+  >;
+  return {
+    id: String(row.id),
+    pathTokens: Array.isArray(row.pathTokens)
+      ? (row.pathTokens as string[])
+      : null,
+  };
+}

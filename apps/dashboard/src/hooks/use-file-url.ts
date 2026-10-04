@@ -1,5 +1,9 @@
 import { useMemo } from "react";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  getInvoiceFilesApiUrl,
+  getVaultFilesApiUrl,
+} from "@/lib/files-api-url";
 
 type FileUrlOptions =
   | {
@@ -75,8 +79,8 @@ export function useFileUrl(options: FileUrlOptions | null) {
     }
 
     if (options.type === "invoice") {
-      // Build invoice download URL
-      const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice`;
+      // Build invoice download URL (residual Node PDF render)
+      const baseUrl = `${getInvoiceFilesApiUrl()}/files/download/invoice`;
       const url = new URL(baseUrl);
       url.searchParams.set("id", options.invoiceId);
       url.searchParams.set("fk", user.fileKey);
@@ -90,10 +94,10 @@ export function useFileUrl(options: FileUrlOptions | null) {
       };
     }
 
-    // Build URL from file path
+    // Build URL from file path (Rust vault proxy/download)
     const { type, filePath, filename } = options;
     const endpointPath = type === "download" ? `${type}/file` : type;
-    const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/files/${endpointPath}`;
+    const baseUrl = `${getVaultFilesApiUrl()}/files/${endpointPath}`;
     const url = new URL(baseUrl);
 
     if (type === "download") {

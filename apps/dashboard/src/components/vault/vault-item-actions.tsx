@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useCopyToClipboard } from "usehooks-ts";
 import { useFileUrl } from "@/hooks/use-file-url";
 import { downloadFile } from "@/lib/download";
-import { useTRPC } from "@/trpc/client";
+import { createShortLinkForDocumentFromRust } from "@/lib/rust-api/short-links-client";
 import { DeleteVaultFileDialog } from "./delete-vault-file-dialog";
 
 type Props = {
@@ -23,7 +23,6 @@ export function VaultItemActions({ id, filePath, hideDelete }: Props) {
   const [isCopied, setIsCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { track } = useOpenPanel();
-  const trpc = useTRPC();
 
   const fileName = filePath.at(-1);
   const { url: downloadUrl } = useFileUrl({
@@ -32,23 +31,22 @@ export function VaultItemActions({ id, filePath, hideDelete }: Props) {
     filename: fileName,
   });
 
-  const shortLinkMutation = useMutation(
-    trpc.shortLinks.createForDocument.mutationOptions({
-      onMutate: () => {
-        setIsCopied(true);
-      },
-      onSuccess: (data) => {
-        track(LogEvents.VaultFileShared.name);
-        if (data?.shortUrl) {
-          copy(data.shortUrl);
+  const shortLinkMutation = useMutation({
+    mutationFn: createShortLinkForDocumentFromRust,
+    onMutate: () => {
+      setIsCopied(true);
+    },
+    onSuccess: (data) => {
+      track(LogEvents.VaultFileShared.name);
+      if (data?.shortUrl) {
+        copy(String(data.shortUrl));
 
-          setTimeout(() => {
-            setIsCopied(false);
-          }, 3000);
-        }
-      },
-    }),
-  );
+        setTimeout(() => {
+          setIsCopied(false);
+        }, 3000);
+      }
+    },
+  });
 
   return (
     <div className="flex flex-row gap-2">

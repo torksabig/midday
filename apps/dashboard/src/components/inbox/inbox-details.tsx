@@ -35,6 +35,7 @@ import { useInboxFilterParams } from "@/hooks/use-inbox-filter-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
+import { getVaultFilesApiUrl } from "@/lib/files-api-url";
 import {
   createInboxBlocklistFromRust,
   inboxByIdQueryOptions,
@@ -538,7 +539,7 @@ export function InboxDetails() {
                         ? "image/jpeg"
                         : data.contentType
                     }
-                    url={`${process.env.NEXT_PUBLIC_API_URL}/files/proxy?filePath=vault/${data?.filePath.join("/")}`}
+                    url={`${getVaultFilesApiUrl()}/files/proxy?filePath=vault/${data?.filePath.join("/")}`}
                     // Include contentType in key to remount after HEIC conversion (busts browser cache)
                     key={`${params.inboxOrder}-${JSON.stringify(filterParams)}-${data.contentType}-primary`}
                   />
@@ -567,7 +568,7 @@ export function InboxDetails() {
                               ? "image/jpeg"
                               : relatedItem.contentType
                           }
-                          url={`${process.env.NEXT_PUBLIC_API_URL}/files/proxy?filePath=vault/${relatedItem.filePath.join("/")}`}
+                          url={`${getVaultFilesApiUrl()}/files/proxy?filePath=vault/${relatedItem.filePath.join("/")}`}
                           // Include contentType in key to remount after HEIC conversion
                           key={`${relatedItem.id}-${params.inboxOrder}-${JSON.stringify(filterParams)}-${relatedItem.contentType}`}
                         />
