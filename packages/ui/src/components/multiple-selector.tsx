@@ -515,6 +515,12 @@ const MultipleSelector = React.forwardRef<
               disabled={disabled}
               onValueChange={(value) => {
                 setInputValue(value);
+                // Keep the creatable/options list open while typing. Focus alone is
+                // not enough when the list was closed by blur/click-outside but the
+                // input retained focus (common in sheet layouts).
+                if (value) {
+                  setOpen(true);
+                }
                 inputProps?.onValueChange?.(value);
               }}
               onBlur={(event) => {

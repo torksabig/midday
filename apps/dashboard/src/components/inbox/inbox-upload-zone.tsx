@@ -73,15 +73,24 @@ export function UploadZone({ children, onUploadComplete }: Props) {
       return;
     }
 
+    if (!user?.teamId) {
+      toast({
+        duration: 2500,
+        variant: "error",
+        title: "Team not loaded yet. Try again in a moment.",
+      });
+      return;
+    }
+
     // Set default progress
     uploadProgress.current = files.map(() => 0);
 
     setShowProgress(true);
 
-    const path = [user?.teamId, "inbox"] as string[];
+    const path = [user.teamId, "inbox"] as string[];
 
     try {
-      // First, create inbox items immediately for instant feedback
+      // First, create inbox items immediately for instant feedback (Rust API).
       const inboxItems = await Promise.all(
         files.map(async (file: File) => {
           // Use the same filename processing as resumableUpload
@@ -89,7 +98,7 @@ export function UploadZone({ children, onUploadComplete }: Props) {
           const filePath = [...path, processedFilename];
           return createInboxItemMutation.mutateAsync({
             filename: processedFilename,
-            mimetype: file.type,
+            mimetype: file.type || "application/octet-stream",
             size: file.size,
             filePath,
           });
@@ -202,6 +211,9 @@ export function UploadZone({ children, onUploadComplete }: Props) {
       {...getRootProps({ onClick: (evt) => evt.stopPropagation() })}
       className="relative h-full"
     >
+      {/* Keep the file input outside pointer-events-none so header Upload
+          (`#upload-files`.click()) and programmatic picks always work. */}
+      <input {...getInputProps()} id="upload-files" className="hidden" />
       <div className="absolute top-0 bottom-0 right-0 left-0 z-[51] pointer-events-none">
         <div
           className={cn(
@@ -209,7 +221,6 @@ export function UploadZone({ children, onUploadComplete }: Props) {
             isDragActive && "visible",
           )}
         >
-          <input {...getInputProps()} id="upload-files" />
           <p className="text-xs">
             Drop your receipts here. <br />
             Maximum of 25 files at a time.

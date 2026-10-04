@@ -76,6 +76,41 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
     }))
     .filter((tag) => !selected.some((s) => s.id === tag.id));
 
+  const commitCreatedTag = (data: { id: string; name: string }) => {
+    const newTag = {
+      id: data.id,
+      label: data.name,
+      value: data.name,
+    };
+
+    setSelected((prev) => {
+      const withoutProvisional = prev.filter(
+        (tag) => tag.value !== data.name || Boolean(tag.id),
+      );
+      if (withoutProvisional.some((tag) => tag.id === data.id)) {
+        return withoutProvisional;
+      }
+      return [...withoutProvisional.filter((tag) => tag.value !== data.name), newTag];
+    });
+    onSelect?.(newTag);
+  };
+
+  const handleCreateTag = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || createTagMutation.isPending) return;
+
+    createTagMutation.mutate(
+      { name: trimmed },
+      {
+        onSuccess: (data) => {
+          if (data?.id && data.name) {
+            commitCreatedTag(data);
+          }
+        },
+      },
+    );
+  };
+
   const handleDelete = () => {
     if (editingTag?.id) {
       deleteTagMutation.mutate({ id: editingTag.id });
@@ -103,6 +138,26 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
           placeholder="Select tags"
           creatable
           emptyIndicator={<p className="text-sm">No results found.</p>}
+          inputProps={{
+            onKeyDown: (event) => {
+              if (event.key !== "Enter") return;
+              const value = event.currentTarget.value.trim();
+              if (!value) return;
+              // Creatable dropdown item can miss Enter when the list was closed;
+              // always persist a brand-new tag name from the input.
+              const exists =
+                selected.some(
+                  (tag) => tag.value.toLowerCase() === value.toLowerCase(),
+                ) ||
+                data?.some(
+                  (tag) => tag.name.toLowerCase() === value.toLowerCase(),
+                );
+              if (!exists) {
+                event.preventDefault();
+                handleCreateTag(value);
+              }
+            },
+          }}
           renderOption={(option) => (
             <div className="flex items-center justify-between w-full group">
               <span>{option.label}</span>
@@ -121,23 +176,7 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
             </div>
           )}
           onCreate={(option) => {
-            createTagMutation.mutate(
-              { name: option.value },
-              {
-                onSuccess: (data) => {
-                  if (data) {
-                    const newTag = {
-                      id: data.id,
-                      label: data.name,
-                      value: data.name,
-                    };
-
-                    setSelected([...selected, newTag]);
-                    onSelect?.(newTag);
-                  }
-                },
-              },
-            );
+            handleCreateTag(option.value);
           }}
           onChange={(options) => {
             setSelected(options);
@@ -148,7 +187,10 @@ export function SelectTags({ tags, onSelect, onRemove, onChange }: Props) {
             );
 
             if (newTag) {
-              onSelect?.(newTag);
+              // Provisional creatable options have no id yet — onCreate persists them.
+              if (newTag.id) {
+                onSelect?.(newTag);
+              }
               return;
             }
 

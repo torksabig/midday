@@ -36,8 +36,16 @@ export function useInboxUpload() {
   const uploadFiles = useCallback(
     async (files: File[]) => {
       if (!files.length) return;
+      if (!user?.teamId) {
+        toastRef.current.toast({
+          duration: 2500,
+          variant: "error",
+          title: "Team not loaded yet. Try again in a moment.",
+        });
+        return;
+      }
 
-      const path = [user?.teamId, "inbox"] as string[];
+      const path = [user.teamId, "inbox"] as string[];
       const progress = files.map(() => 0);
 
       const { id } = toastRef.current.toast({
@@ -57,7 +65,7 @@ export function useInboxUpload() {
             const filePath = [...path, processedFilename];
             return createInboxItem({
               filename: processedFilename,
-              mimetype: file.type,
+              mimetype: file.type || "application/octet-stream",
               size: file.size,
               filePath,
             });

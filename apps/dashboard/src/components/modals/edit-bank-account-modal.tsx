@@ -73,15 +73,14 @@ export function EditBankAccountModal({
   const updateAccountMutation = useMutation({
     mutationFn: updateBankAccountFromRust,
     onSuccess: () => {
-      queryClient.invalidateQueries({
+      // Close first so Save doesn't keep spinning while list invalidation runs.
+      onOpenChange(false);
+      void queryClient.invalidateQueries({
         queryKey: trpc.bankConnections.get.queryKey(),
       });
-
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: trpc.bankAccounts.get.queryKey(),
       });
-
-      onOpenChange(false);
     },
   });
 

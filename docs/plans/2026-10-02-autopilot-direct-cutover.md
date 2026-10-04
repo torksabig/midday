@@ -233,3 +233,15 @@ Optional: Cursor **Loop** / Automation on a timer with the same prompt.
 - [Clean Rust replacement](./2026-09-28-clean-rust-replacement-no-proxy.md) — stages 1–4
 - [Still to be worked on](./still-to-be-worked-on.md) — blocked/external leftovers
 - [Clone-only cutover](./2026-09-29-clone-only-cutover.md) — earlier dual-stack notes (façade era)
+
+## Dashboard UI QA leftovers (2026-10-04)
+
+Focused retest after clone timer duration fix (`517d9f4`) + notifications query fix (`b51179bde`):
+
+| Flow | Result |
+|------|--------|
+| Tags create + assign on transaction sheet | **PASS** — MultipleSelector now opens on type; SelectTags Enter/onCreate persists `tags` + `transaction_tags` |
+| Tracker start/stop duration | **PASS** — stop returns sane seconds (e.g. 3s); UI discards &lt;1m entries by design |
+| Inbox file upload → row | **PASS** — `POST /api/v1/inbox` creates row; vault blob upload may still hang locally |
+
+Still **no Stage 4 / decommission**.
