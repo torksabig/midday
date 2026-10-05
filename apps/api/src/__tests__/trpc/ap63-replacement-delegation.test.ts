@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { accountingRouter } from "../../trpc/routers/accounting";
+import { bankConnectionsRouter } from "../../trpc/routers/bank-connections";
 import { customersRouter } from "../../trpc/routers/customers";
 import { invoiceRecurringRouter } from "../../trpc/routers/invoice-recurring";
 import { invoiceRouter } from "../../trpc/routers/invoice";
@@ -192,6 +193,42 @@ describe("tRPC: AP-65 oauthApplications.enqueueOAuthApprovalReviewEmail (email-o
       userEmail: "ada@example.com",
     });
     expect(result).toEqual({ sent: true });
+  });
+});
+
+describe("tRPC: AP-63 bankConnections.enqueueDeleteConnection (trigger-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerDevTask?.mockReset?.();
+    mocks.triggerDevTask?.mockImplementation?.(() =>
+      Promise.resolve({ id: "evt_trigger_test" }),
+    );
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueDeleteConnection triggers delete-connection without Drizzle", async () => {
+    const caller = createCallerFactory(bankConnectionsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueDeleteConnection({
+      referenceId: "ref-1",
+      provider: "plaid",
+      accessToken: "tok",
+    });
+    expect(mocks.triggerDevTask).toHaveBeenCalledWith("delete-connection", {
+      referenceId: "ref-1",
+      provider: "plaid",
+      accessToken: "tok",
+    });
   });
 });
 

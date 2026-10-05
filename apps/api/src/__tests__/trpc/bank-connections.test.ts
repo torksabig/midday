@@ -5,11 +5,13 @@ import { createTestContext } from "../helpers/test-context";
 import { mocks } from "../setup";
 
 const CONN_ID = "d1e2f3a4-b5c6-7890-abcd-ef1234567890";
+const envSnapshot = { ...process.env };
 
 const createCaller = createCallerFactory(bankConnectionsRouter);
 
 describe("tRPC: bankConnections.get", () => {
   beforeEach(() => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     mocks.getBankConnections.mockReset();
     mocks.getBankConnections.mockImplementation(() => Promise.resolve([]));
   });
@@ -40,6 +42,7 @@ describe("tRPC: bankConnections.get", () => {
 
 describe("tRPC: bankConnections.delete", () => {
   beforeEach(() => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     mocks.deleteBankConnection.mockReset();
     mocks.deleteBankConnection.mockImplementation(() =>
       Promise.resolve({
@@ -64,6 +67,11 @@ describe("tRPC: bankConnections.delete", () => {
       expect.anything(),
       expect.objectContaining({ id: CONN_ID, teamId: "test-team-id" }),
     );
+    expect(mocks.triggerDevTask).toHaveBeenCalledWith("delete-connection", {
+      referenceId: "ref-xyz",
+      provider: "gocardless",
+      accessToken: "token-abc",
+    });
   });
 
   test("throws when connection is not found", async () => {
@@ -75,4 +83,8 @@ describe("tRPC: bankConnections.delete", () => {
       "Bank connection not found",
     );
   });
+});
+
+afterEach(() => {
+  process.env = { ...envSnapshot };
 });

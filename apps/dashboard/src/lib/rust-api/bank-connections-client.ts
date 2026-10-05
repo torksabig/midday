@@ -5,10 +5,17 @@ import { getAccessToken } from "@/utils/session";
 import {
   type BankConnectionListItem,
   type BankConnectionsListParams,
+  deleteBankConnection,
   fetchBankConnections,
   type ReconnectBankConnectionInput,
   reconnectBankConnection,
 } from "./bank-connections";
+
+export type EnqueueDeleteConnectionInput = {
+  referenceId: string | null;
+  provider: "gocardless" | "teller" | "plaid" | "enablebanking";
+  accessToken: string | null;
+};
 
 export type { BankConnectionListItem };
 
@@ -45,4 +52,35 @@ export async function reconnectBankConnectionFromRust(
     await getAccessToken(),
     input,
   );
+}
+
+export async function deleteBankConnectionFromRust(id: string) {
+  return deleteBankConnection(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function deleteBankConnectionWithProviderCleanup(
+  input: {
+    id: string;
+    fallbackProvider?: EnqueueDeleteConnectionInput["provider"];
+  },
+  enqueueDeleteConnection: (
+    payload: EnqueueDeleteConnectionInput,
+  ) => Promise<unknown>,
+) {
+  const data = await deleteBankConnectionFromRust(input.id);
+  if (!data) {
+    throw new Error("Bank connection not found");
+  }
+
+  const provider = (data.provider ??
+    input.fallbackProvider) as EnqueueDeleteConnectionInput["provider"] | null;
+  if (provider) {
+    await enqueueDeleteConnection({
+      referenceId: data.referenceId,
+      provider,
+      accessToken: data.accessToken,
+    });
+  }
+
+  return data;
 }

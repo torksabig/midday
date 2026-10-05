@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `c5e41ff6e` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | *(post-slice commit)* | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
@@ -26,6 +26,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 | `accounting.enqueueExportToAccounting` | BullMQ `export-to-accounting` (Rust `GET /api/v1/apps/{id}` prep in UI) | Hybrid job-only |
 | `team.enqueueInviteTeamEmails` / `enqueueDeleteTeamJob` / `enqueueUpdateBaseCurrency` / `enqueueExportAllData` | Trigger / BullMQ only | Hybrid job-only |
 | `inboxAccounts.enqueueSyncInboxAccount` / `enqueueDeleteInboxAccountSchedule` | Trigger sync / schedule del | Hybrid job-only |
+| `bankConnections.enqueueDeleteConnection` | Trigger `delete-connection` only | Hybrid job-only |
 | `oauthApplications.enqueueOAuthAppInstalledEmail` / `enqueueOAuthApprovalReviewEmail` | Resend only | Hybrid job-only |
 | `invoice.enqueueSendInvoiceReminder` / `enqueueRemoveScheduledInvoiceJob` / `enqueueGenerateInvoice` / `enqueueScheduleInvoice` / `enqueueInvoiceScheduledNotification` | Trigger / BullMQ only (SQL on Rust) | Hybrid job-only |
 | `invoiceRecurring.enqueueRemoveInvoiceScheduledJobs` / `enqueueRecurringSeriesStartedNotification` | BullMQ / notification only (SQL on Rust) | Hybrid job-only |
@@ -34,7 +35,8 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 | `invoiceRecurring.create` / `update` / `pause` / `delete` (tRPC) | Non-dashboard; dashboard uses Rust + enqueue* (`resume` direct) | Hybrid fallback |
 | `customers.enqueueEnrichCustomer` | Trigger `enrich-customer` only (SQL on Rust) | Hybrid job-only |
 | `customers.enrich` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue | Hybrid fallback |
-| `bankConnections.create` / `addAccounts` / `delete` | Encrypt + Trigger delete-connection | STOP |
+| `bankConnections.create` / `addAccounts` | Encrypt + `initial-bank-setup` | STOP |
+| `bankConnections.delete` (tRPC) | Non-dashboard; Rust delegate + Trigger inline | Hybrid fallback |
 | `banking.plaid*` / `gocardless*` / `enablebanking*` (+ `getProviderAccounts`) | Live bank OAuth / token exchange | STOP |
 | `bankAccounts.getDetails` / `getWithPaymentInfo` | Decrypt | STOP |
 | `inboxAccounts.connect` | Inbox OAuth | STOP |
@@ -50,8 +52,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 
 ### Prioritized next slices (no invoice PDF live render)
 
-1. **`bankConnections.delete` dashboard hybrid** — Rust `DELETE /api/v1/bank-connections/{id}` + Node `enqueueDeleteConnection` (Trigger `delete-connection` only); today dashboard still calls full `bankConnections.delete` tRPC (SQL already delegates on Node).
-2. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
+1. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
 3. **`POST /chat`** — move off Node or document long-term co-host (**permanent block** until ported).
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*` (**permanent block** for full Node teardown).
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -96,7 +97,7 @@ Use this as a gate for the user one-shot **`decommission`** ([autopilot direct c
 - [ ] **Billing:** Stripe/Polar flows not on Node tRPC (or billing product sunset complete).
 - [ ] **Connectors / inbox OAuth:** Composio + Gmail/Outlook connect not on Node tRPC.
 - [ ] **Admin:** `user.delete` / `apiKeys.upsert` side effects moved or retired.
-- [ ] **Hybrid enqueue:** Every dashboard path uses Rust SQL + thin enqueue (or jobs retired)—no full-stack tRPC mutations for product writes (including `bankConnections.delete` split).
+- [ ] **Hybrid enqueue:** Every dashboard path uses Rust SQL + thin enqueue (or jobs retired)—no full-stack tRPC mutations for product writes (`bankConnections.delete` dashboard split **done** 2026-10-05).
 - [ ] **SSR/public tRPC proxy:** Portal token invoice, reports link, short links—migrated or documented co-host.
 - [ ] **Tests/docs:** AP-63 delegation suite green; this doc updated with final SHA and “DECOMMISSIONED” status.
 
@@ -208,6 +209,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.delete` prep + delete SQL | **Rust direct** — dashboard `POST /team/delete-prep` → Node `team.enqueueDeleteTeamJob` (BullMQ `delete-team`) → `POST /team/delete`; full `team.delete` tRPC retained for CLI/tests |
 | `bankConnections.delete` SQL | **Rust** `DELETE /api/v1/bank-connections/{id}` (already delegated); Node only Trigger `delete-connection` — documented in OpenAPI + router |
 
+### Migrated (2026-10-05 bankConnections.delete dashboard hybrid)
+
+| Capability | Now |
+|------------|-----|
+| `bankConnections.delete` SQL | **Rust direct** — dashboard `DELETE /api/v1/bank-connections/{id}` → Node `bankConnections.enqueueDeleteConnection` (Trigger `delete-connection` only); full `bankConnections.delete` tRPC retained for non-dashboard callers |
+
 ### Migrated (2026-10-05 team invite dashboard hybrid)
 
 | Capability | Now |
@@ -295,11 +302,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.enqueueExportAllData` | BullMQ `export-team-data` only (no team SQL) |
 | `inboxAccounts.enqueueDeleteInboxAccountSchedule` | Trigger `schedules.del` only (SQL on Rust) |
 | `inboxAccounts.enqueueSyncInboxAccount` | Trigger `sync-inbox-account` only (row read on Rust) |
+| `bankConnections.enqueueDeleteConnection` | Trigger `delete-connection` only (SQL on Rust) |
 | `oauthApplications.enqueueOAuthAppInstalledEmail` | Resend install email only (auth-code SQL on Rust) |
 | `oauthApplications.enqueueOAuthApprovalReviewEmail` | Resend review email only (status SQL on Rust) |
 | `team.invite` / `team.create` / `team.delete` (tRPC) | Non-dashboard callers; dashboard skips SQL hop |
 | `team.updateBaseCurrency` / `exportAllData` (tRPC) | Non-dashboard callers; dashboard uses enqueue* |
-| `bankConnections.delete` | Trigger `delete-connection` only (SQL on Rust) |
+| `bankConnections.delete` (tRPC) | Non-dashboard callers; dashboard uses Rust + `enqueueDeleteConnection` |
 | `oauthApplications.authorize` / `updateApprovalStatus` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
 | `invoice.enqueueSendInvoiceReminder` / `enqueueRemoveScheduledInvoiceJob` / `enqueueGenerateInvoice` / `enqueueScheduleInvoice` / `enqueueInvoiceScheduledNotification` | Trigger/BullMQ/notification only (SQL on Rust) |
 | `invoice.create` / `cancelSchedule` / `remind` / `updateSchedule` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
@@ -377,7 +385,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | `transactions.generateCsvMapping` | **Node AI** — dashboard tRPC (no Rust) |
 | `accounting.export` | **Rust** app lookup (dashboard) + BullMQ `enqueueExportToAccounting`; tRPC `export` fallback Node |
 | `documents.processDocument` / reprocess SQL | **Rust direct** — dashboard `processDocumentsFromRust` / `reprocessDocumentFromRust` → `documents.enqueueProcessDocument`; tRPC orchestrators for non-dashboard |
-| `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
+| `bankConnections.delete` SQL | **Rust direct** (dashboard); `enqueueDeleteConnection` / tRPC `delete` fallback Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
 | `customers.enrich` SQL | **Rust direct** (dashboard); `enqueueEnrichCustomer` / tRPC `enrich` fallback Node |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
@@ -393,8 +401,8 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**`bankConnections.delete` dashboard hybrid** (Rust DELETE + Node enqueue-only Trigger). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists.
+**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. Then **`POST /chat`** port or co-host documentation.
 
-OpenAPI: `getAppById` returns typed **`InstalledAppResponse`**. **`deleteBankConnection`** on Rust returns SQL row; Node must still run `delete-connection` for provider teardown.
+OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 
 Do **not** silently remove STOP/hybrid/permanent blocks without a replacement plan.

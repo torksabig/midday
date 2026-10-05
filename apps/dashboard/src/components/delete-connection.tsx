@@ -25,6 +25,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { BankConnectionListItem } from "@/lib/rust-api/bank-connections";
+import { deleteBankConnectionWithProviderCleanup } from "@/lib/rust-api/bank-connections-client";
 import { overviewSummaryQueryKey } from "@/lib/rust-api/overview";
 import { useTRPC } from "@/trpc/client";
 
@@ -38,19 +39,33 @@ export function DeleteConnection({ connection }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
 
-  const deleteConnectionMutation = useMutation(
-    trpc.bankConnections.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.bankConnections.get.queryKey(),
-        });
-        queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
-
-        setOpen(false);
-        setValue("");
-      },
-    }),
+  const enqueueDeleteConnectionMutation = useMutation(
+    trpc.bankConnections.enqueueDeleteConnection.mutationOptions(),
   );
+
+  const deleteConnectionMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      deleteBankConnectionWithProviderCleanup(
+        {
+          id,
+          fallbackProvider: connection.provider as
+            | "gocardless"
+            | "teller"
+            | "plaid"
+            | "enablebanking",
+        },
+        (payload) => enqueueDeleteConnectionMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.bankConnections.get.queryKey(),
+      });
+      queryClient.invalidateQueries({ queryKey: overviewSummaryQueryKey });
+
+      setOpen(false);
+      setValue("");
+    },
+  });
 
   const accounts = connection.bankAccounts ?? [];
   const provider = connection.provider;

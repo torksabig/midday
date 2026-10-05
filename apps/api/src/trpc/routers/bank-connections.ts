@@ -2,6 +2,7 @@ import {
   addProviderAccountsSchema,
   createBankConnectionSchema,
   deleteBankConnectionSchema,
+  enqueueDeleteConnectionSchema,
   getBankConnectionsSchema,
   reconnectBankConnectionSchema,
 } from "@api/schemas/bank-connections";
@@ -27,6 +28,12 @@ import type {
 } from "@midday/jobs/schema";
 import { tasks } from "@trigger.dev/sdk";
 import { TRPCError } from "@trpc/server";
+
+async function triggerDeleteConnectionJob(
+  payload: DeleteConnectionPayload,
+) {
+  await tasks.trigger("delete-connection", payload);
+}
 
 export const bankConnectionsRouter = createTRPCRouter({
   get: protectedProcedure
@@ -73,6 +80,18 @@ export const bankConnectionsRouter = createTRPCRouter({
       return event;
     }),
 
+  /** Trigger-only half after dashboard Rust `DELETE /api/v1/bank-connections/{id}`. */
+  enqueueDeleteConnection: protectedProcedure
+    .input(enqueueDeleteConnectionSchema)
+    .mutation(async ({ input }) => {
+      await triggerDeleteConnectionJob({
+        referenceId: input.referenceId,
+        provider: input.provider,
+        accessToken: input.accessToken,
+      });
+      return { triggered: true as const };
+    }),
+
   /** Rust SQL delete; Trigger `delete-connection` provider teardown stays Node (AP-52). */
   delete: protectedProcedure
     .input(deleteBankConnectionSchema)
@@ -102,11 +121,11 @@ export const bankConnectionsRouter = createTRPCRouter({
         throw new Error("Bank connection not found");
       }
 
-      await tasks.trigger("delete-connection", {
+      await triggerDeleteConnectionJob({
         referenceId: data.referenceId,
         provider: data.provider!,
         accessToken: data.accessToken,
-      } satisfies DeleteConnectionPayload);
+      });
 
       return data;
     }),

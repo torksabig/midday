@@ -46,6 +46,13 @@ export const createBankConnectionSchema = z.object({
 
 export const deleteBankConnectionSchema = z.object({ id: z.string() });
 
+/** Trigger `delete-connection` after dashboard Rust `DELETE /api/v1/bank-connections/{id}`. */
+export const enqueueDeleteConnectionSchema = z.object({
+  referenceId: z.string().optional().nullable(),
+  provider: z.enum(["gocardless", "teller", "plaid", "enablebanking"]),
+  accessToken: z.string().optional().nullable(),
+});
+
 export const addProviderAccountsSchema = z.object({
   connectionId: z.string().uuid(),
   accounts: z.array(

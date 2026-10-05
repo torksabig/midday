@@ -5,6 +5,8 @@ type RawBankConnection = components["schemas"]["BankConnectionListItem"];
 type RawBankConnectionAccount = components["schemas"]["BankConnectionAccount"];
 type RawReconnectResponse =
   components["schemas"]["BankConnectionReconnectResponse"];
+type RawDeleteResponse =
+  components["schemas"]["BankConnectionDeleteResponse"];
 
 export type BankConnectionsListParams = {
   enabled?: boolean;
@@ -52,6 +54,12 @@ export type ReconnectBankConnectionInput = {
 
 export type ReconnectBankConnectionResult = {
   id: string;
+};
+
+export type DeleteBankConnectionResult = {
+  referenceId: string | null;
+  provider: string | null;
+  accessToken: string | null;
 };
 
 export function normalizeBankConnectionAccount(
@@ -161,4 +169,37 @@ export async function reconnectBankConnection(
 
   const payload = (await response.json()) as RawReconnectResponse;
   return { id: payload.id };
+}
+
+export async function deleteBankConnection(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<DeleteBankConnectionResult | null> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/bank-connections/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as RawDeleteResponse;
+  return {
+    referenceId: payload.referenceId ?? null,
+    provider: payload.provider ?? null,
+    accessToken: payload.accessToken ?? null,
+  };
 }
