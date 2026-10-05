@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(this commit)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `3b90cbd67` | torksabig |
 | **clone** (origin) | `cursor/backend-replace-ui-frozen-plans` | `3354988` | origin |
 
 Prior midday tip: `375d8cb53` (transactions REST bulk-create docs).
