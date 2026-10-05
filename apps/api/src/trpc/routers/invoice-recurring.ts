@@ -9,6 +9,7 @@ import {
 } from "@api/schemas/invoice-recurring";
 import {
   assertLegacyIdentityFallbackAllowed,
+  tryDelegateCustomersGetById,
   tryDelegateInvoiceRecurringGet,
   tryDelegateInvoiceRecurringList,
   tryDelegateInvoiceRecurringPause,
@@ -41,6 +42,54 @@ import { TRPCError } from "@trpc/server";
 
 const logger = createLoggerWithContext("trpc:invoice-recurring");
 
+type CustomerEmailRow = {
+  id?: string;
+  email?: string | null;
+  billingEmail?: string | null;
+};
+
+/** Prefer Rust customer get-by-id; email validation + notifications stay Node. */
+async function resolveCustomerById(params: {
+  db: Parameters<typeof getCustomerById>[0];
+  id: string;
+  teamId: string;
+  accessToken?: string | null;
+}): Promise<CustomerEmailRow | null> {
+  if (shouldDelegateToReplacementBackend()) {
+    const delegated = await tryDelegateCustomersGetById(
+      params.id,
+      params.accessToken,
+    );
+    if (delegated.delegated) {
+      return (delegated.customer as CustomerEmailRow | null) ?? null;
+    }
+    assertLegacyIdentityFallbackAllowed();
+  }
+
+  return getCustomerById(params.db, {
+    id: params.id,
+    teamId: params.teamId,
+  });
+}
+
+function assertCustomerHasEmail(customer: CustomerEmailRow | null): void {
+  if (!customer) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Customer not found",
+    });
+  }
+
+  const customerEmail = customer.billingEmail || customer.email;
+  if (!customerEmail) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
+    });
+  }
+}
+
 export const invoiceRecurringRouter = createTRPCRouter({
   create: protectedProcedure
     .input(createInvoiceRecurringSchema)
@@ -56,63 +105,20 @@ export const invoiceRecurringRouter = createTRPCRouter({
 
       // Validate that the customer exists and has an email address for sending invoices
       // Recurring invoices auto-send, so we need a valid customer with email
-      const customer = await getCustomerById(db, {
+      const customer = await resolveCustomerById({
+        db,
         id: recurringData.customerId,
         teamId,
+        accessToken,
       });
+      assertCustomerHasEmail(customer);
 
-      if (!customer) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
-      }
-
-      const customerEmail = customer.billingEmail || customer.email;
-      if (!customerEmail) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
-        });
-      }
-
-      // Postgres create/link transaction can delegate; notifications stay Node
+      // Postgres create/link (+ invoice issue_date) via Rust; notifications stay Node
       if (shouldDelegateToReplacementBackend()) {
-        let issueDate: string | null = null;
-        if (invoiceId) {
-          const foundInvoice = await db.query.invoices.findFirst({
-            where: (invoices, { eq, and }) =>
-              and(eq(invoices.id, invoiceId), eq(invoices.teamId, teamId)),
-            columns: {
-              id: true,
-              invoiceRecurringId: true,
-              issueDate: true,
-            },
-          });
-          if (foundInvoice?.invoiceRecurringId) {
-            const existingSeries = await tryDelegateInvoiceRecurringGet(
-              foundInvoice.invoiceRecurringId,
-              accessToken,
-            );
-            if (existingSeries) {
-              return existingSeries;
-            }
-            assertLegacyIdentityFallbackAllowed();
-            const legacy = await getInvoiceRecurringById(db, {
-              id: foundInvoice.invoiceRecurringId,
-              teamId,
-            });
-            if (legacy) return legacy;
-          }
-          issueDate = foundInvoice?.issueDate ?? null;
-        }
-
         const delegated = await tryDelegateInvoiceRecurringCreate(
           {
             invoiceId,
             ...recurringData,
-            issueDate,
           },
           accessToken,
         );
@@ -509,26 +515,13 @@ export const invoiceRecurringRouter = createTRPCRouter({
       // If customerId is being updated, validate the new customer has an email
       // Recurring invoices auto-send, so we need a valid email destination
       if (input.customerId !== undefined) {
-        const customer = await getCustomerById(db, {
+        const customer = await resolveCustomerById({
+          db,
           id: input.customerId,
           teamId,
+          accessToken,
         });
-
-        if (!customer) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Customer not found",
-          });
-        }
-
-        const customerEmail = customer.billingEmail || customer.email;
-        if (!customerEmail) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Customer must have an email address to receive recurring invoices. Please add an email to the customer profile.",
-          });
-        }
+        assertCustomerHasEmail(customer);
       }
 
       // Cross-field validation stays Node; Postgres update can delegate

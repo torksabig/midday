@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createCallerFactory } from "../../trpc/init";
 import { invoiceRecurringRouter } from "../../trpc/routers/invoice-recurring";
 import { createTestContext } from "../helpers/test-context";
@@ -6,8 +6,21 @@ import { mocks } from "../setup";
 
 const RECURRING_ID = "b3b6e2c2-1f2a-4e3b-9c1d-2a4b6e2c21f2";
 const CUSTOMER_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const envSnapshot = { ...process.env };
 
 const createCaller = createCallerFactory(invoiceRecurringRouter);
+
+beforeEach(() => {
+  // Exercise Drizzle fallback paths; replacement fail-closed covered by AP-51/AP-56.
+  process.env = {
+    ...envSnapshot,
+    MIDDAY_BACKEND_MODE: "legacy",
+  };
+});
+
+afterEach(() => {
+  process.env = { ...envSnapshot };
+});
 
 describe("tRPC: invoiceRecurring.list", () => {
   beforeEach(() => {

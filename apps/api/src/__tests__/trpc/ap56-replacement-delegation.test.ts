@@ -49,6 +49,7 @@ describe("tRPC: AP-56 invoiceRecurring create/update fail-closed", () => {
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
     });
+    expect(mocks.getCustomerById).not.toHaveBeenCalled();
     expect(mocks.createInvoiceRecurring).not.toHaveBeenCalled();
   });
 
@@ -61,6 +62,19 @@ describe("tRPC: AP-56 invoiceRecurring create/update fail-closed", () => {
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
     });
+    expect(mocks.updateInvoiceRecurring).not.toHaveBeenCalled();
+  });
+
+  test("update with customerId throws without Drizzle when API is down", async () => {
+    const caller = createCallerFactory(invoiceRecurringRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await expect(
+      caller.update({ id: ID, customerId: CUSTOMER_ID }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+    });
+    expect(mocks.getCustomerById).not.toHaveBeenCalled();
     expect(mocks.updateInvoiceRecurring).not.toHaveBeenCalled();
   });
 });

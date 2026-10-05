@@ -829,7 +829,7 @@ export interface paths {
         };
         get: operations["listInvoiceRecurring"];
         put?: never;
-        post?: never;
+        post: operations["createInvoiceRecurring"];
         delete?: never;
         options?: never;
         head?: never;
@@ -844,8 +844,24 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getInvoiceRecurringById"];
-        put?: never;
+        put: operations["updateInvoiceRecurring"];
         post?: never;
+        delete: operations["deleteInvoiceRecurring"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invoice-recurring/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pauseInvoiceRecurring"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6142,6 +6158,40 @@ export interface operations {
             };
         };
     };
+    createInvoiceRecurring: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created recurring series (SQL only; notifications stay Midday Node) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Linked invoice not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInvoiceRecurringById: {
         parameters: {
             query?: never;
@@ -6155,6 +6205,117 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Recurring series detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Recurring series not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateInvoiceRecurring: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Recurring series id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated recurring series */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Recurring series not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteInvoiceRecurring: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Recurring series id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canceled series + jobIds for Midday BullMQ cleanup */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Recurring series not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pauseInvoiceRecurring: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Recurring series id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paused series + jobIds for Midday BullMQ cleanup */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6488,13 +6649,8 @@ export interface operations {
                 cursor?: string;
                 pageSize?: number;
                 q?: string;
-                statuses?: string[];
-                customers?: string[];
                 start?: string;
                 end?: string;
-                sort?: string[];
-                ids?: string[];
-                recurringIds?: string[];
                 recurring?: boolean;
             };
             header?: never;
@@ -8858,9 +9014,6 @@ export interface operations {
                 start?: string;
                 end?: string;
                 status?: string;
-                customers?: string[];
-                tags?: string[];
-                sort?: string[];
             };
             header?: never;
             path?: never;
