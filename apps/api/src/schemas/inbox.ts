@@ -249,6 +249,13 @@ export const matchTransactionSchema = z.object({
   transactionId: z.string().uuid(),
 });
 
+export const matchInboxItemBodySchema = z.object({
+  transactionId: z.string().uuid().openapi({
+    description: "Transaction ID to link to this inbox item",
+    example: "a1b2c3d4-5678-4e7a-9c1a-2b7c1e24c2a4",
+  }),
+});
+
 export const unmatchTransactionSchema = z.object({
   id: z.string().uuid(),
 });

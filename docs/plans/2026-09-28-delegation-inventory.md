@@ -573,7 +573,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `POST /tracker-entries/bulk` | no | bulk create — Drizzle only (no clone route) |
 | `GET /users/me` | yes | Rust auth/me via `tryDelegateUserMe` + `replacement-rest-users.ts` (2026-10-05) |
 | `PATCH /users/me` | yes | Rust user update via `tryDelegateUserUpdate` (2026-10-05) |
-| Other REST inbox routes | no | create/match/blocklist stay Drizzle on `:3003` |
+| Other REST inbox routes | yes | create/match/unmatch/confirm/decline/blocklist/search/by-status/bulk-delete delegate on `:3003` (2026-10-05) |
 | Other REST routers (oauth, mcp, files, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 
 **Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.

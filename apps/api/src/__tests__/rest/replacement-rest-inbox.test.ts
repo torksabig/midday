@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
+  createInboxBlocklistForRest,
+  createInboxForRest,
   deleteInboxForRest,
+  fetchInboxBlocklistForRest,
   fetchInboxByIdForRest,
   fetchInboxListForRest,
+  matchInboxForRest,
   updateInboxForRest,
 } from "../../rest/services/replacement-rest-inbox";
 
@@ -65,6 +69,58 @@ describe("REST inbox replacement delegation", () => {
     await expect(
       deleteInboxForRest(
         "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "Bearer fake-session-jwt",
+        legacy,
+      ),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("create fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve({ id: "inbox-1" }));
+    await expect(
+      createInboxForRest(
+        {
+          displayName: "receipt.pdf",
+          filePath: ["team", "inbox", "receipt.pdf"],
+          fileName: "receipt.pdf",
+          contentType: "application/pdf",
+          size: 100,
+          status: "processing",
+        },
+        "Bearer fake-session-jwt",
+        legacy,
+      ),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("match fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve({ id: "inbox-1" }));
+    await expect(
+      matchInboxForRest(
+        "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "b1b2c3d4-e5f6-7890-abcd-ef1234567891",
+        "Bearer fake-session-jwt",
+        legacy,
+      ),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("blocklist get fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve([]));
+    await expect(
+      fetchInboxBlocklistForRest("Bearer fake-session-jwt", legacy),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("blocklist create fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve({ id: "bl-1" }));
+    await expect(
+      createInboxBlocklistForRest(
+        { type: "domain", value: "spam.com" },
         "Bearer fake-session-jwt",
         legacy,
       ),

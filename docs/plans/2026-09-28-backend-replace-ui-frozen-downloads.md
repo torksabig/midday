@@ -108,6 +108,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] CI/script: `scripts/diff-ui-baseline.sh` — `diff` dashboard+ui against Downloads (`MIDDAY_UI_BASELINE` override)
 - [x] REST OpenAPI `:3003` — documents list/get/delete + vault presigned-url delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — inbox list/get/patch/delete delegate to Rust in `replacement` mode (2026-10-05)
+- [x] REST OpenAPI `:3003` — inbox create/match/unmatch/confirm/decline/blocklist/search/by-status/bulk-delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — transactions list/get/create/update/delete delegate to Rust in `replacement` mode; bulk create still Drizzle (2026-10-05)
 - [x] REST OpenAPI `:3003` — customers list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — invoices list/get/summary/payment-status/create/update/delete delegate to Rust in `replacement` mode; create/send uses Node BullMQ only (2026-10-05)
@@ -121,7 +122,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — users `GET/PATCH /me` delegate to Rust in `replacement` mode (2026-10-05)
 - [ ] Legal review (below)
 
-**Remaining Drizzle REST in `replacement` mode (2026-10-05):** `POST /transactions/bulk` (bulk create); `POST /tracker-entries/bulk` (bulk create); inbox create/match/blocklist and other non-migrated inbox routes; oauth/mcp, invoice PDF download fallback.
+**Remaining Drizzle REST in `replacement` mode (2026-10-05):** `POST /transactions/bulk` (bulk create); `POST /tracker-entries/bulk` (bulk create); oauth/mcp, invoice PDF download fallback. Inbox OpenAPI CRUD/match/blocklist/search routes delegate to Rust (clone `9bf4592`+ inbox API; no new Rust in this slice).
 
 ## Env reference
 
