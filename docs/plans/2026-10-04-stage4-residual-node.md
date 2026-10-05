@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(set at commit)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `831a6f83e` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `ae896ce0e` (REST notifications + bank-accounts → Rust).
