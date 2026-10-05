@@ -673,6 +673,86 @@ export type DeleteTeamResult = {
   memberUserIds: string[];
 };
 
+export type CreateTeamInviteItem = {
+  email: string;
+  role: "owner" | "member";
+};
+
+export type CreateTeamInvitesSkipped = {
+  email: string;
+  reason: "already_member" | "already_invited" | "duplicate";
+};
+
+export type CreateTeamInvitesResult = {
+  results: Array<{
+    email: string | null;
+    code?: string | null;
+    role?: string | null;
+    team?: { id: string; name: string | null } | null;
+  }>;
+  skippedInvites: CreateTeamInvitesSkipped[];
+};
+
+export function normalizeCreateTeamInvitesResult(
+  payload: unknown,
+): CreateTeamInvitesResult {
+  const row = asRecord(payload) ?? {};
+  const resultsRaw = Array.isArray(row.results) ? row.results : [];
+  const skippedRaw = Array.isArray(row.skippedInvites)
+    ? row.skippedInvites
+    : Array.isArray(row.skipped_invites)
+      ? row.skipped_invites
+      : [];
+
+  return {
+    results: resultsRaw.map((item) => {
+      const invite = asRecord(item) ?? {};
+      const teamRaw = asRecord(invite.team);
+      return {
+        email: asString(invite.email),
+        code: asString(invite.code),
+        role: asString(invite.role),
+        team: teamRaw
+          ? {
+              id: String(teamRaw.id ?? ""),
+              name: asString(teamRaw.name),
+            }
+          : null,
+      };
+    }),
+    skippedInvites: skippedRaw.map((item) => {
+      const skipped = asRecord(item) ?? {};
+      return {
+        email: String(skipped.email ?? ""),
+        reason: (skipped.reason ??
+          "duplicate") as CreateTeamInvitesSkipped["reason"],
+      };
+    }),
+  };
+}
+
+export async function createTeamInvites(
+  baseUrl: string,
+  accessToken: string | null,
+  invites: CreateTeamInviteItem[],
+): Promise<CreateTeamInvitesResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/invites`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ invites }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  return normalizeCreateTeamInvitesResult(await response.json());
+}
+
 export async function createTeam(
   baseUrl: string,
   accessToken: string | null,

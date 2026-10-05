@@ -6,6 +6,7 @@ import {
   deleteTeamMemberSchema,
   deleteTeamSchema,
   enqueueDeleteTeamJobSchema,
+  enqueueInviteTeamEmailsSchema,
   inviteTeamMembersSchema,
   leaveTeamSchema,
   updateBaseCurrencySchema,
@@ -91,6 +92,23 @@ async function triggerDeleteTeamCleanupJob(
     },
     "teams",
   );
+}
+
+async function triggerInviteTeamMembersJob(
+  teamId: string,
+  ip: string,
+  invites: InviteTeamMembersPayload["invites"],
+) {
+  if (invites.length === 0) {
+    return;
+  }
+
+  await tasks.trigger("invite-team-members", {
+    teamId,
+    invites,
+    ip,
+    locale: "en",
+  } satisfies InviteTeamMembersPayload);
 }
 
 export const teamRouter = createTRPCRouter({
@@ -427,6 +445,24 @@ export const teamRouter = createTRPCRouter({
       await triggerDeleteTeamCleanupJob(input.teamId, input.connections);
     }),
 
+  /** Email-only half after dashboard Rust `POST /api/v1/team/invites`. */
+  enqueueInviteTeamEmails: protectedProcedure
+    .input(enqueueInviteTeamEmailsSchema)
+    .mutation(async ({ ctx: { teamId, geo, session }, input }) => {
+      const invitedByEmail = session.user.email;
+      if (!invitedByEmail) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Email is required to invite team members",
+        });
+      }
+
+      const ip = geo.ip ?? "127.0.0.1";
+      await triggerInviteTeamMembersJob(teamId!, ip, input.invites);
+
+      return { sent: input.invites.length };
+    }),
+
   deleteMember: protectedProcedure
     .input(deleteTeamMemberSchema)
     .mutation(async ({ ctx: { db, session, teamId, accessToken }, input }) => {
@@ -639,15 +675,7 @@ export const teamRouter = createTRPCRouter({
         },
       );
 
-      // Only trigger email sending if there are valid invites
-      if (invites.length > 0) {
-        await tasks.trigger("invite-team-members", {
-          teamId: teamId!,
-          invites,
-          ip,
-          locale: "en",
-        } satisfies InviteTeamMembersPayload);
-      }
+      await triggerInviteTeamMembersJob(teamId!, ip, invites);
 
       // Return information about the invitation process
       return {

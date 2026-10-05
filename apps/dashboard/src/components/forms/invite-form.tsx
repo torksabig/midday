@@ -18,7 +18,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useFieldArray } from "react-hook-form";
 import { z } from "zod/v3";
+import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { createTeamInvitesFromRust } from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 const formSchema = z.object({
@@ -40,41 +42,84 @@ export function InviteForm({ onSuccess, skippable = true }: InviteFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { track } = useOpenPanel();
+  const { data: user } = useUserQuery();
 
-  const inviteMutation = useMutation(
-    trpc.team.invite.mutationOptions({
-      onSuccess: (data) => {
-        if (data.sent > 0) {
-          track(LogEvents.MemberInvited.name, { count: data.sent });
-        }
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.team.teamInvites.queryKey(),
-        });
-
-        // Show appropriate feedback based on results
-        if (data.sent > 0 && data.skipped === 0) {
-          toast({
-            title: "Invites sent",
-            description: `${data.sent} invite${data.sent > 1 ? "s" : ""} sent successfully`,
-            variant: "success",
-          });
-        } else if (data.sent > 0 && data.skipped > 0) {
-          toast({
-            title: "Invites partially sent",
-            description: `${data.sent} invite${data.sent > 1 ? "s" : ""} sent, ${data.skipped} skipped (already members or invited)`,
-          });
-        } else if (data.sent === 0 && data.skipped > 0) {
-          toast({
-            title: "No invites sent",
-            description: `All ${data.skipped} invite${data.skipped > 1 ? "s" : ""} were skipped (already members or invited)`,
-          });
-        }
-
-        onSuccess?.();
-      },
-    }),
+  const enqueueInviteTeamEmailsMutation = useMutation(
+    trpc.team.enqueueInviteTeamEmails.mutationOptions(),
   );
+
+  const inviteMutation = useMutation({
+    mutationFn: async (
+      invites: Array<{ email: string; role: "owner" | "member" }>,
+    ) => {
+      const invitedByEmail = user?.email;
+      if (!invitedByEmail) {
+        throw new Error("Email is required to invite team members");
+      }
+
+      const invitedByName = user.fullName ?? "";
+      const fallbackTeamName = user.team?.name ?? "";
+
+      const data = await createTeamInvitesFromRust(invites);
+
+      const emailInvites = data.results.flatMap((invite) => {
+        if (!invite.email) {
+          return [];
+        }
+
+        return [
+          {
+            email: invite.email,
+            invitedByName,
+            invitedByEmail,
+            teamName: invite.team?.name ?? fallbackTeamName,
+          },
+        ];
+      });
+
+      if (emailInvites.length > 0) {
+        await enqueueInviteTeamEmailsMutation.mutateAsync({
+          invites: emailInvites,
+        });
+      }
+
+      return {
+        sent: emailInvites.length,
+        skipped: data.skippedInvites.length,
+        skippedInvites: data.skippedInvites,
+      };
+    },
+    onSuccess: (data) => {
+      if (data.sent > 0) {
+        track(LogEvents.MemberInvited.name, { count: data.sent });
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.team.teamInvites.queryKey(),
+      });
+
+      // Show appropriate feedback based on results
+      if (data.sent > 0 && data.skipped === 0) {
+        toast({
+          title: "Invites sent",
+          description: `${data.sent} invite${data.sent > 1 ? "s" : ""} sent successfully`,
+          variant: "success",
+        });
+      } else if (data.sent > 0 && data.skipped > 0) {
+        toast({
+          title: "Invites partially sent",
+          description: `${data.sent} invite${data.sent > 1 ? "s" : ""} sent, ${data.skipped} skipped (already members or invited)`,
+        });
+      } else if (data.sent === 0 && data.skipped > 0) {
+        toast({
+          title: "No invites sent",
+          description: `All ${data.skipped} invite${data.skipped > 1 ? "s" : ""} were skipped (already members or invited)`,
+        });
+      }
+
+      onSuccess?.();
+    },
+  });
 
   const form = useZodForm(formSchema, {
     defaultValues: {

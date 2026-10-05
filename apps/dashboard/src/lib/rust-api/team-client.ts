@@ -6,7 +6,10 @@ import {
   acceptTeamInvite,
   type AcceptTeamInviteInput,
   createTeam,
+  createTeamInvites,
+  type CreateTeamInviteItem,
   type CreateTeamInput,
+  type CreateTeamInvitesResult,
   type DashboardTeam,
   declineTeamInvite,
   type DeclineTeamInviteInput,
@@ -144,6 +147,12 @@ export async function leaveTeamFromRust(input: LeaveTeamInput) {
 
 export async function createTeamFromRust(input: CreateTeamInput) {
   return createTeam(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function createTeamInvitesFromRust(
+  invites: CreateTeamInviteItem[],
+): Promise<CreateTeamInvitesResult> {
+  return createTeamInvites(getRustApiUrl(), await getAccessToken(), invites);
 }
 
 export async function teamDeletePrepFromRust(input: DeleteTeamInput) {

@@ -111,6 +111,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.delete` prep + delete SQL | **Rust direct** — dashboard `POST /team/delete-prep` → Node `team.enqueueDeleteTeamJob` (BullMQ `delete-team`) → `POST /team/delete`; full `team.delete` tRPC retained for CLI/tests |
 | `bankConnections.delete` SQL | **Rust** `DELETE /api/v1/bank-connections/{id}` (already delegated); Node only Trigger `delete-connection` — documented in OpenAPI + router |
 
+### Migrated (2026-10-05 team invite dashboard hybrid)
+
+| Capability | Now |
+|------------|-----|
+| `team.invite` SQL insert | **Rust direct** — dashboard `POST /api/v1/team/invites` → Node `team.enqueueInviteTeamEmails` (Trigger `invite-team-members` / Resend only); full `team.invite` tRPC retained for non-dashboard callers |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
@@ -119,9 +125,9 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 |-----------|----------|
 | `documents.enqueueProcessDocument` (+ thin `reprocessDocument`/`processDocument` orchestrators) | process-document BullMQ jobs |
 | `inbox.processAttachments` / `retryMatching` | Jobs |
-| `team.invite` | Trigger email only (SQL on Rust) |
+| `team.enqueueInviteTeamEmails` | Trigger `invite-team-members` / Resend only (SQL on Rust) |
 | `team.enqueueDeleteTeamJob` | BullMQ `delete-team` provider teardown only (SQL on Rust) |
-| `team.create` / `team.delete` (tRPC) | Non-dashboard callers; dashboard skips SQL hop |
+| `team.invite` / `team.create` / `team.delete` (tRPC) | Non-dashboard callers; dashboard skips SQL hop |
 | `team.updateBaseCurrency` / `exportAllData` | Trigger jobs |
 | `bankConnections.delete` | Trigger `delete-connection` only (SQL on Rust) |
 | `oauthApplications.authorize` / `updateApprovalStatus` | Resend |
@@ -178,7 +184,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | Document reprocess / process SQL + signedUrls / signedUrl | **Rust direct** (job enqueue Node) |
 | Invoice PDF SQL + stored vault PDF | **Rust**; known `file_path` skips Node; blind downloads Rust→Node fallback |
 | `invoice.remind` / `cancelSchedule` / schedule / create status SQL | **Rust**; Trigger/BullMQ Node |
-| `team.invite` SQL | **Rust**; Trigger Resend Node |
+| `team.invite` SQL | **Rust direct** (dashboard); `enqueueInviteTeamEmails` / tRPC fallback Node |
 | `team.create` / delete prep+delete SQL | **Rust direct** (dashboard); `enqueueDeleteTeamJob` / tRPC fallback Node |
 | `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
@@ -190,8 +196,8 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-1. **`team.updateBaseCurrency` / `exportAllData`** — Trigger-only jobs; document or thin enqueue procedures like delete-team.  
-2. **`team.invite` dashboard direct** — Rust invite insert + Node Trigger only (mirror create/delete split).  
+1. **`team.updateBaseCurrency` / `exportAllData`** — Trigger-only jobs; thin enqueue procedures like delete-team / invite emails.  
+2. **`inboxAccounts.sync` / `delete`** — Rust SQL already delegated; dashboard direct + job-only tRPC like team hybrids.  
 3. Or **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

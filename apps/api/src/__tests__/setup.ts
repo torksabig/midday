@@ -847,6 +847,7 @@ export const mocks = {
   // Other commonly used queries
   validateAccessToken: mock(() => null) as MockFn,
   triggerJob: mock(() => ({ id: "job-123" })) as MockFn,
+  triggerDevTask: mock(() => Promise.resolve({ id: "evt_trigger_test" })) as MockFn,
   signedUrl: mock(() => ({
     data: { signedUrl: "https://example.com/signed" },
     error: null,
@@ -1272,7 +1273,7 @@ mock.module("@midday/documents/embed", () => ({
 
 mock.module("@trigger.dev/sdk", () => ({
   tasks: {
-    trigger: mock(() => Promise.resolve({ id: "evt_trigger_test" })),
+    trigger: mocks.triggerDevTask,
   },
   schedules: {
     del: mock(() => Promise.resolve()),

@@ -276,6 +276,22 @@ export const deleteTeamSchema = z.object({
   }),
 });
 
+/** Dashboard hybrid: Rust invite insert already ran; Node only triggers Resend emails. */
+export const enqueueInviteTeamEmailsSchema = z.object({
+  invites: z
+    .array(
+      z.object({
+        email: z.string().email(),
+        invitedByName: z.string(),
+        invitedByEmail: z.string().email(),
+        teamName: z.string(),
+      }),
+    )
+    .openapi({
+      description: "Invite rows to email via Trigger invite-team-members",
+    }),
+});
+
 /** Dashboard hybrid: Rust delete-prep already ran; Node only enqueues delete-team job. */
 export const enqueueDeleteTeamJobSchema = z.object({
   teamId: z.string().openapi({

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   normalizeAvailablePlans,
+  normalizeCreateTeamInvitesResult,
   normalizeTeamConnectionStatus,
   normalizeTeamListItem,
   normalizeTeamMember,
@@ -132,6 +133,34 @@ test("normalizes user invites with nested snake_case fields", () => {
     role: "member",
     user: { id: "u1", fullName: "Ada", email: "owner@acme.com" },
     team: { id: "t1", name: "Acme", logoUrl: "https://logo" },
+  });
+});
+
+test("normalizes create team invites payload", () => {
+  expect(
+    normalizeCreateTeamInvitesResult({
+      results: [
+        {
+          email: "new@example.com",
+          code: "abc",
+          role: "member",
+          team: { id: "team-1", name: "Acme" },
+        },
+      ],
+      skipped_invites: [{ email: "dup@example.com", reason: "already_member" }],
+    }),
+  ).toEqual({
+    results: [
+      {
+        email: "new@example.com",
+        code: "abc",
+        role: "member",
+        team: { id: "team-1", name: "Acme" },
+      },
+    ],
+    skippedInvites: [
+      { email: "dup@example.com", reason: "already_member" },
+    ],
   });
 });
 
