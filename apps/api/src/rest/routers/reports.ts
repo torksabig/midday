@@ -13,6 +13,14 @@ import {
   getSpendingResponseSchema,
   getSpendingSchema,
 } from "@api/schemas/reports";
+import {
+  fetchBurnRateReportsForRest,
+  fetchExpensesReportsForRest,
+  fetchProfitReportsForRest,
+  fetchRevenueReportsForRest,
+  fetchRunwayReportsForRest,
+  fetchSpendingReportsForRest,
+} from "@api/rest/services/replacement-rest-reports";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import {
@@ -55,14 +63,19 @@ app.openapi(
     const teamId = c.get("teamId");
     const { from, to, currency, revenueType } = c.req.valid("query");
 
-    const results = await getReports(db, {
-      teamId,
-      from,
-      to,
-      currency,
-      type: "revenue",
-      revenueType,
-    });
+    const results = await fetchRevenueReportsForRest(
+      { from, to, currency, revenueType },
+      c.req.header("Authorization"),
+      () =>
+        getReports(db, {
+          teamId,
+          from,
+          to,
+          currency,
+          type: "revenue",
+          revenueType,
+        }),
+    );
 
     return c.json(validateResponse(results, getRevenueResponseSchema));
   },
@@ -97,14 +110,19 @@ app.openapi(
     const teamId = c.get("teamId");
     const { from, to, currency, revenueType } = c.req.valid("query");
 
-    const results = await getReports(db, {
-      teamId,
-      from,
-      to,
-      currency,
-      type: "profit",
-      revenueType,
-    });
+    const results = await fetchProfitReportsForRest(
+      { from, to, currency, revenueType },
+      c.req.header("Authorization"),
+      () =>
+        getReports(db, {
+          teamId,
+          from,
+          to,
+          currency,
+          type: "profit",
+          revenueType,
+        }),
+    );
 
     return c.json(validateResponse(results, getProfitResponseSchema));
   },
@@ -139,12 +157,17 @@ app.openapi(
     const teamId = c.get("teamId");
     const { from, to, currency } = c.req.valid("query");
 
-    const results = await getBurnRate(db, {
-      teamId,
-      from,
-      to,
-      currency,
-    });
+    const results = await fetchBurnRateReportsForRest(
+      { from, to, currency },
+      c.req.header("Authorization"),
+      () =>
+        getBurnRate(db, {
+          teamId,
+          from,
+          to,
+          currency,
+        }),
+    );
 
     return c.json(validateResponse(results, getBurnRateResponseSchema));
   },
@@ -179,10 +202,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const { currency } = c.req.valid("query");
 
-    const results = await getRunway(db, {
-      teamId,
+    const results = await fetchRunwayReportsForRest(
       currency,
-    });
+      c.req.header("Authorization"),
+      () =>
+        getRunway(db, {
+          teamId,
+          currency,
+        }),
+    );
 
     return c.json(validateResponse(results, getRunwayResponseSchema));
   },
@@ -217,12 +245,17 @@ app.openapi(
     const teamId = c.get("teamId");
     const { from, to, currency } = c.req.valid("query");
 
-    const results = await getExpenses(db, {
-      teamId,
-      from,
-      to,
-      currency,
-    });
+    const results = await fetchExpensesReportsForRest(
+      { from, to, currency },
+      c.req.header("Authorization"),
+      () =>
+        getExpenses(db, {
+          teamId,
+          from,
+          to,
+          currency,
+        }),
+    );
 
     return c.json(validateResponse(results, getExpensesResponseSchema));
   },
@@ -257,12 +290,17 @@ app.openapi(
     const teamId = c.get("teamId");
     const { from, to, currency } = c.req.valid("query");
 
-    const results = await getSpending(db, {
-      teamId,
-      from,
-      to,
-      currency,
-    });
+    const results = await fetchSpendingReportsForRest(
+      { from, to, currency },
+      c.req.header("Authorization"),
+      () =>
+        getSpending(db, {
+          teamId,
+          from,
+          to,
+          currency,
+        }),
+    );
 
     return c.json(validateResponse(results, getSpendingResponseSchema));
   },

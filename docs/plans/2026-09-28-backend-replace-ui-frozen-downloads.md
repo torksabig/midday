@@ -114,9 +114,10 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — teams list/get/update/members delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — tags list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — search global (`GET /search`) delegates to Rust in `replacement` mode (2026-10-05)
+- [x] REST OpenAPI `:3003` — reports chart reads (`GET /reports/*` six routes) delegate to Rust in `replacement` mode (2026-10-05)
 - [ ] Legal review (below)
 
-**Remaining Drizzle REST in `replacement` mode (2026-10-05):** `POST /transactions/bulk` (bulk create); inbox create/match/blocklist and other non-migrated inbox routes; reports, tracker, notifications, users, bank-accounts, oauth/mcp, invoice PDF download fallback.
+**Remaining Drizzle REST in `replacement` mode (2026-10-05):** `POST /transactions/bulk` (bulk create); inbox create/match/blocklist and other non-migrated inbox routes; tracker, notifications, users, bank-accounts, oauth/mcp, invoice PDF download fallback.
 
 ## Env reference
 
