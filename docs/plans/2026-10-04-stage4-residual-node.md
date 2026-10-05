@@ -4,11 +4,11 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 residual inventory pass)
+## Tip SHAs (2026-10-05 post–createFromTracker inventory)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `e4dfbaffb` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `63e6ae243` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
@@ -50,15 +50,55 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 
 ### Prioritized next slices (no invoice PDF live render)
 
-1. **`invoice.updateSchedule`** — reschedule BullMQ hop if dashboard gains UI for it.
-3. **`POST /chat`** — move off Node or document long-term co-host.
-4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*`.
+1. **`bankConnections.delete` dashboard hybrid** — Rust `DELETE /api/v1/bank-connections/{id}` + Node `enqueueDeleteConnection` (Trigger `delete-connection` only); today dashboard still calls full `bankConnections.delete` tRPC (SQL already delegates on Node).
+2. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
+3. **`POST /chat`** — move off Node or document long-term co-host (**permanent block** until ported).
+4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*` (**permanent block** for full Node teardown).
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
 6. **Invoice PDF live render** — **STOP** (drafts/receipts `@midday/invoice` React-PDF); do not cut over in Stage 4 automation.
 
+### Permanent Node blocks (Stage 4 — do not auto-cutover)
+
+These surfaces stay on minimal Node until an explicit product/engineering replacement exists. Automation must **not** delete or “fail-closed” them without a migration note and UX plan.
+
+| Block | Dashboard / caller touchpoints | Why Node stays |
+|-------|----------------------------------|----------------|
+| **`POST /chat`** | `chat-context`, `store/chat.ts` → `NEXT_PUBLIC_API_URL/chat` | Agent stream + tools; **no Rust port in Stage 4** |
+| **Worker `trpc.banking.*`** | `packages/jobs`, `apps/worker` (not dashboard HTTP) | Provider HTTP, decrypt, schedules; SQL half on Rust only |
+| **Bank OAuth callbacks** | Plaid/GC/EB connect components; `app/api/enablebanking/session` → `banking.enablebankingExchange` | Live token exchange + redirect URIs on `:3003` |
+| **Invoice PDF live render** | Draft/receipt downloads; Node `GET /files/download/invoice` when Rust returns `needs_render` / `no_stored_pdf` | React-PDF (`@midday/invoice`); stored bytes on Rust |
+| **`jobs.getStatus`** | `hooks/use-job-status.ts` | BullMQ job polling; no Rust equivalent |
+| **`transactions.generateCsvMapping`** | `modals/import-modal/field-mapping.tsx` | Claude Haiku mapping; Node AI |
+| **Decrypt reads** | `bankAccounts.getDetails`, `getWithPaymentInfo` | Vault decrypt |
+| **Encrypt writes** | `bankConnections.create`, `addAccounts` | Vault encrypt + `initial-bank-setup` |
+| **Billing / Polar** | `billing.*`, `invoicePayments.*`, subscription UI | Stripe/Polar |
+| **Connectors (Composio)** | `connectors.*`, chat connector reads | Third-party OAuth |
+| **Inbox OAuth** | `inboxAccounts.connect` | Gmail/Outlook OAuth on Node |
+| **Admin side effects** | `user.delete`, `apiKeys.upsert` | Resend / admin email |
+
+Hybrid **enqueue-only** tRPC (SQL on Rust, Node triggers BullMQ/Trigger/Resend) is intentional residual surface—not listed as permanent blocks, but required until each enqueue is callable without full-stack tRPC from the dashboard.
+
 ### Safe to decommission `apps/api`?
 
-**NO.** Minimal Node remains required for: STOP surfaces (banking decrypt/encrypt/OAuth, billing, connectors, inbox connect, admin delete, job status, CSV AI mapping), hybrid job enqueue, invoice PDF **live render**, `/chat`, and OAuth callbacks. Worker banking tRPC is an additional blocker.
+**NO.** Minimal Node remains required for: **Permanent Node blocks** (table above), hybrid job enqueue, and worker banking tRPC. See **Decommission checklist** below for exit criteria.
+
+### Decommission checklist (required before deleting `apps/api`)
+
+Use this as a gate for the user one-shot **`decommission`** ([autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md)). Every item must be **done** or **explicitly waived in writing** with product sign-off.
+
+- [ ] **Chat:** Dashboard no longer depends on `POST /chat` on `:3003` (replacement host or feature retired).
+- [ ] **Workers:** No `packages/jobs` / worker runtime calls to Node `trpc.banking.*` (provider ops Rust-owned or isolated micro-BFF).
+- [ ] **Bank OAuth:** Redirect URIs and token exchange moved or accepted on new hosts; Enable Banking session route not proxying Node tRPC.
+- [ ] **PDF live render:** Draft/receipt/needs-render paths do not require Node React-PDF (or feature retired).
+- [ ] **Job polling:** `jobs.getStatus` replaced (Rust job status API or remove UI dependency).
+- [ ] **CSV import AI:** `generateCsvMapping` replaced or import flow retired.
+- [ ] **Decrypt/encrypt:** `bankAccounts.getDetails` / `getWithPaymentInfo` and `bankConnections.create` / `addAccounts` Rust-safe or retired.
+- [ ] **Billing:** Stripe/Polar flows not on Node tRPC (or billing product sunset complete).
+- [ ] **Connectors / inbox OAuth:** Composio + Gmail/Outlook connect not on Node tRPC.
+- [ ] **Admin:** `user.delete` / `apiKeys.upsert` side effects moved or retired.
+- [ ] **Hybrid enqueue:** Every dashboard path uses Rust SQL + thin enqueue (or jobs retired)—no full-stack tRPC mutations for product writes (including `bankConnections.delete` split).
+- [ ] **SSR/public tRPC proxy:** Portal token invoice, reports link, short links—migrated or documented co-host.
+- [ ] **Tests/docs:** AP-63 delegation suite green; this doc updated with final SHA and “DECOMMISSIONED” status.
 
 ## How to run now (local)
 
@@ -353,6 +393,8 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-See **Prioritized next slices** above. OpenAPI: `getAppById` now returns typed **`InstalledAppResponse`** (not generic `Object`).
+**`bankConnections.delete` dashboard hybrid** (Rust DELETE + Node enqueue-only Trigger). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists.
 
-Do **not** silently remove STOP/hybrid without a replacement plan.
+OpenAPI: `getAppById` returns typed **`InstalledAppResponse`**. **`deleteBankConnection`** on Rust returns SQL row; Node must still run `delete-connection` for provider teardown.
+
+Do **not** silently remove STOP/hybrid/permanent blocks without a replacement plan.
