@@ -4,14 +4,14 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 post–REST transactions list/get/write/delete Rust delegation)
+## Tip SHAs (2026-10-05 post–REST customers list/get/write/delete Rust delegation)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `d747d9665` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `9c4b1cce0` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
-Prior tip: `ebfd0e72a` (REST inbox list/get/update/delete).
+Prior tip: `d747d9665` (REST transactions list/get/write/delete).
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
 
@@ -368,13 +368,25 @@ Helpers: `apps/api/src/rest/services/replacement-rest-inbox.ts` (mirrors tRPC in
 
 Helpers: `apps/api/src/rest/services/replacement-rest-transactions.ts` (mirrors tRPC transactions router + presigned-url Bearer extraction).
 
+### Migrated (2026-10-05 REST customers list/get/write/delete → Rust)
+
+| Capability | Now |
+|------------|-----|
+| `GET /customers` | **Rust** — `GET /api/v1/customers` via `tryDelegateCustomersGet` + `replacement-rest-customers` |
+| `GET /customers/{id}` | **Rust** — `GET /api/v1/customers/{id}`; 404 when row missing |
+| `POST /customers` / `PATCH /customers/{id}` | **Rust** — `POST /api/v1/customers` via `tryDelegateCustomerUpsert` |
+| `DELETE /customers/{id}` | **Rust** — `DELETE /api/v1/customers/{id}` via `tryDelegateCustomerDelete` |
+
+Helpers: `apps/api/src/rest/services/replacement-rest-customers.ts` (mirrors tRPC customers router + Bearer extraction).
+
 ### REST OpenAPI still Drizzle in replacement mode (inventory)
 
 | Router / area | Drizzle-backed routes (non-exhaustive) |
 |---------------|----------------------------------------|
 | `inbox` | _(list/get/update/delete migrated)_ |
 | `transactions` | _(list/get/write/delete migrated; bulk create still Drizzle)_ |
-| `customers`, `teams`, `users`, `bank-accounts`, `invoices`, `tags`, `search`, `reports`, `tracker-*`, `notifications` | CRUD/list reads |
+| `customers` | _(list/get/write/delete migrated)_ |
+| `teams`, `users`, `bank-accounts`, `invoices`, `tags`, `search`, `reports`, `tracker-*`, `notifications` | CRUD/list reads |
 | `oauth`, `mcp`, app OAuth callbacks, webhooks | integrations |
 | `files/download` | invoice React-PDF fallback + partial delegation |
 | REST middleware (`auth`, `db`) | identity / team resolution (required until REST auth moves) |
@@ -507,7 +519,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **customers** list/get/write (or **invoices** OpenAPI CRUD). **`POST /transactions/bulk`** create remains Drizzle until clone adds bulk create. Then **`POST /chat`** co-host only (documented).
+**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **invoices** OpenAPI list/get/write (or **teams**). **`POST /transactions/bulk`** create remains Drizzle until clone adds bulk create. Then **`POST /chat`** co-host only (documented).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 

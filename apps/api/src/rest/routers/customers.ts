@@ -1,6 +1,12 @@
 import { withRequiredScope } from "@api/rest/middleware";
 import type { Context } from "@api/rest/types";
 import {
+  deleteCustomerForRest,
+  fetchCustomerByIdForRest,
+  fetchCustomersListForRest,
+  upsertCustomerForRest,
+} from "@api/rest/services/replacement-rest-customers";
+import {
   customerResponseSchema,
   customersResponseSchema,
   getCustomerByIdSchema,
@@ -48,11 +54,21 @@ app.openapi(
     const teamId = c.get("teamId");
     const { q, ...query } = c.req.valid("query");
 
-    const result = await getCustomers(db, {
-      ...query,
-      teamId,
-      q,
-    });
+    const result = await fetchCustomersListForRest(
+      {
+        cursor: query.cursor,
+        pageSize: query.pageSize,
+        q,
+        sort: query.sort,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getCustomers(db, {
+          ...query,
+          teamId,
+          q,
+        }),
+    );
 
     return c.json(validateResponse(result, customersResponseSchema));
   },
@@ -94,10 +110,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const body = c.req.valid("json");
 
-    const result = await upsertCustomer(db, {
-      ...body,
-      teamId,
-    });
+    const result = await upsertCustomerForRest(
+      body,
+      c.req.header("Authorization"),
+      () =>
+        upsertCustomer(db, {
+          ...body,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, customerResponseSchema), 201);
   },
@@ -132,7 +153,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const id = c.req.valid("param").id;
 
-    const result = await getCustomerById(db, { id, teamId });
+    const result = await fetchCustomerByIdForRest(
+      id,
+      c.req.header("Authorization"),
+      () => getCustomerById(db, { id, teamId }),
+    );
 
     if (!result) {
       throw new HTTPException(404, { message: "Customer not found" });
@@ -180,11 +205,16 @@ app.openapi(
     const id = c.req.valid("param").id;
     const body = c.req.valid("json");
 
-    const result = await upsertCustomer(db, {
-      ...body,
-      id,
-      teamId,
-    });
+    const result = await upsertCustomerForRest(
+      { ...body, id },
+      c.req.header("Authorization"),
+      () =>
+        upsertCustomer(db, {
+          ...body,
+          id,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, customerResponseSchema));
   },
@@ -219,7 +249,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const id = c.req.valid("param").id;
 
-    const result = await deleteCustomer(db, { id, teamId });
+    const result = await deleteCustomerForRest(
+      id,
+      c.req.header("Authorization"),
+      () => deleteCustomer(db, { id, teamId }),
+    );
 
     return c.json(validateResponse(result, customerResponseSchema));
   },

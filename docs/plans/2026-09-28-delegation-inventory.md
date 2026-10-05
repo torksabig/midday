@@ -549,8 +549,10 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `GET /transactions`, `GET /transactions/{id}` | yes | Rust list/get via `replacement-rest-transactions.ts` (2026-10-05) |
 | `POST /transactions`, `PATCH /transactions/{id}`, `PATCH /transactions/bulk`, `DELETE /transactions/{id}`, `DELETE /transactions/bulk` | yes | Rust create/update/delete-many (2026-10-05) |
 | `POST /transactions/bulk` | no | bulk create — Drizzle only (no clone route) |
+| `GET /customers`, `GET /customers/{id}` | yes | Rust list/get via `replacement-rest-customers.ts` (2026-10-05) |
+| `POST /customers`, `PATCH /customers/{id}`, `DELETE /customers/{id}` | yes | Rust upsert/delete via `tryDelegateCustomerUpsert` / `tryDelegateCustomerDelete` (2026-10-05) |
 | Other REST inbox routes | no | create/match/blocklist stay Drizzle on `:3003` |
-| Other REST routers (customers, teams, invoices, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
+| Other REST routers (teams, invoices, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 
 **Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 

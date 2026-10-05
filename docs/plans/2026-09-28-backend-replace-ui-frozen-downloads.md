@@ -109,6 +109,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — documents list/get/delete + vault presigned-url delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — inbox list/get/patch/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — transactions list/get/create/update/delete delegate to Rust in `replacement` mode; bulk create still Drizzle (2026-10-05)
+- [x] REST OpenAPI `:3003` — customers list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [ ] Legal review (below)
 
 ## Env reference
