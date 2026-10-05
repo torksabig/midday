@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see latest push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `b0646db3a` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior midday tip: `5d140f102` (REST inbox create/match/blocklist → Rust).
