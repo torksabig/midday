@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(set on push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `64dd63931` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `5b334af85` (REST teams list/get/update/members).
