@@ -4,14 +4,14 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 post–REST customers list/get/write/delete Rust delegation)
+## Tip SHAs (2026-10-05 post–REST invoices list/get/write/delete Rust delegation)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `4ae9c51aa` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(set at push)_ | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
-Prior tip: `d747d9665` (REST transactions list/get/write/delete).
+Prior tip: `bc2687ade` (REST customers list/get/write/delete).
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
 
@@ -55,7 +55,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 ### Prioritized next slices (no invoice PDF live render)
 
 1. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
-2. **REST OpenAPI list/get/delete** on `:3003` — **documents**, **inbox**, and **transactions** list/get/write/delete now Rust in replacement mode; **customers**, **teams**, **invoices**, etc. still Drizzle (transaction/inbox presigned-url paths already Rust).
+2. **REST OpenAPI list/get/delete** on `:3003` — **documents**, **inbox**, **transactions**, **customers**, and **invoices** list/get/write/delete now Rust in replacement mode; **teams**, **tags**, **search**, etc. still Drizzle (transaction/inbox presigned-url paths already Rust).
 3. **`POST /chat`** — move off Node or document long-term co-host (**permanent block** until ported).
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*` (**permanent block** for full Node teardown).
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -379,6 +379,20 @@ Helpers: `apps/api/src/rest/services/replacement-rest-transactions.ts` (mirrors 
 
 Helpers: `apps/api/src/rest/services/replacement-rest-customers.ts` (mirrors tRPC customers router + Bearer extraction).
 
+### Migrated (2026-10-05 REST invoices list/get/write/delete → Rust)
+
+| Capability | Now |
+|------------|-----|
+| `GET /invoices` | **Rust** — `GET /api/v1/invoices` via `tryDelegateInvoicesGet` + `replacement-rest-invoices` |
+| `GET /invoices/payment-status` | **Rust** — `GET /api/v1/invoices/payment-status` |
+| `GET /invoices/summary` | **Rust** — `GET /api/v1/invoices/summary` |
+| `GET /invoices/{id}` | **Rust** — `GET /api/v1/invoices/{id}`; 404 when row missing |
+| `POST /invoices` | **Hybrid** — Rust `POST /api/v1/invoices/draft` + Rust status `PUT` for create/scheduled; BullMQ `generate-invoice` / `schedule-invoice` / notifications stay Node (no React-PDF on REST path) |
+| `PUT /invoices/{id}` | **Rust** — `PUT /api/v1/invoices/{id}` via `tryDelegateInvoiceUpdate` |
+| `DELETE /invoices/{id}` | **Rust** — `DELETE /api/v1/invoices/{id}` via `tryDelegateInvoiceDelete` |
+
+Helpers: `apps/api/src/rest/services/replacement-rest-invoices.ts` (mirrors tRPC invoice SQL delegation + Bearer extraction).
+
 ### REST OpenAPI still Drizzle in replacement mode (inventory)
 
 | Router / area | Drizzle-backed routes (non-exhaustive) |
@@ -386,7 +400,8 @@ Helpers: `apps/api/src/rest/services/replacement-rest-customers.ts` (mirrors tRP
 | `inbox` | _(list/get/update/delete migrated)_ |
 | `transactions` | _(list/get/write/delete migrated; bulk create still Drizzle)_ |
 | `customers` | _(list/get/write/delete migrated)_ |
-| `teams`, `users`, `bank-accounts`, `invoices`, `tags`, `search`, `reports`, `tracker-*`, `notifications` | CRUD/list reads |
+| `invoices` | _(list/get/summary/payment-status/write/delete migrated; POST jobs hybrid)_ |
+| `teams`, `users`, `bank-accounts`, `tags`, `search`, `reports`, `tracker-*`, `notifications` | CRUD/list reads |
 | `oauth`, `mcp`, app OAuth callbacks, webhooks | integrations |
 | `files/download` | invoice React-PDF fallback + partial delegation |
 | REST middleware (`auth`, `db`) | identity / team resolution (required until REST auth moves) |
@@ -519,7 +534,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **invoices** OpenAPI list/get/write (or **teams**). **`POST /transactions/bulk`** create remains Drizzle until clone adds bulk create. Then **`POST /chat`** co-host only (documented).
+**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **teams** OpenAPI (or **tags** / **search**). **`POST /transactions/bulk`** create remains Drizzle until clone adds bulk create. Then **`POST /chat`** co-host only (documented).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 

@@ -1,5 +1,14 @@
 import type { Context } from "@api/rest/types";
 import {
+  createRestInvoiceDraft,
+  deleteInvoiceForRest,
+  fetchInvoiceByIdForRest,
+  fetchInvoicePaymentStatusForRest,
+  fetchInvoiceSummaryForRest,
+  fetchInvoicesListForRest,
+  updateInvoiceForRest,
+} from "@api/rest/services/replacement-rest-invoices";
+import {
   deleteInvoiceResponseSchema,
   deleteInvoiceSchema,
   draftInvoiceRequestSchema,
@@ -71,13 +80,23 @@ app.openapi(
     const teamId = c.get("teamId");
     const { pageSize, cursor, sort, ...filter } = c.req.valid("query");
 
-    const result = await getInvoices(db, {
-      teamId,
-      pageSize,
-      cursor,
-      sort,
-      ...filter,
-    });
+    const result = (await fetchInvoicesListForRest(
+      {
+        pageSize,
+        cursor,
+        sort,
+        ...filter,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getInvoices(db, {
+          teamId,
+          pageSize,
+          cursor,
+          sort,
+          ...filter,
+        }),
+    )) as Awaited<ReturnType<typeof getInvoices>>;
 
     // Transform the data to add pdfUrl and previewUrl for each invoice
     const transformedResult = {
@@ -161,7 +180,10 @@ app.openapi(
     const db = c.get("db");
     const teamId = c.get("teamId");
 
-    const result = await getPaymentStatus(db, teamId);
+    const result = await fetchInvoicePaymentStatusForRest(
+      c.req.header("Authorization"),
+      () => getPaymentStatus(db, teamId),
+    );
 
     return c.json(validateResponse(result, getPaymentStatusResponseSchema));
   },
@@ -196,10 +218,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const { statuses } = c.req.valid("query");
 
-    const result = await getInvoiceSummary(db, {
-      teamId,
-      statuses,
-    });
+    const result = await fetchInvoiceSummaryForRest(
+      { statuses },
+      c.req.header("Authorization"),
+      () =>
+        getInvoiceSummary(db, {
+          teamId,
+          statuses,
+        }),
+    );
 
     return c.json(validateResponse(result, invoiceSummaryResponseSchema));
   },
@@ -236,10 +263,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await getInvoiceById(db, {
+    const result = (await fetchInvoiceByIdForRest(
       id,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () => getInvoiceById(db, { id, teamId }),
+    )) as Awaited<ReturnType<typeof getInvoiceById>>;
 
     if (!result) {
       throw new HTTPException(404, { message: "Invoice not found" });
@@ -409,69 +437,83 @@ app.openapi(
     const userId = c.get("session").user.id;
     const input = c.req.valid("json");
 
-    // Generate invoice ID and number if not provided
     const invoiceId = uuidv4();
-    const finalInvoiceNumber =
-      input.invoiceNumber || (await getNextInvoiceNumber(db, teamId));
+    const authorization = c.req.header("Authorization");
 
-    // Check if the provided invoice number is already used
-    if (input.invoiceNumber) {
-      const isUsed = await isInvoiceNumberUsed(db, teamId, finalInvoiceNumber);
-      if (isUsed) {
-        throw new HTTPException(409, {
-          message: `Invoice number '${finalInvoiceNumber}' is already used. Please provide a different invoice number or omit it to auto-generate one.`,
+    const result = (await createRestInvoiceDraft(
+      {
+        invoiceId,
+        teamId,
+        userId,
+        input,
+      },
+      authorization,
+      async () => {
+        const finalInvoiceNumber =
+          input.invoiceNumber || (await getNextInvoiceNumber(db, teamId));
+
+        if (input.invoiceNumber) {
+          const isUsed = await isInvoiceNumberUsed(
+            db,
+            teamId,
+            finalInvoiceNumber,
+          );
+          if (isUsed) {
+            throw new HTTPException(409, {
+              message: `Invoice number '${finalInvoiceNumber}' is already used. Please provide a different invoice number or omit it to auto-generate one.`,
+            });
+          }
+        }
+
+        const template = await getInvoiceTemplate(db, teamId);
+        const paymentTermsDays = template?.paymentTermsDays ?? 30;
+
+        const issueDate = input.issueDate || new Date().toISOString();
+        const dueDate =
+          input.dueDate ||
+          addDays(new Date(issueDate), paymentTermsDays).toISOString();
+
+        const customer = await getCustomerById(db, {
+          id: input.customerId,
+          teamId,
         });
-      }
-    }
 
-    // Get template for default payment terms
-    const template = await getInvoiceTemplate(db, teamId);
-    const paymentTermsDays = template?.paymentTermsDays ?? 30;
+        if (!customer) {
+          throw new HTTPException(404, { message: "Customer not found" });
+        }
 
-    // Set default dates if not provided
-    const issueDate = input.issueDate || new Date().toISOString();
-    const dueDate =
-      input.dueDate ||
-      addDays(new Date(issueDate), paymentTermsDays).toISOString();
+        const customerDetails = transformCustomerToContent(customer);
 
-    // Fetch customer and generate customerDetails
-    const customer = await getCustomerById(db, {
-      id: input.customerId,
-      teamId,
-    });
-
-    if (!customer) {
-      throw new HTTPException(404, { message: "Customer not found" });
-    }
-
-    const customerDetails = transformCustomerToContent(customer);
-
-    const result = await draftInvoice(db, {
-      id: invoiceId,
-      teamId,
-      userId,
-      invoiceNumber: finalInvoiceNumber,
-      issueDate,
-      dueDate,
-      template: input.template,
-      paymentDetails: input.paymentDetails,
-      fromDetails: input.fromDetails,
-      customerDetails: customerDetails ? JSON.stringify(customerDetails) : null,
-      noteDetails: input.noteDetails,
-      customerId: input.customerId,
-      customerName: customer.name,
-      logoUrl: input.logoUrl,
-      vat: input.vat,
-      tax: input.tax,
-      discount: input.discount,
-      topBlock: input.topBlock,
-      bottomBlock: input.bottomBlock,
-      amount: input.amount,
-      lineItems: input.lineItems?.map((item) => ({
-        ...item,
-        name: JSON.stringify(item.name),
-      })),
-    });
+        return draftInvoice(db, {
+          id: invoiceId,
+          teamId,
+          userId,
+          invoiceNumber: finalInvoiceNumber,
+          issueDate,
+          dueDate,
+          template: input.template,
+          paymentDetails: input.paymentDetails,
+          fromDetails: input.fromDetails,
+          customerDetails: customerDetails
+            ? JSON.stringify(customerDetails)
+            : null,
+          noteDetails: input.noteDetails,
+          customerId: input.customerId,
+          customerName: customer.name,
+          logoUrl: input.logoUrl,
+          vat: input.vat,
+          tax: input.tax,
+          discount: input.discount,
+          topBlock: input.topBlock,
+          bottomBlock: input.bottomBlock,
+          amount: input.amount,
+          lineItems: input.lineItems?.map((item) => ({
+            ...item,
+            name: JSON.stringify(item.name),
+          })),
+        });
+      },
+    )) as Awaited<ReturnType<typeof draftInvoice>>;
 
     if (!result) {
       throw new HTTPException(500, { message: "Failed to create invoice" });
@@ -484,12 +526,22 @@ app.openapi(
       input.deliveryType === "create_and_send"
     ) {
       // Update invoice status to unpaid (similar to tRPC)
-      const updatedInvoice = await updateInvoice(db, {
-        id: result.id,
-        status: "unpaid",
-        teamId,
-        userId,
-      });
+      const updatedInvoice = (await updateInvoiceForRest(
+        {
+          id: result.id,
+          status: "unpaid",
+          teamId,
+          userId,
+        },
+        authorization,
+        () =>
+          updateInvoice(db, {
+            id: result.id,
+            status: "unpaid",
+            teamId,
+            userId,
+          }),
+      )) as Awaited<ReturnType<typeof updateInvoice>> | null;
 
       if (updatedInvoice) {
         finalResult = updatedInvoice;
@@ -544,14 +596,26 @@ app.openapi(
       }
 
       // Update the invoice with scheduling information
-      const updatedInvoice = await updateInvoice(db, {
-        id: result.id,
-        status: "scheduled",
-        scheduledAt: input.scheduledAt,
-        scheduledJobId: scheduledRun.id,
-        teamId,
-        userId,
-      });
+      const updatedInvoice = (await updateInvoiceForRest(
+        {
+          id: result.id,
+          status: "scheduled",
+          scheduledAt: input.scheduledAt,
+          scheduledJobId: scheduledRun.id,
+          teamId,
+          userId,
+        },
+        authorization,
+        () =>
+          updateInvoice(db, {
+            id: result.id,
+            status: "scheduled",
+            scheduledAt: input.scheduledAt,
+            scheduledJobId: scheduledRun.id,
+            teamId,
+            userId,
+          }),
+      )) as Awaited<ReturnType<typeof updateInvoice>> | null;
 
       if (!updatedInvoice) {
         // Clean up the orphaned job before throwing
@@ -667,14 +731,24 @@ app.openapi(
     const { id } = c.req.valid("param");
     const input = c.req.valid("json");
 
-    await updateInvoice(db, {
-      id,
-      teamId,
-      userId,
-      ...input,
-    });
-
-    const result = await getInvoiceById(db, { id, teamId });
+    const result = (await updateInvoiceForRest(
+      {
+        id,
+        teamId,
+        userId,
+        ...input,
+      },
+      c.req.header("Authorization"),
+      async () => {
+        await updateInvoice(db, {
+          id,
+          teamId,
+          userId,
+          ...input,
+        });
+        return getInvoiceById(db, { id, teamId });
+      },
+    )) as Awaited<ReturnType<typeof getInvoiceById>>;
 
     if (!result) {
       throw new HTTPException(404, { message: "Invoice not found" });
@@ -744,10 +818,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await deleteInvoice(db, {
+    const result = await deleteInvoiceForRest(
       id,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () =>
+        deleteInvoice(db, {
+          id,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, deleteInvoiceResponseSchema));
   },
