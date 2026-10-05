@@ -289,3 +289,18 @@ export const updateApprovalStatusSchema = z
       status: "pending",
     },
   });
+
+/** Dashboard hybrid: Rust authorize SQL already ran; Node only sends install email. */
+export const enqueueOAuthAppInstalledEmailSchema = z.object({
+  email: z.string().email(),
+  teamName: z.string(),
+  appName: z.string(),
+});
+
+/** Dashboard hybrid: Rust approval-status SQL already ran; Node only sends review email. */
+export const enqueueOAuthApprovalReviewEmailSchema = z.object({
+  applicationName: z.string(),
+  developerName: z.string().optional(),
+  teamName: z.string(),
+  userEmail: z.string().email(),
+});

@@ -3,6 +3,8 @@
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type AuthorizeOAuthApplicationInput,
+  type AuthorizeOAuthApplicationResult,
   type CreateOAuthApplicationInput,
   type DeleteOAuthApplicationInput,
   type GetOAuthApplicationInfoInput,
@@ -17,7 +19,11 @@ import {
   type OAuthApplicationsList,
   type RegenerateOAuthSecretInput,
   type RevokeOAuthAccessInput,
+  type UpdateOAuthApprovalStatusInput,
+  type UpdateOAuthApprovalStatusResult,
   type UpdateOAuthApplicationInput,
+  authorizeOAuthApplication,
+  buildOAuthAuthorizeRedirectUrl,
   createOAuthApplication,
   deleteOAuthApplication,
   fetchAuthorizedOAuthApplications,
@@ -27,6 +33,7 @@ import {
   regenerateOAuthApplicationSecret,
   revokeOAuthApplicationAccess,
   updateOAuthApplication,
+  updateOAuthApplicationApprovalStatus,
 } from "./oauth-applications";
 
 function getRustApiUrl() {
@@ -133,4 +140,100 @@ export async function revokeOAuthApplicationAccessFromRust(
     await getAccessToken(),
     input,
   );
+}
+
+export async function authorizeOAuthApplicationFromRust(
+  input: AuthorizeOAuthApplicationInput,
+): Promise<AuthorizeOAuthApplicationResult> {
+  const rust = await authorizeOAuthApplication(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+  return { redirect_url: buildOAuthAuthorizeRedirectUrl(input, rust) };
+}
+
+export type OAuthAuthorizeWithInstallEmailOptions = {
+  input: AuthorizeOAuthApplicationInput;
+  enqueueInstallEmail: (payload: {
+    email: string;
+    teamName: string;
+    appName: string;
+  }) => Promise<unknown>;
+  fallbackUserEmail?: string | null;
+};
+
+export async function authorizeOAuthApplicationWithInstallEmail({
+  input,
+  enqueueInstallEmail,
+  fallbackUserEmail,
+}: OAuthAuthorizeWithInstallEmailOptions): Promise<AuthorizeOAuthApplicationResult> {
+  const rust = await authorizeOAuthApplication(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+
+  if (
+    input.decision === "allow" &&
+    !rust.hasAuthorizedBefore &&
+    rust.teamName &&
+    (rust.userEmail || fallbackUserEmail)
+  ) {
+    await enqueueInstallEmail({
+      email: rust.userEmail ?? fallbackUserEmail!,
+      teamName: rust.teamName,
+      appName: rust.application.name,
+    });
+  }
+
+  return { redirect_url: buildOAuthAuthorizeRedirectUrl(input, rust) };
+}
+
+export async function updateOAuthApprovalStatusFromRust(
+  input: UpdateOAuthApprovalStatusInput,
+): Promise<UpdateOAuthApprovalStatusResult> {
+  return updateOAuthApplicationApprovalStatus(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+}
+
+export type OAuthApprovalStatusWithReviewEmailOptions = {
+  input: UpdateOAuthApprovalStatusInput;
+  enqueueReviewEmail: (payload: {
+    applicationName: string;
+    developerName?: string;
+    teamName: string;
+    userEmail: string;
+  }) => Promise<unknown>;
+  teamName: string;
+  userEmail: string;
+  developerName?: string | null;
+};
+
+export async function updateOAuthApprovalStatusWithReviewEmail({
+  input,
+  enqueueReviewEmail,
+  teamName,
+  userEmail,
+  developerName,
+}: OAuthApprovalStatusWithReviewEmailOptions): Promise<UpdateOAuthApprovalStatusResult> {
+  const result = await updateOAuthApplicationApprovalStatus(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input,
+  );
+
+  if (input.status === "pending") {
+    await enqueueReviewEmail({
+      applicationName: result.name,
+      developerName: developerName ?? undefined,
+      teamName,
+      userEmail,
+    });
+  }
+
+  return result;
 }

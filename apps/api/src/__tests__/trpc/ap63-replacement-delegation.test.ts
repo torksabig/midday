@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
+import { oauthApplicationsRouter } from "../../trpc/routers/oauth-applications";
 import { teamRouter } from "../../trpc/routers/team";
 import { createTestContext } from "../helpers/test-context";
 
@@ -121,6 +122,67 @@ describe("tRPC: AP-63 team.enqueueExportAllData (job-only hybrid)", () => {
       },
       "transactions",
     );
+  });
+});
+
+describe("tRPC: AP-65 oauthApplications.enqueueOAuthAppInstalledEmail (email-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.resendEmailsSend.mockReset();
+    mocks.resendEmailsSend.mockImplementation(() => Promise.resolve());
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueOAuthAppInstalledEmail completes without Drizzle", async () => {
+    const caller = createCallerFactory(oauthApplicationsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.enqueueOAuthAppInstalledEmail({
+      email: "user@example.com",
+      teamName: "Acme",
+      appName: "Raycast",
+    });
+    expect(result).toEqual({ sent: true });
+  });
+});
+
+describe("tRPC: AP-65 oauthApplications.enqueueOAuthApprovalReviewEmail (email-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.resendEmailsSend.mockReset();
+    mocks.resendEmailsSend.mockImplementation(() => Promise.resolve());
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueOAuthApprovalReviewEmail completes without Drizzle", async () => {
+    const caller = createCallerFactory(oauthApplicationsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.enqueueOAuthApprovalReviewEmail({
+      applicationName: "My App",
+      developerName: "Ada",
+      teamName: "Acme",
+      userEmail: "ada@example.com",
+    });
+    expect(result).toEqual({ sent: true });
   });
 });
 

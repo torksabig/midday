@@ -2,6 +2,8 @@ import {
   authorizeOAuthApplicationSchema,
   createOAuthApplicationSchema,
   deleteOAuthApplicationSchema,
+  enqueueOAuthAppInstalledEmailSchema,
+  enqueueOAuthApprovalReviewEmailSchema,
   getApplicationInfoSchema,
   getOAuthApplicationSchema,
   regenerateClientSecretSchema,
@@ -48,6 +50,50 @@ import { createLoggerWithContext } from "@midday/logger";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 
 const logger = createLoggerWithContext("trpc:oauth-applications");
+
+async function sendOAuthAppInstalledEmail(input: {
+  email: string;
+  teamName: string;
+  appName: string;
+}) {
+  const html = await render(
+    AppInstalledEmail({
+      email: input.email,
+      teamName: input.teamName,
+      appName: input.appName,
+    }),
+  );
+
+  await resend.emails.send({
+    from: "Midday <middaybot@midday.ai>",
+    to: input.email,
+    subject: "An app has been added to your team",
+    html,
+  });
+}
+
+async function sendOAuthApprovalReviewEmail(input: {
+  applicationName: string;
+  developerName?: string;
+  teamName: string;
+  userEmail: string;
+}) {
+  const html = await render(
+    AppReviewRequestEmail({
+      applicationName: input.applicationName,
+      developerName: input.developerName,
+      teamName: input.teamName,
+      userEmail: input.userEmail,
+    }),
+  );
+
+  await resend.emails.send({
+    from: "Midday <middaybot@midday.ai>",
+    to: "pontus@midday.ai",
+    subject: `Application Review Request - ${input.applicationName}`,
+    html,
+  });
+}
 
 export const oauthApplicationsRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -127,6 +173,35 @@ export const oauthApplicationsRouter = createTRPCRouter({
       };
     }),
 
+  /** Resend-only half after dashboard Rust `POST /api/v1/oauth-applications/authorize`. */
+  enqueueOAuthAppInstalledEmail: protectedProcedure
+    .input(enqueueOAuthAppInstalledEmailSchema)
+    .mutation(async ({ input }) => {
+      try {
+        await sendOAuthAppInstalledEmail(input);
+      } catch (error) {
+        logger.error("Failed to send app installation email", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return { sent: true as const };
+    }),
+
+  /** Resend-only half after dashboard Rust approval-status update. */
+  enqueueOAuthApprovalReviewEmail: protectedProcedure
+    .input(enqueueOAuthApprovalReviewEmailSchema)
+    .mutation(async ({ input }) => {
+      try {
+        await sendOAuthApprovalReviewEmail(input);
+      } catch (error) {
+        logger.error("Failed to send application review request", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return { sent: true as const };
+    }),
+
+  /** Full path for non-dashboard callers; dashboard uses Rust authorize + enqueue email. */
   authorize: protectedProcedure
     .input(authorizeOAuthApplicationSchema)
     .mutation(async ({ ctx, input }) => {
@@ -169,28 +244,16 @@ export const oauthApplicationsRouter = createTRPCRouter({
             return { redirect_url: redirectUrl.toString() };
           }
 
-          // Send app installation email only if this is the first time authorizing
           try {
             if (
               !delegated.result.hasAuthorizedBefore &&
               delegated.result.teamName &&
               (delegated.result.userEmail || session.user.email)
             ) {
-              const email =
-                delegated.result.userEmail ?? session.user.email!;
-              const html = await render(
-                AppInstalledEmail({
-                  email,
-                  teamName: delegated.result.teamName,
-                  appName: delegated.result.application.name,
-                }),
-              );
-
-              await resend.emails.send({
-                from: "Midday <middaybot@midday.ai>",
-                to: email,
-                subject: "An app has been added to your team",
-                html,
+              await sendOAuthAppInstalledEmail({
+                email: delegated.result.userEmail ?? session.user.email!,
+                teamName: delegated.result.teamName,
+                appName: delegated.result.application.name,
               });
             }
           } catch (error) {
@@ -293,19 +356,10 @@ export const oauthApplicationsRouter = createTRPCRouter({
           const userTeam = userTeams.find((team) => team.id === teamId);
 
           if (userTeam && session.user.email) {
-            const html = await render(
-              AppInstalledEmail({
-                email: session.user.email,
-                teamName: userTeam.name!,
-                appName: application.name,
-              }),
-            );
-
-            await resend.emails.send({
-              from: "Midday <middaybot@midday.ai>",
-              to: session.user.email,
-              subject: "An app has been added to your team",
-              html,
+            await sendOAuthAppInstalledEmail({
+              email: session.user.email,
+              teamName: userTeam.name!,
+              appName: application.name,
             });
           }
         }
@@ -518,6 +572,7 @@ export const oauthApplicationsRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  /** Full path for non-dashboard callers; dashboard uses Rust approval-status + enqueue email. */
   updateApprovalStatus: protectedProcedure
     .input(updateApprovalStatusSchema)
     .mutation(async ({ ctx, input }) => {
@@ -542,20 +597,11 @@ export const oauthApplicationsRouter = createTRPCRouter({
               const currentTeam = userTeams?.find((team) => team.id === teamId);
 
               if (currentTeam && session.user.email) {
-                const html = await render(
-                  AppReviewRequestEmail({
-                    applicationName: application.name ?? result.name,
-                    developerName: application.developerName || undefined,
-                    teamName: currentTeam.name!,
-                    userEmail: session.user.email,
-                  }),
-                );
-
-                await resend.emails.send({
-                  from: "Midday <middaybot@midday.ai>",
-                  to: "pontus@midday.ai",
-                  subject: `Application Review Request - ${application.name ?? result.name}`,
-                  html,
+                await sendOAuthApprovalReviewEmail({
+                  applicationName: application.name ?? result.name,
+                  developerName: application.developerName || undefined,
+                  teamName: currentTeam.name!,
+                  userEmail: session.user.email,
                 });
               }
             } catch (error) {
@@ -595,20 +641,11 @@ export const oauthApplicationsRouter = createTRPCRouter({
           const currentTeam = userTeams?.find((team) => team.id === teamId);
 
           if (currentTeam && session.user.email) {
-            const html = await render(
-              AppReviewRequestEmail({
-                applicationName: application.name,
-                developerName: application.developerName || undefined,
-                teamName: currentTeam.name!,
-                userEmail: session.user.email,
-              }),
-            );
-
-            await resend.emails.send({
-              from: "Midday <middaybot@midday.ai>",
-              to: "pontus@midday.ai",
-              subject: `Application Review Request - ${application.name}`,
-              html,
+            await sendOAuthApprovalReviewEmail({
+              applicationName: application.name,
+              developerName: application.developerName || undefined,
+              teamName: currentTeam.name!,
+              userEmail: session.user.email,
             });
           }
         } catch (error) {

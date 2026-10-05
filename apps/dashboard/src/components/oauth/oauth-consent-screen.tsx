@@ -26,8 +26,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useOAuthParams } from "@/hooks/use-oauth-params";
 import { useTeamQuery } from "@/hooks/use-team";
-import { oauthApplicationInfoQueryOptions } from "@/lib/rust-api/oauth-applications-client";
+import {
+  authorizeOAuthApplicationWithInstallEmail,
+  oauthApplicationInfoQueryOptions,
+} from "@/lib/rust-api/oauth-applications-client";
 import { teamListQueryOptions } from "@/lib/rust-api/team-client";
+import { useUserQuery } from "@/hooks/use-user";
 import { useTRPC } from "@/trpc/client";
 import { getKnownClient } from "@/utils/known-oauth-clients";
 import { getScopeDescription } from "@/utils/scopes";
@@ -45,6 +49,7 @@ export function OAuthConsentScreen() {
   } = useOAuthParams();
 
   const trpc = useTRPC();
+  const { data: user } = useUserQuery();
   const { data: currentTeam } = useTeamQuery();
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [authorized, setAuthorized] = useState(false);
@@ -79,21 +84,30 @@ export function OAuthConsentScreen() {
     teamListQueryOptions(trpc.team.list.queryKey()),
   );
 
-  const authorizeMutation = useMutation(
-    trpc.oauthApplications.authorize.mutationOptions({
-      onSuccess: (data) => {
-        setAuthorized(true);
-        window.location.href = data.redirect_url;
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message || "Authorization failed",
-          variant: "error",
-        });
-      },
-    }),
+  const enqueueOAuthAppInstalledEmailMutation = useMutation(
+    trpc.oauthApplications.enqueueOAuthAppInstalledEmail.mutationOptions(),
   );
+
+  const authorizeMutation = useMutation({
+    mutationFn: (input: Parameters<typeof authorizeOAuthApplicationWithInstallEmail>[0]["input"]) =>
+      authorizeOAuthApplicationWithInstallEmail({
+        input,
+        fallbackUserEmail: user?.email,
+        enqueueInstallEmail: (payload) =>
+          enqueueOAuthAppInstalledEmailMutation.mutateAsync(payload),
+      }),
+    onSuccess: (data) => {
+      setAuthorized(true);
+      window.location.href = data.redirect_url;
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Authorization failed",
+        variant: "error",
+      });
+    },
+  });
 
   const handleAuthorize = async () => {
     if (!selectedTeamId) {

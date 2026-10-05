@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import {
+  buildOAuthAuthorizeRedirectUrl,
   deepCamelCaseKeys,
   normalizeOAuthApplication,
   normalizeOAuthApplicationCreate,
   normalizeOAuthApplicationDelete,
   normalizeOAuthApplicationInfo,
   normalizeOAuthApplicationRegenerateSecret,
+  normalizeOAuthApprovalStatusResult,
   normalizeOAuthApplicationsAuthorized,
   normalizeOAuthApplicationsList,
 } from "./oauth-applications";
@@ -128,4 +130,43 @@ test("deepCamelCaseKeys is idempotent", () => {
     logoUrl: null,
     isPublic: true,
   });
+});
+
+test("buildOAuthAuthorizeRedirectUrl sets code on allow", () => {
+  const url = buildOAuthAuthorizeRedirectUrl(
+    {
+      redirectUri: "https://example.com/cb",
+      state: "st",
+      decision: "allow",
+    },
+    {
+      decision: "allow",
+      code: "auth_code_1",
+      application: { id: "app-1", name: "App" },
+    },
+  );
+  expect(url).toContain("code=auth_code_1");
+  expect(url).toContain("state=st");
+});
+
+test("buildOAuthAuthorizeRedirectUrl sets access_denied on deny", () => {
+  const url = buildOAuthAuthorizeRedirectUrl(
+    {
+      redirectUri: "https://example.com/cb",
+      decision: "deny",
+    },
+    {
+      decision: "deny",
+      application: { id: "app-1", name: "App" },
+    },
+  );
+  expect(url).toContain("error=access_denied");
+});
+
+test("normalizeOAuthApprovalStatusResult unwraps nested result", () => {
+  expect(
+    normalizeOAuthApprovalStatusResult({
+      result: { id: "app-7", name: "Review Me", status: "pending" },
+    }),
+  ).toEqual({ id: "app-7", name: "Review Me", status: "pending" });
 });

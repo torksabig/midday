@@ -1,5 +1,17 @@
-import type { RouterInputs, RouterOutputs } from "@api/trpc/routers/_app";
+import type {
+  RouterInputs,
+  RouterOutputs,
+} from "@api/trpc/routers/_app";
 import { RustApiError } from "./overview";
+
+export type AuthorizeOAuthApplicationInput =
+  RouterInputs["oauthApplications"]["authorize"];
+export type AuthorizeOAuthApplicationResult =
+  RouterOutputs["oauthApplications"]["authorize"];
+export type UpdateOAuthApprovalStatusInput =
+  RouterInputs["oauthApplications"]["updateApprovalStatus"];
+export type UpdateOAuthApprovalStatusResult =
+  RouterOutputs["oauthApplications"]["updateApprovalStatus"];
 
 export type OAuthApplicationsList = RouterOutputs["oauthApplications"]["list"];
 export type OAuthApplicationItem =
@@ -306,6 +318,117 @@ export async function revokeOAuthApplicationAccess(
   if (!response.ok) await throwRustApiError(response);
 
   return normalizeOAuthApplicationRevokeAccess(await response.json());
+}
+
+export type OAuthAuthorizeRustResult = {
+  decision: "allow" | "deny";
+  code?: string;
+  application: { id: string; name: string };
+  teamName?: string | null;
+  userEmail?: string | null;
+  hasAuthorizedBefore?: boolean;
+};
+
+export function normalizeOAuthAuthorizeRustResult(
+  payload: unknown,
+): OAuthAuthorizeRustResult {
+  const row = deepCamelCaseKeys(payload) as OAuthAuthorizeRustResult;
+  if (row.decision !== "allow" && row.decision !== "deny") {
+    throw new RustApiError(500, "OAuth authorize payload missing decision");
+  }
+  if (!row.application?.id || !row.application?.name) {
+    throw new RustApiError(500, "OAuth authorize payload missing application");
+  }
+  return row;
+}
+
+export function buildOAuthAuthorizeRedirectUrl(
+  input: Pick<
+    AuthorizeOAuthApplicationInput,
+    "redirectUri" | "state" | "decision"
+  >,
+  rust: OAuthAuthorizeRustResult,
+): string {
+  const redirectUrl = new URL(input.redirectUri);
+
+  if (rust.decision === "deny" || input.decision === "deny") {
+    redirectUrl.searchParams.set("error", "access_denied");
+    redirectUrl.searchParams.set("error_description", "User denied access");
+    if (input.state) {
+      redirectUrl.searchParams.set("state", input.state);
+    }
+    return redirectUrl.toString();
+  }
+
+  if (!rust.code) {
+    throw new RustApiError(500, "Failed to create authorization code");
+  }
+
+  redirectUrl.searchParams.set("code", rust.code);
+  if (input.state) {
+    redirectUrl.searchParams.set("state", input.state);
+  }
+  return redirectUrl.toString();
+}
+
+export async function authorizeOAuthApplication(
+  baseUrl: string,
+  accessToken: string | null,
+  input: AuthorizeOAuthApplicationInput,
+): Promise<OAuthAuthorizeRustResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/oauth-applications/authorize`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  return normalizeOAuthAuthorizeRustResult(await response.json());
+}
+
+export function normalizeOAuthApprovalStatusResult(
+  payload: unknown,
+): UpdateOAuthApprovalStatusResult {
+  const row = deepCamelCaseKeys(payload) as {
+    result?: UpdateOAuthApprovalStatusResult;
+  };
+  if (row.result && typeof row.result === "object") {
+    return row.result;
+  }
+  return deepCamelCaseKeys(payload) as UpdateOAuthApprovalStatusResult;
+}
+
+export async function updateOAuthApplicationApprovalStatus(
+  baseUrl: string,
+  accessToken: string | null,
+  input: UpdateOAuthApprovalStatusInput,
+): Promise<UpdateOAuthApprovalStatusResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const { id, status } = input;
+  const response = await fetch(
+    `${baseUrl}/api/v1/oauth-applications/${encodeURIComponent(id)}/approval-status`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) await throwRustApiError(response);
+
+  return normalizeOAuthApprovalStatusResult(await response.json());
 }
 
 export async function fetchOAuthApplicationInfo(
