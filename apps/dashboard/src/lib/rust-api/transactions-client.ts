@@ -1,10 +1,15 @@
 "use client";
 
+import { formatAmountValue } from "@midday/import";
 import {
   infiniteQueryOptions,
   type QueryKey,
   queryOptions,
 } from "@tanstack/react-query";
+import {
+  fetchBankAccountById,
+  updateBankAccount,
+} from "./bank-accounts";
 import { getAccessToken } from "@/utils/session";
 import {
   createTransaction,
@@ -134,5 +139,43 @@ export function searchTransactionMatchQueryOptions(
         params,
       ),
     enabled: options.enabled,
+  });
+}
+
+/** Rust SQL half of `transactions.import` for manual accounts (balance/currency). */
+export async function prepareManualBankAccountForImport(input: {
+  bankAccountId: string;
+  currency: string;
+  currentBalance?: string;
+}): Promise<void> {
+  const baseUrl = getRustApiUrl();
+  const accessToken = await getAccessToken();
+  const account = await fetchBankAccountById(
+    baseUrl,
+    accessToken,
+    input.bankAccountId,
+  );
+
+  if (!account) {
+    throw new Error("Bank account not found");
+  }
+
+  if (!account.manual) {
+    return;
+  }
+
+  const parsedBalance = input.currentBalance
+    ? formatAmountValue({ amount: input.currentBalance })
+    : null;
+
+  const balance =
+    parsedBalance !== null && Number.isFinite(parsedBalance)
+      ? parsedBalance
+      : null;
+
+  await updateBankAccount(baseUrl, accessToken, {
+    id: input.bankAccountId,
+    currency: input.currency,
+    balance: balance ?? undefined,
   });
 }

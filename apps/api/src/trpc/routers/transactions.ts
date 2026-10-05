@@ -2,6 +2,8 @@ import { anthropic } from "@ai-sdk/anthropic";
 import {
   createTransactionSchema,
   deleteTransactionsSchema,
+  enqueueExportTransactionsSchema,
+  enqueueImportTransactionsSchema,
   exportTransactionsSchema,
   generateCsvMappingResponseSchema,
   generateCsvMappingSchema,
@@ -54,6 +56,7 @@ import {
 import { triggerJob } from "@midday/job-client";
 import { TRPCError } from "@trpc/server";
 import { generateObject } from "ai";
+import type { z } from "zod";
 
 const csvMappingInFlight = new Map<
   string,
@@ -66,6 +69,48 @@ const csvMappingInFlight = new Map<
     currency?: string;
   }>
 >();
+
+type ExportTransactionsJobInput = z.infer<typeof exportTransactionsSchema>;
+type ImportTransactionsJobInput = z.infer<typeof enqueueImportTransactionsSchema>;
+
+async function triggerExportTransactionsJob(
+  teamId: string,
+  userId: string,
+  userEmail: string | undefined,
+  input: ExportTransactionsJobInput,
+) {
+  return triggerJob(
+    "export-transactions",
+    {
+      teamId,
+      userId,
+      userEmail,
+      locale: input.locale,
+      transactionIds: input.transactionIds,
+      dateFormat: input.dateFormat,
+      exportSettings: input.exportSettings,
+    },
+    "transactions",
+  );
+}
+
+async function triggerImportTransactionsJob(
+  teamId: string,
+  input: ImportTransactionsJobInput,
+) {
+  return triggerJob(
+    "import-transactions",
+    {
+      filePath: input.filePath,
+      bankAccountId: input.bankAccountId,
+      currency: input.currency,
+      mappings: input.mappings,
+      teamId,
+      inverted: input.inverted,
+    },
+    "transactions",
+  );
+}
 
 export const transactionsRouter = createTRPCRouter({
   get: protectedProcedure
@@ -320,6 +365,23 @@ export const transactionsRouter = createTRPCRouter({
       return transaction;
     }),
 
+  /** Job-only export; no transaction SQL on Node. */
+  enqueueExportTransactions: protectedProcedure
+    .input(enqueueExportTransactionsSchema)
+    .mutation(async ({ input, ctx: { teamId, session } }) => {
+      if (!teamId) {
+        throw new Error("Team not found");
+      }
+
+      return triggerExportTransactionsJob(
+        teamId,
+        session.user.id,
+        session.user.email ?? undefined,
+        input,
+      );
+    }),
+
+  /** Non-dashboard callers; dashboard uses `enqueueExportTransactions`. */
   export: protectedProcedure
     .input(exportTransactionsSchema)
     .mutation(async ({ input, ctx: { teamId, session } }) => {
@@ -327,21 +389,26 @@ export const transactionsRouter = createTRPCRouter({
         throw new Error("Team not found");
       }
 
-      return triggerJob(
-        "export-transactions",
-        {
-          teamId,
-          userId: session.user.id,
-          userEmail: session.user.email ?? undefined,
-          locale: input.locale,
-          transactionIds: input.transactionIds,
-          dateFormat: input.dateFormat,
-          exportSettings: input.exportSettings,
-        },
-        "transactions",
+      return triggerExportTransactionsJob(
+        teamId,
+        session.user.id,
+        session.user.email ?? undefined,
+        input,
       );
     }),
 
+  /** Job-only half after dashboard Rust manual bank-account prep. */
+  enqueueImportTransactions: protectedProcedure
+    .input(enqueueImportTransactionsSchema)
+    .mutation(async ({ input, ctx: { teamId } }) => {
+      if (!teamId) {
+        throw new Error("Team not found");
+      }
+
+      return triggerImportTransactionsJob(teamId, input);
+    }),
+
+  /** Non-dashboard callers; dashboard uses Rust bank-account prep + `enqueueImportTransactions`. */
   import: protectedProcedure
     .input(importTransactionsSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -418,18 +485,13 @@ export const transactionsRouter = createTRPCRouter({
         }
       }
 
-      return triggerJob(
-        "import-transactions",
-        {
-          filePath: input.filePath,
-          bankAccountId: input.bankAccountId,
-          currency: input.currency,
-          mappings: input.mappings,
-          teamId,
-          inverted: input.inverted,
-        },
-        "transactions",
-      );
+      return triggerImportTransactionsJob(teamId, {
+        filePath: input.filePath,
+        bankAccountId: input.bankAccountId,
+        currency: input.currency,
+        mappings: input.mappings,
+        inverted: input.inverted,
+      });
     }),
 
   moveToReview: protectedProcedure

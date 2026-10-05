@@ -163,7 +163,7 @@ export function ExportTransactionsModal({
 
   // File export mutation
   const exportMutation = useMutation(
-    trpc.transactions.export.mutationOptions({
+    trpc.transactions.enqueueExportTransactions.mutationOptions({
       onSuccess: (data) => {
         if (data?.id) {
           setExportData({ runId: data.id, exportType: "file" });

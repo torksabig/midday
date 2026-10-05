@@ -24,6 +24,7 @@ import { useTeamQuery } from "@/hooks/use-team";
 import { useUpload } from "@/hooks/use-upload";
 import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
+import { prepareManualBankAccountForImport } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 import { ImportCsvContext, importSchema } from "./context";
 import { FieldMapping } from "./field-mapping";
@@ -77,7 +78,7 @@ export function ImportModal() {
   });
 
   const importTransactions = useMutation(
-    trpc.transactions.import.mutationOptions({
+    trpc.transactions.enqueueImportTransactions.mutationOptions({
       onSuccess: (data) => {
         if (data?.id) {
           setJobId(data.id);
@@ -404,20 +405,34 @@ export function ImportModal() {
                             )
                           : undefined;
 
-                      importTransactions.mutate({
-                        filePath: path,
-                        currency: data.currency,
-                        bankAccountId: data.bank_account_id,
-                        currentBalance,
-                        inverted: data.inverted,
-                        mappings: {
-                          amount: data.amount,
-                          date: data.date,
-                          description: data.description,
-                          counterparty: data.counterparty,
-                          balance: data.balance,
-                        },
-                      });
+                      try {
+                        await prepareManualBankAccountForImport({
+                          bankAccountId: data.bank_account_id,
+                          currency: data.currency,
+                          currentBalance,
+                        });
+
+                        importTransactions.mutate({
+                          filePath: path,
+                          currency: data.currency,
+                          bankAccountId: data.bank_account_id,
+                          inverted: data.inverted,
+                          mappings: {
+                            amount: data.amount,
+                            date: data.date,
+                            description: data.description,
+                            counterparty: data.counterparty,
+                            balance: data.balance,
+                          },
+                        });
+                      } catch {
+                        setIsImporting(false);
+                        toast({
+                          duration: 3500,
+                          variant: "error",
+                          title: "Something went wrong please try again.",
+                        });
+                      }
                     })}
                   >
                     {page === "select-file" && <SelectFile />}

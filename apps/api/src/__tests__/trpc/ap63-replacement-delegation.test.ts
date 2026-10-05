@@ -8,6 +8,7 @@ import { inboxRouter } from "../../trpc/routers/inbox";
 import { oauthApplicationsRouter } from "../../trpc/routers/oauth-applications";
 import { teamRouter } from "../../trpc/routers/team";
 import { transactionAttachmentsRouter } from "../../trpc/routers/transaction-attachments";
+import { transactionsRouter } from "../../trpc/routers/transactions";
 import { createTestContext } from "../helpers/test-context";
 
 const envSnapshot = { ...process.env };
@@ -426,6 +427,96 @@ describe("tRPC: documents.enqueueProcessDocument (job-only hybrid)", () => {
       {
         jobId: "process-doc_test-team-id_team-1/vault/invoice.pdf",
       },
+    );
+  });
+});
+
+describe("tRPC: AP-67 transactions.enqueueExportTransactions (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-tx-export" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueExportTransactions triggers export-transactions without Drizzle", async () => {
+    const caller = createCallerFactory(transactionsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const txId = "a1a2b3c4-5d6e-4f8a-9b0c-1d2e3f4a5b6c";
+    await caller.enqueueExportTransactions({
+      transactionIds: [txId],
+      locale: "en",
+    });
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "export-transactions",
+      expect.objectContaining({
+        teamId: "test-team-id",
+        userId: "test-user-id",
+        transactionIds: [txId],
+      }),
+      "transactions",
+    );
+  });
+});
+
+describe("tRPC: AP-67 transactions.enqueueImportTransactions (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-tx-import" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueImportTransactions triggers import-transactions without Drizzle", async () => {
+    const caller = createCallerFactory(transactionsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueImportTransactions({
+      filePath: ["team-1", "imports", "file.csv"],
+      bankAccountId: ID,
+      currency: "USD",
+      inverted: false,
+      mappings: {
+        amount: "Amount",
+        date: "Date",
+        description: "Description",
+      },
+    });
+    expect(mocks.getBankAccountById).not.toHaveBeenCalled();
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "import-transactions",
+      {
+        filePath: ["team-1", "imports", "file.csv"],
+        bankAccountId: ID,
+        currency: "USD",
+        mappings: {
+          amount: "Amount",
+          date: "Date",
+          description: "Description",
+        },
+        teamId: "test-team-id",
+        inverted: false,
+      },
+      "transactions",
     );
   });
 });

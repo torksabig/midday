@@ -1014,6 +1014,14 @@ export const importTransactionsSchema = z.object({
     }),
 });
 
+/** Dashboard hybrid: BullMQ `export-transactions` only (no SQL on Node). */
+export const enqueueExportTransactionsSchema = exportTransactionsSchema;
+
+/** Dashboard hybrid: BullMQ `import-transactions` only (manual account prep on Rust). */
+export const enqueueImportTransactionsSchema = importTransactionsSchema.omit({
+  currentBalance: true,
+});
+
 export const generateCsvMappingSchema = z.object({
   fieldColumns: z.array(z.string()).min(1),
   firstRows: z.array(z.record(z.string(), z.string())).min(1),
