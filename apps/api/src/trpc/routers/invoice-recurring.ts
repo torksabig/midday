@@ -1,6 +1,8 @@
 import {
   createInvoiceRecurringSchema,
   deleteInvoiceRecurringSchema,
+  enqueueRecurringSeriesStartedNotificationSchema,
+  enqueueRemoveInvoiceScheduledJobsSchema,
   getInvoiceRecurringByIdSchema,
   getInvoiceRecurringListSchema,
   getUpcomingInvoicesSchema,
@@ -35,7 +37,7 @@ import {
 } from "@midday/db/queries";
 import { calculateNextScheduledDate } from "@midday/db/utils/invoice-recurring";
 import { isDateInFutureUTC } from "@midday/invoice/recurring";
-import { decodeJobId, getQueue } from "@midday/job-client";
+import { decodeJobId, getQueue, triggerJob } from "@midday/job-client";
 import { createLoggerWithContext } from "@midday/logger";
 import { Notifications } from "@midday/notifications";
 import { TRPCError } from "@trpc/server";
@@ -72,6 +74,18 @@ async function resolveCustomerById(params: {
   });
 }
 
+async function removeInvoiceScheduledJobs(jobIds: string[]): Promise<void> {
+  if (!jobIds.length) return;
+  const queue = getQueue("invoices");
+  await Promise.all(
+    jobIds.map(async (scheduledJobId) => {
+      const { jobId: rawJobId } = decodeJobId(scheduledJobId);
+      const job = await queue.getJob(rawJobId);
+      if (job) await job.remove();
+    }),
+  );
+}
+
 function assertCustomerHasEmail(customer: CustomerEmailRow | null): void {
   if (!customer) {
     throw new TRPCError({
@@ -91,6 +105,7 @@ function assertCustomerHasEmail(customer: CustomerEmailRow | null): void {
 }
 
 export const invoiceRecurringRouter = createTRPCRouter({
+  /** Non-dashboard callers; dashboard uses Rust create + notification enqueue. */
   create: protectedProcedure
     .input(createInvoiceRecurringSchema)
     .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
@@ -296,6 +311,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
       return result;
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust PUT directly. */
   update: protectedProcedure
     .input(updateInvoiceRecurringSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -630,6 +646,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
       });
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust delete + `enqueueRemoveInvoiceScheduledJobs`. */
   delete: protectedProcedure
     .input(deleteInvoiceRecurringSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -646,14 +663,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
           accessToken,
         );
         if (delegated.delegated) {
-          const queue = getQueue("invoices");
-          await Promise.all(
-            delegated.jobIds.map(async (scheduledJobId) => {
-              const { jobId: rawJobId } = decodeJobId(scheduledJobId);
-              const job = await queue.getJob(rawJobId);
-              if (job) await job.remove();
-            }),
-          );
+          await removeInvoiceScheduledJobs(delegated.jobIds);
           const recurring = delegated.recurring as { id?: string } | null;
           return { id: recurring?.id ?? input.id };
         }
@@ -709,18 +719,12 @@ export const invoiceRecurringRouter = createTRPCRouter({
         return { recurring, jobIdsToRemove };
       });
 
-      // Remove BullMQ jobs AFTER the transaction has committed successfully
-      const queue = getQueue("invoices");
-      await Promise.all(
-        result.jobIdsToRemove.map(async (jobId) => {
-          const job = await queue.getJob(jobId);
-          if (job) await job.remove();
-        }),
-      );
+      await removeInvoiceScheduledJobs(result.jobIdsToRemove);
 
       return { id: result.recurring.id };
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust pause + `enqueueRemoveInvoiceScheduledJobs`. */
   pause: protectedProcedure
     .input(pauseResumeInvoiceRecurringSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -737,14 +741,7 @@ export const invoiceRecurringRouter = createTRPCRouter({
           accessToken,
         );
         if (delegated.delegated) {
-          const queue = getQueue("invoices");
-          await Promise.all(
-            delegated.jobIds.map(async (scheduledJobId) => {
-              const { jobId: rawJobId } = decodeJobId(scheduledJobId);
-              const job = await queue.getJob(rawJobId);
-              if (job) await job.remove();
-            }),
-          );
+          await removeInvoiceScheduledJobs(delegated.jobIds);
           return delegated.recurring;
         }
         assertLegacyIdentityFallbackAllowed();
@@ -888,5 +885,37 @@ export const invoiceRecurringRouter = createTRPCRouter({
       }
 
       return result;
+    }),
+
+  enqueueRemoveInvoiceScheduledJobs: protectedProcedure
+    .input(enqueueRemoveInvoiceScheduledJobsSchema)
+    .mutation(async ({ input }) => {
+      await removeInvoiceScheduledJobs(input.jobIds);
+      return { removed: true as const };
+    }),
+
+  enqueueRecurringSeriesStartedNotification: protectedProcedure
+    .input(enqueueRecurringSeriesStartedNotificationSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      await triggerJob(
+        "notification",
+        {
+          type: "recurring_series_started",
+          teamId: teamId!,
+          recurringId: input.recurringId,
+          invoiceId: input.invoiceId,
+          customerName: input.customerName ?? undefined,
+          frequency: input.frequency,
+          endType: input.endType,
+          endDate: input.endDate ?? undefined,
+          endCount: input.endCount ?? undefined,
+        },
+        "notifications",
+      ).catch((error) => {
+        logger.error("Failed to send recurring_series_started notification", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+      return { queued: true as const };
     }),
 });

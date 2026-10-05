@@ -41,6 +41,11 @@ import {
   duplicateInvoiceFromRust,
   updateInvoiceFromRust,
 } from "@/lib/rust-api/invoices-client";
+import {
+  cancelInvoiceScheduleHybrid,
+  deleteInvoiceRecurringHybrid,
+  pauseInvoiceRecurringHybrid,
+} from "@/lib/invoice-hybrid-flows";
 import { resumeInvoiceRecurringFromRust } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 import { getUrl } from "@/utils/environment";
@@ -157,36 +162,49 @@ export function ActionsMenu({ row }: Props) {
     },
   });
 
-  const cancelScheduleMutation = useMutation(
-    trpc.invoice.cancelSchedule.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-
-        // Widget uses regular query
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
-      },
-    }),
+  const enqueueRemoveScheduledInvoiceJobMutation = useMutation(
+    trpc.invoice.enqueueRemoveScheduledInvoiceJob.mutationOptions(),
   );
 
-  const cancelSeriesMutation = useMutation(
-    trpc.invoiceRecurring.delete.mutationOptions({
-      onSuccess: () => {
+  const enqueueRemoveInvoiceScheduledJobsMutation = useMutation(
+    trpc.invoiceRecurring.enqueueRemoveInvoiceScheduledJobs.mutationOptions(),
+  );
+
+  const cancelScheduleMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      cancelInvoiceScheduleHybrid(input, (payload) =>
+        enqueueRemoveScheduledInvoiceJobMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
+
+      // Widget uses regular query
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
+    },
+  });
+
+  const cancelSeriesMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      deleteInvoiceRecurringHybrid(input, (payload) =>
+        enqueueRemoveInvoiceScheduledJobsMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.invoice.get.infiniteQueryKey(),
         });
@@ -203,26 +221,27 @@ export function ActionsMenu({ row }: Props) {
           queryKey: trpc.invoiceRecurring.list.queryKey(),
         });
       },
-    }),
-  );
+  });
 
-  const pauseSeriesMutation = useMutation(
-    trpc.invoiceRecurring.pause.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const pauseSeriesMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      pauseInvoiceRecurringHybrid(input, (payload) =>
+        enqueueRemoveInvoiceScheduledJobsMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
+    },
+  });
 
   const resumeSeriesMutation = useMutation({
     mutationFn: resumeInvoiceRecurringFromRust,

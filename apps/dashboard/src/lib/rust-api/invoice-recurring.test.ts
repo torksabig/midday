@@ -15,6 +15,18 @@ test("buildInvoiceRecurringListQuery encodes camelCase filters", () => {
   ).toBe("?cursor=25&pageSize=25&status=active&customerId=c-1");
 });
 
+test("deepCamelCaseKeys normalizes pause/delete jobIds", () => {
+  expect(
+    deepCamelCaseKeys({
+      recurring: { id: "rec-1", status: "paused" },
+      job_ids: ["invoices:1"],
+    }),
+  ).toEqual({
+    recurring: { id: "rec-1", status: "paused" },
+    jobIds: ["invoices:1"],
+  });
+});
+
 test("deepCamelCaseKeys normalizes upcoming summary", () => {
   expect(
     deepCamelCaseKeys({

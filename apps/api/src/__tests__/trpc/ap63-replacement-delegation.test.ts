@@ -4,6 +4,8 @@ import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { accountingRouter } from "../../trpc/routers/accounting";
 import { customersRouter } from "../../trpc/routers/customers";
+import { invoiceRecurringRouter } from "../../trpc/routers/invoice-recurring";
+import { invoiceRouter } from "../../trpc/routers/invoice";
 import { documentsRouter } from "../../trpc/routers/documents";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
 import { inboxRouter } from "../../trpc/routers/inbox";
@@ -639,5 +641,94 @@ describe("tRPC: AP-65 customers.enqueueEnrichCustomer (trigger-only hybrid)", ()
       "customers",
       { attempts: 1 },
     );
+  });
+});
+
+describe("tRPC: AP-66 invoice.enqueueSendInvoiceReminder (trigger-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-reminder" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueSendInvoiceReminder triggers send-invoice-reminder without Drizzle", async () => {
+    const caller = createCallerFactory(invoiceRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueSendInvoiceReminder({ invoiceId: ID });
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "send-invoice-reminder",
+      { invoiceId: ID },
+      "invoices",
+    );
+  });
+});
+
+describe("tRPC: AP-66 invoice.enqueueGenerateInvoice (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-generate" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueGenerateInvoice triggers generate-invoice without Drizzle", async () => {
+    const caller = createCallerFactory(invoiceRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueGenerateInvoice({
+      id: ID,
+      deliveryType: "create_and_send",
+    });
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "generate-invoice",
+      { invoiceId: ID, deliveryType: "create_and_send" },
+      "invoices",
+    );
+  });
+});
+
+describe("tRPC: AP-66 invoiceRecurring.enqueueRemoveInvoiceScheduledJobs (job-only hybrid)", () => {
+  beforeEach(() => {
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueRemoveInvoiceScheduledJobs completes without Drizzle", async () => {
+    const caller = createCallerFactory(invoiceRecurringRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.enqueueRemoveInvoiceScheduledJobs({
+      jobIds: ["invoices:42"],
+    });
+    expect(result).toEqual({ removed: true });
   });
 });

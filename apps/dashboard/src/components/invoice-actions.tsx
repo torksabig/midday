@@ -38,6 +38,12 @@ import {
   deleteInvoiceFromRust,
   updateInvoiceFromRust,
 } from "@/lib/rust-api/invoices-client";
+import {
+  cancelInvoiceScheduleHybrid,
+  deleteInvoiceRecurringHybrid,
+  pauseInvoiceRecurringHybrid,
+  remindInvoiceHybrid,
+} from "@/lib/invoice-hybrid-flows";
 import { resumeInvoiceRecurringFromRust } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 
@@ -135,22 +141,35 @@ export function InvoiceActions({
     },
   });
 
-  const sendReminderMutation = useMutation(
-    trpc.invoice.remind.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.InvoiceReminderSent.name);
-        toast({
-          duration: 2500,
-          title: "Reminder sent",
-          variant: "success",
-        });
-      },
-    }),
+  const enqueueSendInvoiceReminderMutation = useMutation(
+    trpc.invoice.enqueueSendInvoiceReminder.mutationOptions(),
   );
 
-  const cancelSeriesMutation = useMutation(
-    trpc.invoiceRecurring.delete.mutationOptions({
-      onSuccess: () => {
+  const enqueueRemoveInvoiceScheduledJobsMutation = useMutation(
+    trpc.invoiceRecurring.enqueueRemoveInvoiceScheduledJobs.mutationOptions(),
+  );
+
+  const sendReminderMutation = useMutation({
+    mutationFn: (input: { id: string; date: string }) =>
+      remindInvoiceHybrid(input, (payload) =>
+        enqueueSendInvoiceReminderMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
+      track(LogEvents.InvoiceReminderSent.name);
+      toast({
+        duration: 2500,
+        title: "Reminder sent",
+        variant: "success",
+      });
+    },
+  });
+
+  const cancelSeriesMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      deleteInvoiceRecurringHybrid(input, (payload) =>
+        enqueueRemoveInvoiceScheduledJobsMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.invoice.getById.queryKey(),
         });
@@ -163,8 +182,7 @@ export function InvoiceActions({
           queryKey: trpc.invoiceRecurring.list.queryKey(),
         });
       },
-    }),
-  );
+  });
 
   const refundMutation = useMutation(
     trpc.invoicePayments.refundPayment.mutationOptions({
@@ -188,27 +206,29 @@ export function InvoiceActions({
     }),
   );
 
-  const pauseSeriesMutation = useMutation(
-    trpc.invoiceRecurring.pause.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
+  const pauseSeriesMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      pauseInvoiceRecurringHybrid(input, (payload) =>
+        enqueueRemoveInvoiceScheduledJobsMutation.mutateAsync(payload),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
-        });
-      },
-    }),
-  );
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
+      });
+    },
+  });
 
   const resumeSeriesMutation = useMutation({
     mutationFn: resumeInvoiceRecurringFromRust,

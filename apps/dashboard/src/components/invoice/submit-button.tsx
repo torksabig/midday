@@ -37,6 +37,7 @@ import * as React from "react";
 import { useFormContext } from "react-hook-form";
 import { useTemplateUpdate } from "@/hooks/use-template-update";
 import { useUserQuery } from "@/hooks/use-user";
+import { cancelInvoiceScheduleHybrid } from "@/lib/invoice-hybrid-flows";
 import { useTRPC } from "@/trpc/client";
 import {
   getDefaultRecurringConfig,
@@ -270,9 +271,16 @@ export function SubmitButton({ isSubmitting, disabled, className }: Props) {
   const trpc = useTRPC();
   const { updateTemplate } = useTemplateUpdate();
 
-  const cancelScheduleMutation = useMutation(
-    trpc.invoice.cancelSchedule.mutationOptions(),
+  const enqueueRemoveScheduledInvoiceJobMutation = useMutation(
+    trpc.invoice.enqueueRemoveScheduledInvoiceJob.mutationOptions(),
   );
+
+  const cancelScheduleMutation = useMutation({
+    mutationFn: (input: { id: string }) =>
+      cancelInvoiceScheduleHybrid(input, (payload) =>
+        enqueueRemoveScheduledInvoiceJobMutation.mutateAsync(payload),
+      ),
+  });
 
   const handleOptionChange = (value: string) => {
     const deliveryType = value as

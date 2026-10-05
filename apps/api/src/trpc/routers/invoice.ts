@@ -4,6 +4,11 @@ import {
   deleteInvoiceSchema,
   draftInvoiceSchema,
   duplicateInvoiceSchema,
+  enqueueGenerateInvoiceSchema,
+  enqueueInvoiceScheduledNotificationSchema,
+  enqueueRemoveScheduledInvoiceJobSchema,
+  enqueueScheduleInvoiceSchema,
+  enqueueSendInvoiceReminderSchema,
   getInvoiceByIdSchema,
   getInvoiceByTokenSchema,
   getInvoicesSchema,
@@ -104,6 +109,17 @@ async function resolveInvoiceById(params: {
     id: params.id,
     teamId: params.teamId,
   });
+}
+
+async function removeScheduledInvoiceJobByCompositeId(
+  scheduledJobId: string,
+): Promise<void> {
+  const queue = getQueue("invoices");
+  const { jobId: rawJobId } = decodeJobId(scheduledJobId);
+  const job = await queue.getJob(rawJobId);
+  if (job) {
+    await job.remove();
+  }
 }
 
 export const invoiceRouter = createTRPCRouter({
@@ -648,6 +664,7 @@ export const invoiceRouter = createTRPCRouter({
       });
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust status PUT + enqueue* job helpers. */
   create: protectedProcedure
     .input(createInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
@@ -854,6 +871,7 @@ export const invoiceRouter = createTRPCRouter({
       return data;
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust PUT + `enqueueSendInvoiceReminder`. */
   remind: protectedProcedure
     .input(remindInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -1039,6 +1057,7 @@ export const invoiceRouter = createTRPCRouter({
       return updatedInvoice;
     }),
 
+  /** Non-dashboard callers; dashboard uses Rust cancel fields + job enqueue helpers. */
   cancelSchedule: protectedProcedure
     .input(cancelScheduledInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
@@ -1058,14 +1077,7 @@ export const invoiceRouter = createTRPCRouter({
       }
 
       if (invoice.scheduledJobId) {
-        // Cancel the scheduled job by removing it from the queue
-        const queue = getQueue("invoices");
-        // Decode composite ID (format: "invoices:123") to get raw job ID for BullMQ
-        const { jobId: rawJobId } = decodeJobId(invoice.scheduledJobId);
-        const job = await queue.getJob(rawJobId);
-        if (job) {
-          await job.remove();
-        }
+        await removeScheduledInvoiceJobByCompositeId(invoice.scheduledJobId);
       }
 
       // Status/schedule clear via Rust PUT in replacement mode
@@ -1179,4 +1191,103 @@ export const invoiceRouter = createTRPCRouter({
       return getNewCustomersCount(db, { teamId: teamId! });
     },
   ),
+
+  enqueueSendInvoiceReminder: protectedProcedure
+    .input(enqueueSendInvoiceReminderSchema)
+    .mutation(async ({ input }) => {
+      await triggerJob(
+        "send-invoice-reminder",
+        {
+          invoiceId: input.invoiceId,
+        },
+        "invoices",
+      );
+      return { queued: true as const };
+    }),
+
+  enqueueRemoveScheduledInvoiceJob: protectedProcedure
+    .input(enqueueRemoveScheduledInvoiceJobSchema)
+    .mutation(async ({ input }) => {
+      await removeScheduledInvoiceJobByCompositeId(input.scheduledJobId);
+      return { removed: true as const };
+    }),
+
+  enqueueGenerateInvoice: protectedProcedure
+    .input(enqueueGenerateInvoiceSchema)
+    .mutation(async ({ input }) => {
+      await triggerJob(
+        "generate-invoice",
+        {
+          invoiceId: input.id,
+          deliveryType: input.deliveryType,
+        },
+        "invoices",
+      );
+      return { queued: true as const };
+    }),
+
+  enqueueScheduleInvoice: protectedProcedure
+    .input(enqueueScheduleInvoiceSchema)
+    .mutation(async ({ input }) => {
+      const scheduledDate = new Date(input.scheduledAt);
+      const now = new Date();
+
+      if (scheduledDate <= now) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "scheduledAt must be in the future",
+        });
+      }
+
+      const delayMs = scheduledDate.getTime() - now.getTime();
+      const scheduledRun = await triggerJob(
+        "schedule-invoice",
+        {
+          invoiceId: input.invoiceId,
+        },
+        "invoices",
+        {
+          delay: delayMs,
+        },
+      );
+
+      if (!scheduledRun?.id) {
+        throw new TRPCError({
+          code: "SERVICE_UNAVAILABLE",
+          message: "Failed to create scheduled job",
+        });
+      }
+
+      if (input.replaceScheduledJobId) {
+        await removeScheduledInvoiceJobByCompositeId(
+          input.replaceScheduledJobId,
+        ).catch((err) => {
+          logger.error("Failed to remove old scheduled job", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
+
+      return { scheduledJobId: scheduledRun.id };
+    }),
+
+  enqueueInvoiceScheduledNotification: protectedProcedure
+    .input(enqueueInvoiceScheduledNotificationSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      await triggerJob(
+        "notification",
+        {
+          type: "invoice_scheduled",
+          teamId: teamId!,
+          invoiceId: input.invoiceId,
+          invoiceNumber: input.invoiceNumber,
+          scheduledAt: input.scheduledAt,
+          customerName: input.customerName ?? undefined,
+        },
+        "notifications",
+      ).catch(() => {
+        // Fire-and-forget — invoice schedule already persisted on Rust
+      });
+      return { queued: true as const };
+    }),
 });

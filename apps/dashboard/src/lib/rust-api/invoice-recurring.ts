@@ -134,6 +134,138 @@ export async function fetchInvoiceRecurringUpcoming(
   return deepCamelCaseKeys(await response.json()) as InvoiceRecurringUpcoming;
 }
 
+export type InvoiceRecurringMutationResult = {
+  recurring: InvoiceRecurringDetail | null;
+  jobIds: string[];
+};
+
+function parseInvoiceRecurringMutationPayload(
+  payload: unknown,
+): InvoiceRecurringMutationResult {
+  const normalized = deepCamelCaseKeys(payload) as {
+    recurring?: InvoiceRecurringDetail | null;
+    jobIds?: string[];
+  };
+  return {
+    recurring: normalized.recurring ?? null,
+    jobIds: normalized.jobIds ?? [],
+  };
+}
+
+export async function pauseInvoiceRecurring(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<InvoiceRecurringMutationResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoice-recurring/${encodeURIComponent(id)}/pause`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return parseInvoiceRecurringMutationPayload(await response.json());
+}
+
+export async function deleteInvoiceRecurring(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<InvoiceRecurringMutationResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoice-recurring/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return parseInvoiceRecurringMutationPayload(await response.json());
+}
+
+export async function createInvoiceRecurring(
+  baseUrl: string,
+  accessToken: string | null,
+  input: Record<string, unknown>,
+): Promise<InvoiceRecurringDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/invoice-recurring`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as InvoiceRecurringDetail;
+}
+
+export async function updateInvoiceRecurring(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+  input: Record<string, unknown>,
+): Promise<InvoiceRecurringDetail> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/invoice-recurring/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return deepCamelCaseKeys(await response.json()) as InvoiceRecurringDetail;
+}
+
 export async function resumeInvoiceRecurring(
   baseUrl: string,
   accessToken: string | null,

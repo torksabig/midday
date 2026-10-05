@@ -34,6 +34,7 @@ import { FormatAmount } from "@/components/format-amount";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { invoiceRecurringByIdQueryOptions } from "@/lib/rust-api/invoice-recurring-client";
+import { updateInvoiceRecurringFromRust } from "@/lib/rust-api/invoice-recurring-client";
 import { useTRPC } from "@/trpc/client";
 
 const DAY_NAMES = [
@@ -177,28 +178,27 @@ export function EditRecurringSheet() {
   );
   const isValid = validationErrors.length === 0;
 
-  const updateMutation = useMutation(
-    trpc.invoiceRecurring.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.get.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
-        });
-        setParams({ editRecurringId: null });
-      },
-    }),
-  );
+  const updateMutation = useMutation({
+    mutationFn: updateInvoiceRecurringFromRust,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.get.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.getUpcoming.queryKey(),
+      });
+      setParams({ editRecurringId: null });
+    },
+  });
 
   const handleSave = () => {
     if (!editRecurringId || !isValid || !config.endType) return;

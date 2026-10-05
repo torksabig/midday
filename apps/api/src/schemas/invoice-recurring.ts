@@ -764,3 +764,19 @@ export const invoiceRecurringInfoSchema = z.object({
     example: "active",
   }),
 });
+
+/** Dashboard hybrid: BullMQ remove after Rust pause/delete returns jobIds. */
+export const enqueueRemoveInvoiceScheduledJobsSchema = z.object({
+  jobIds: z.array(z.string().min(1)),
+});
+
+/** Dashboard hybrid: notification only after Rust create. */
+export const enqueueRecurringSeriesStartedNotificationSchema = z.object({
+  recurringId: z.string().uuid(),
+  invoiceId: z.string().uuid().optional(),
+  customerName: z.string().nullable().optional(),
+  frequency: invoiceRecurringFrequencySchema,
+  endType: invoiceRecurringEndTypeSchema,
+  endDate: z.string().nullable().optional(),
+  endCount: z.number().int().nullable().optional(),
+});

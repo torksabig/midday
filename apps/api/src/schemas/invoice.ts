@@ -729,6 +729,37 @@ export const cancelScheduledInvoiceSchema = z.object({
   id: z.string().uuid(),
 });
 
+/** Dashboard hybrid: BullMQ remove only after Rust schedule clear. */
+export const enqueueRemoveScheduledInvoiceJobSchema = z.object({
+  scheduledJobId: z.string().min(1),
+});
+
+/** Dashboard hybrid: Trigger send-invoice-reminder after Rust reminderSentAt PUT. */
+export const enqueueSendInvoiceReminderSchema = z.object({
+  invoiceId: z.string().uuid(),
+});
+
+/** Dashboard hybrid: BullMQ generate-invoice after Rust status unpaid. */
+export const enqueueGenerateInvoiceSchema = createInvoiceSchema.pick({
+  id: true,
+  deliveryType: true,
+});
+
+/** Dashboard hybrid: BullMQ schedule-invoice after Rust validates schedule fields. */
+export const enqueueScheduleInvoiceSchema = z.object({
+  invoiceId: z.string().uuid(),
+  scheduledAt: z.string().datetime({ offset: true }),
+  replaceScheduledJobId: z.string().nullable().optional(),
+});
+
+/** Dashboard hybrid: Trigger invoice_scheduled notification (no SQL). */
+export const enqueueInvoiceScheduledNotificationSchema = z.object({
+  invoiceId: z.string().uuid(),
+  invoiceNumber: z.string(),
+  scheduledAt: z.string(),
+  customerName: z.string().nullable().optional(),
+});
+
 export const duplicateInvoiceSchema = z.object({
   id: z
     .string()

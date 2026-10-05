@@ -2,17 +2,23 @@
 
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
+import type { RouterInputs } from "@api/trpc/routers/_app";
 import {
   type GetUpcomingParams,
   type InvoiceRecurringDetail,
   type InvoiceRecurringList,
+  type InvoiceRecurringMutationResult,
   type InvoiceRecurringResume,
   type InvoiceRecurringUpcoming,
   type ListInvoiceRecurringParams,
+  createInvoiceRecurring,
+  deleteInvoiceRecurring,
   fetchInvoiceRecurringById,
   fetchInvoiceRecurringList,
   fetchInvoiceRecurringUpcoming,
+  pauseInvoiceRecurring,
   resumeInvoiceRecurring,
+  updateInvoiceRecurring,
 } from "./invoice-recurring";
 
 function getRustApiUrl() {
@@ -72,5 +78,47 @@ export async function resumeInvoiceRecurringFromRust(input: {
     getRustApiUrl(),
     await getAccessToken(),
     input.id,
+  );
+}
+
+export async function pauseInvoiceRecurringFromRust(input: {
+  id: string;
+}): Promise<InvoiceRecurringMutationResult> {
+  return pauseInvoiceRecurring(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input.id,
+  );
+}
+
+export async function deleteInvoiceRecurringFromRust(input: {
+  id: string;
+}): Promise<InvoiceRecurringMutationResult> {
+  return deleteInvoiceRecurring(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input.id,
+  );
+}
+
+export async function createInvoiceRecurringFromRust(
+  input: RouterInputs["invoiceRecurring"]["create"],
+): Promise<InvoiceRecurringDetail> {
+  return createInvoiceRecurring(
+    getRustApiUrl(),
+    await getAccessToken(),
+    input as Record<string, unknown>,
+  );
+}
+
+export async function updateInvoiceRecurringFromRust(
+  input: RouterInputs["invoiceRecurring"]["update"],
+): Promise<InvoiceRecurringDetail> {
+  const { id, ...fields } = input;
+  return updateInvoiceRecurring(
+    getRustApiUrl(),
+    await getAccessToken(),
+    id,
+    fields as Record<string, unknown>,
   );
 }

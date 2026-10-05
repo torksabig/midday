@@ -175,11 +175,16 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.delete` | direct Rust | **write** · draft/canceled only (AP-32); dashboard calls `DELETE /api/v1/invoices/{id}` |
 | `invoice.duplicate` | direct Rust | **write** · copy as draft; next number from Rust default-settings then `POST /api/v1/invoices/duplicate` |
 | `invoice.updateSchedule` | yes | **write** · DB after Trigger job create in Node (AP-33) |
-| `invoice.cancelSchedule` | yes | **write** · DB after Trigger cancel in Node (AP-33) |
-| `invoice.create` | yes | **write** · status/schedule DB after Trigger in Node (AP-55) — **hybrid, keep on tRPC** (send/PDF/schedule) |
-| `invoice.createFromTracker` | yes | **write** · tracker compose Node + draft insert (AP-55) |
+| `invoice.cancelSchedule` | yes | **write** · full path for non-dashboard; dashboard Rust clear + `enqueueRemoveScheduledInvoiceJob` |
+| `invoice.enqueueSendInvoiceReminder` | no | **write** · Trigger `send-invoice-reminder` only (dashboard hybrid) |
+| `invoice.enqueueRemoveScheduledInvoiceJob` | no | **write** · BullMQ remove only (dashboard hybrid) |
+| `invoice.enqueueGenerateInvoice` | no | **write** · BullMQ `generate-invoice` only (dashboard hybrid) |
+| `invoice.enqueueScheduleInvoice` | no | **write** · BullMQ `schedule-invoice` only (dashboard hybrid) |
+| `invoice.enqueueInvoiceScheduledNotification` | no | **write** · Trigger notification only (dashboard hybrid) |
+| `invoice.create` | yes | **write** · full path for non-dashboard; dashboard Rust status + enqueue* jobs (AP-55) |
+| `invoice.createFromTracker` | yes | **write** · tracker compose Node + draft insert (AP-55) — **dashboard still tRPC** |
 | `invoice.defaultSettings` | direct Rust | read · Postgres bundle via `GET /api/v1/invoices/default-settings-data`; dashboard compose (geo/uuid/date) in `invoice-default-settings.ts` (AP-58) |
-| `invoice.remind` | yes | **write** · reminderSentAt SQL; send-reminder job stays Node (AP-59) |
+| `invoice.remind` | yes | **write** · full path for non-dashboard; dashboard Rust PUT + `enqueueSendInvoiceReminder` (AP-59) |
 | `invoice.*` (other) | no | send (email delivery) |
 | `trackerProjects.get` | direct Rust | read · list (Phase 6 slice 1); dashboard infinite/list calls `GET /api/v1/tracker/projects` directly |
 | `trackerProjects.getById` | direct Rust | read · detail + assigned users (Phase 9); dashboard calls `GET /api/v1/tracker/projects/{id}` directly |
@@ -243,12 +248,14 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoiceProducts.saveLineItemAsProduct` | direct Rust | **write** · update-or-upsert from line item (AP-39); dashboard calls `POST /api/v1/invoice-products/save-line-item` directly |
 | `invoiceRecurring.list` | direct Rust | read · paginated series list (AP-43); OpenAPI + client ready (invalidate-only UI sites) |
 | `invoiceRecurring.get` | direct Rust | read · series detail + customer; dashboard calls `GET /api/v1/invoice-recurring/{id}` |
-| `invoiceRecurring.pause` | yes | **write** · pause + revert scheduled; BullMQ remove stays Node hybrid (AP-51) |
+| `invoiceRecurring.pause` | yes | **write** · full path for non-dashboard; dashboard Rust pause + `enqueueRemoveInvoiceScheduledJobs` (AP-51) |
 | `invoiceRecurring.resume` | direct Rust | **write** · resume / complete if ended; dashboard calls `POST /api/v1/invoice-recurring/{id}/resume` |
-| `invoiceRecurring.delete` | yes | **write** · cancel + revert scheduled; BullMQ remove stays Node hybrid (AP-51) |
+| `invoiceRecurring.delete` | yes | **write** · full path for non-dashboard; dashboard Rust delete + `enqueueRemoveInvoiceScheduledJobs` (AP-51) |
+| `invoiceRecurring.enqueueRemoveInvoiceScheduledJobs` | no | **write** · BullMQ remove only (dashboard hybrid) |
+| `invoiceRecurring.enqueueRecurringSeriesStartedNotification` | no | **write** · Trigger notification only (dashboard hybrid) |
 | `invoiceRecurring.getUpcoming` | direct Rust | read · upcoming date projection; dashboard calls `GET /api/v1/invoice-recurring/{id}/upcoming` |
-| `invoiceRecurring.create` | yes | **write** · DB create/link; notifications stay Node (AP-56) |
-| `invoiceRecurring.update` | yes | **write** · DB update; cross-field validation stays Node (AP-56) |
+| `invoiceRecurring.create` | yes | **write** · full path for non-dashboard; dashboard Rust create + `enqueueRecurringSeriesStartedNotification` (AP-56) |
+| `invoiceRecurring.update` | yes | **write** · full path for non-dashboard; dashboard Rust PUT (AP-56) |
 | `invoiceRecurring.*` (other) | no | — |
 | `institutions.get` | direct Rust | read · country search list (AP-45); dashboard calls `GET /api/v1/institutions` directly |
 | `institutions.getById` | yes | read · by id (AP-45); no dashboard call sites; OpenAPI ready |

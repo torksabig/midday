@@ -23,6 +23,11 @@ import { useDebounceValue } from "usehooks-ts";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
+import { createInvoiceHybrid } from "@/lib/invoice-hybrid-flows";
+import {
+  createInvoiceRecurringFromRust,
+  updateInvoiceRecurringFromRust,
+} from "@/lib/rust-api/invoice-recurring-client";
 import {
   draftInvoiceFromRust,
   updateInvoiceFromRust,
@@ -83,96 +88,130 @@ export function Form() {
     },
   });
 
-  const createInvoiceMutation = useMutation(
-    trpc.invoice.create.mutationOptions({
-      onSuccess: (data) => {
-        track(LogEvents.InvoiceCreated.name);
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.getById.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.paymentStatus.queryKey(),
-        });
-
-        // Invalidate global search
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
-
-        // Next suggested invoice number must advance after a successful send;
-        // otherwise "Create another" resets from stale defaultSettings and shows
-        // a duplicate-number validation error.
-        queryClient.invalidateQueries({
-          queryKey: invoiceDefaultSettingsQueryKey,
-        });
-
-        setParams({ invoiceType: "success", invoiceId: data.id });
-      },
-      onError: (error) => {
-        // Check if this is a scheduling error using the specific error code
-        if (error.data?.code === "SERVICE_UNAVAILABLE") {
-          toast({
-            title: "Scheduling Failed",
-            description:
-              "Please try again. If the issue persists, contact support.",
-          });
-        } else {
-          // Generic error handling for other invoice creation errors
-          toast({
-            title: "Invoice Creation Failed",
-            description: "An unexpected error occurred. Please try again.",
-          });
-        }
-      },
-    }),
+  const enqueueGenerateInvoiceMutation = useMutation(
+    trpc.invoice.enqueueGenerateInvoice.mutationOptions(),
+  );
+  const enqueueScheduleInvoiceMutation = useMutation(
+    trpc.invoice.enqueueScheduleInvoice.mutationOptions(),
+  );
+  const enqueueInvoiceScheduledNotificationMutation = useMutation(
+    trpc.invoice.enqueueInvoiceScheduledNotification.mutationOptions(),
+  );
+  const enqueueRecurringSeriesStartedNotificationMutation = useMutation(
+    trpc.invoiceRecurring.enqueueRecurringSeriesStartedNotification.mutationOptions(),
   );
 
-  const createRecurringInvoiceMutation = useMutation(
-    trpc.invoiceRecurring.create.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.RecurringInvoiceCreated.name);
-        // Invalidate queries - the form will be closed by createInvoiceMutation
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.get.infiniteQueryKey(),
-        });
+  const createInvoiceMutation = useMutation({
+    mutationFn: (input: Parameters<typeof createInvoiceHybrid>[0]) =>
+      createInvoiceHybrid(input, {
+        enqueueGenerateInvoice: (payload) =>
+          enqueueGenerateInvoiceMutation.mutateAsync(payload),
+        enqueueScheduleInvoice: (payload) =>
+          enqueueScheduleInvoiceMutation.mutateAsync(payload),
+        enqueueInvoiceScheduledNotification: (payload) =>
+          enqueueInvoiceScheduledNotificationMutation.mutateAsync(payload),
+      }),
+    onSuccess: (data) => {
+      track(LogEvents.InvoiceCreated.name);
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoiceRecurring.list.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.getById.queryKey(),
+      });
 
-        queryClient.invalidateQueries({
-          queryKey: trpc.invoice.invoiceSummary.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
 
-        // Invalidate global search
-        queryClient.invalidateQueries({
-          queryKey: trpc.search.global.queryKey(),
-        });
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.paymentStatus.queryKey(),
+      });
 
-        // Don't show toast or close form here - createInvoiceMutation will handle that
-      },
-      onError: (_error) => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: invoiceDefaultSettingsQueryKey,
+      });
+
+      setParams({ invoiceType: "success", invoiceId: data.id });
+    },
+    onError: (error) => {
+      const code =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        error.data &&
+        typeof error.data === "object" &&
+        "code" in error.data
+          ? String(error.data.code)
+          : undefined;
+
+      if (code === "SERVICE_UNAVAILABLE") {
         toast({
-          title: "Recurring Invoice Failed",
+          title: "Scheduling Failed",
+          description:
+            "Please try again. If the issue persists, contact support.",
+        });
+      } else {
+        toast({
+          title: "Invoice Creation Failed",
           description: "An unexpected error occurred. Please try again.",
         });
-      },
-    }),
-  );
+      }
+    },
+  });
 
-  // Mutation to update recurring series template when editing an invoice in a series
-  const updateRecurringTemplateMutation = useMutation(
-    trpc.invoiceRecurring.update.mutationOptions(),
-  );
+  const createRecurringInvoiceMutation = useMutation({
+    mutationFn: async (
+      input: Parameters<typeof createInvoiceRecurringFromRust>[0],
+    ) => {
+      const recurring = await createInvoiceRecurringFromRust(input);
+      if (recurring?.id) {
+        await enqueueRecurringSeriesStartedNotificationMutation.mutateAsync({
+          recurringId: recurring.id,
+          invoiceId: input.invoiceId,
+          customerName: input.customerName ?? null,
+          frequency: input.frequency,
+          endType: input.endType,
+          endDate: input.endDate ?? null,
+          endCount: input.endCount ?? null,
+        });
+      }
+      return recurring;
+    },
+    onSuccess: () => {
+      track(LogEvents.RecurringInvoiceCreated.name);
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.get.infiniteQueryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoiceRecurring.list.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.invoice.invoiceSummary.queryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.search.global.queryKey(),
+      });
+    },
+    onError: (_error) => {
+      toast({
+        title: "Recurring Invoice Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    },
+  });
+
+  const updateRecurringTemplateMutation = useMutation({
+    mutationFn: updateInvoiceRecurringFromRust,
+  });
 
   // Mutation to update invoice status (used for scheduling future-dated recurring invoices)
   const updateInvoiceMutation = useMutation({

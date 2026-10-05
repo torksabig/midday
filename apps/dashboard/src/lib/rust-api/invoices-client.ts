@@ -173,3 +173,7 @@ export async function deleteInvoiceFromRust(input: { id: string } | string) {
 export async function duplicateInvoiceFromRust(input: DuplicateInvoiceInput) {
   return duplicateInvoice(getRustApiUrl(), await getAccessToken(), input);
 }
+
+export async function fetchInvoiceByIdFromRust(id: string) {
+  return fetchInvoiceById(getRustApiUrl(), await getAccessToken(), id);
+}
