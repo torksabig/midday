@@ -33,6 +33,7 @@ import {
   fetchReplacementTrackerStartTimer,
   fetchReplacementTrackerStopTimer,
   fetchReplacementTrackerEntriesUpsert,
+  fetchReplacementTrackerEntriesCreateMany,
   fetchReplacementTrackerEntryDelete,
   fetchReplacementInvoiceDelete,
   fetchReplacementAccountingSyncStatus,
@@ -271,6 +272,7 @@ import {
   type ReplacementStartTimerInput,
   type ReplacementStopTimerInput,
   type ReplacementTrackerUpsertInput,
+  type ReplacementTrackerBulkCreateEntry,
   type ReplacementAccountingSyncStatusQuery,
   type ReplacementBankConnectionsListQuery,
 } from "@midday/replacement-backend";
@@ -1580,6 +1582,15 @@ export async function tryDelegateTrackerEntriesUpsert(
     }
     return { delegated: false };
   }
+}
+
+export async function tryDelegateTrackerEntriesCreateMany(
+  entries: ReplacementTrackerBulkCreateEntry[],
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTrackerEntriesCreateMany(baseUrl, token, entries),
+  );
 }
 
 export type DelegateIdOnlyResult =

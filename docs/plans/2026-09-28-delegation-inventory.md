@@ -570,7 +570,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `POST /tracker-entries`, `PATCH /tracker-entries/{id}`, `DELETE /tracker-entries/{id}` | yes | Rust upsert/delete via `tryDelegateTrackerEntriesUpsert` / `tryDelegateTrackerEntryDelete` (2026-10-05) |
 | `POST /tracker-entries/timer/start`, `POST /tracker-entries/timer/stop` | yes | Rust timer mutations via `tryDelegateTrackerStartTimer` / `tryDelegateTrackerStopTimer` (2026-10-05) |
 | `GET /tracker-entries/timer/current`, `GET /tracker-entries/timer/status` | yes | Rust timer reads via `tryDelegateTrackerCurrentTimer` / `tryDelegateTrackerTimerStatus` (2026-10-05) |
-| `POST /tracker-entries/bulk` | no | bulk create — Drizzle only (no clone route) |
+| `POST /tracker-entries/bulk` | yes | Rust `POST /api/v1/tracker/entries/create-many` via `tryDelegateTrackerEntriesCreateMany` (2026-10-05) |
 | `GET /users/me` | yes | Rust auth/me via `tryDelegateUserMe` + `replacement-rest-users.ts` (2026-10-05) |
 | `PATCH /users/me` | yes | Rust user update via `tryDelegateUserUpdate` (2026-10-05) |
 | Other REST inbox routes | yes | create/match/unmatch/confirm/decline/blocklist/search/by-status/bulk-delete delegate on `:3003` (2026-10-05) |
@@ -578,7 +578,7 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 
 **REST OAuth/MCP on `:3003` (2026-10-05 inventory — no delegation shipped):** `GET/POST /oauth/authorization`, `POST /oauth/token`, `POST /oauth/register`, `POST /oauth/revoke`, `/.well-known/oauth-*`, `POST /mcp` — all Node; tRPC `oauthApplications.*` Rust helpers are **not** wired into public REST OAuth server (provider-flow boundary). Do not port callbacks/webhooks in REST phase.
 
-**Next:** REST OpenAPI **product** migration **closed** except `POST /tracker-entries/bulk`. Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
+**Next:** REST OpenAPI **product** migration **closed** (2026-10-05). Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

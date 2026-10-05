@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
+  bulkCreateTrackerEntriesForRest,
   deleteTrackerEntryForRest,
   fetchTrackerEntriesByRangeForRest,
   getCurrentTimerForRest,
@@ -41,6 +42,18 @@ describe("REST tracker-entries replacement delegation", () => {
     await expect(
       fetchTrackerEntriesByRangeForRest(
         { from: "2024-04-01", to: "2024-04-30" },
+        "Bearer fake-session-jwt",
+        legacy,
+      ),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("bulkCreate fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve([]));
+    await expect(
+      bulkCreateTrackerEntriesForRest(
+        [upsertInput],
         "Bearer fake-session-jwt",
         legacy,
       ),

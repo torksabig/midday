@@ -2020,6 +2020,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tracker/entries/create-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTrackerEntriesMany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tracker/entries/upsert": {
         parameters: {
             query?: never;
@@ -2529,6 +2545,19 @@ export interface components {
         };
         BankConnectionReconnectResponse: {
             id: string;
+        };
+        BulkCreateTrackerEntriesBody: {
+            entries: components["schemas"]["BulkCreateTrackerEntryItem"][];
+        };
+        BulkCreateTrackerEntryItem: {
+            assignedId?: string | null;
+            dates: string[];
+            description?: string | null;
+            /** Format: int32 */
+            duration: number;
+            projectId: string;
+            start: string;
+            stop: string;
         };
         BulkUpdateNotificationSettingsBody: {
             updates: components["schemas"]["UpsertNotificationSettingBody"][];
@@ -9292,6 +9321,44 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTrackerEntriesMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkCreateTrackerEntriesBody"];
+            };
+        };
+        responses: {
+            /** @description Created tracker entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Bulk create requires Midday Postgres or invalid payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {

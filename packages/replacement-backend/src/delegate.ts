@@ -1591,6 +1591,35 @@ export type ReplacementTrackerUpsertInput = {
   duration: number;
 };
 
+export type ReplacementTrackerBulkCreateEntry = Omit<
+  ReplacementTrackerUpsertInput,
+  "id"
+>;
+
+export async function fetchReplacementTrackerEntriesCreateMany(
+  baseUrl: string,
+  token: string,
+  entries: ReplacementTrackerBulkCreateEntry[],
+): Promise<unknown[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/tracker/entries/create-many`,
+    token,
+    {
+      entries: entries.map((entry) => ({
+        start: entry.start,
+        stop: entry.stop,
+        dates: entry.dates,
+        assignedId: entry.assignedId ?? undefined,
+        projectId: entry.projectId,
+        description: entry.description ?? undefined,
+        duration: entry.duration,
+      })),
+    },
+  );
+  return mapReplacementToTrackerEntriesUpsert(payload);
+}
+
 export async function fetchReplacementTrackerEntriesUpsert(
   baseUrl: string,
   token: string,

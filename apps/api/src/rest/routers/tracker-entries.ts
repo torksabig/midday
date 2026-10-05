@@ -1,4 +1,5 @@
 import {
+  bulkCreateTrackerEntriesForRest,
   deleteTrackerEntryForRest,
   fetchTrackerEntriesByRangeForRest,
   getCurrentTimerForRest,
@@ -179,23 +180,26 @@ app.openapi(
     const teamId = c.get("teamId");
     const session = c.get("session");
     const { entries } = c.req.valid("json");
-
-    const result = await bulkCreateTrackerEntries(db, {
-      teamId,
-      entries: entries.map(({ assignedId, ...rest }) => ({
-        assignedId: assignedId ?? session.user.id,
-        ...rest,
-      })),
-    });
-
-    const dataWithProject = result.map((item) => ({
-      ...item,
-      project: item.trackerProject,
+    const normalizedEntries = entries.map(({ assignedId, ...rest }) => ({
+      assignedId: assignedId ?? session.user.id,
+      ...rest,
     }));
+
+    const result = await bulkCreateTrackerEntriesForRest(
+      normalizedEntries,
+      c.req.header("Authorization"),
+      async () => {
+        const rows = await bulkCreateTrackerEntries(db, {
+          teamId,
+          entries: normalizedEntries,
+        });
+        return mapTrackerEntriesForRestResponse(rows) as unknown[];
+      },
+    );
 
     return c.json(
       validateResponse(
-        { data: dataWithProject },
+        { data: result },
         createTrackerEntriesResponseSchema,
       ),
     );

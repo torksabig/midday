@@ -2,6 +2,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateTrackerCurrentTimer,
   tryDelegateTrackerEntriesByRange,
+  tryDelegateTrackerEntriesCreateMany,
   tryDelegateTrackerEntriesUpsert,
   tryDelegateTrackerEntryDelete,
   tryDelegateTrackerStartTimer,
@@ -11,6 +12,7 @@ import {
 import type {
   ReplacementStartTimerInput,
   ReplacementStopTimerInput,
+  ReplacementTrackerBulkCreateEntry,
   ReplacementTrackerEntriesByRangeQuery,
   ReplacementTrackerTimerQuery,
   ReplacementTrackerUpsertInput,
@@ -76,6 +78,32 @@ export async function upsertTrackerEntriesForRest(
     );
     if (delegated.delegated) {
       return mapTrackerEntriesForRestResponse(delegated.entries);
+    }
+    assertLegacyIdentityFallbackAllowed();
+  } catch (error) {
+    mapDelegationErrorToHttp(error);
+  }
+
+  return fetchLegacy();
+}
+
+export async function bulkCreateTrackerEntriesForRest(
+  entries: ReplacementTrackerBulkCreateEntry[],
+  authorizationHeader: string | undefined,
+  fetchLegacy: () => Promise<unknown[]>,
+): Promise<unknown[]> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return fetchLegacy();
+  }
+
+  const sessionAccessToken = extractBearerToken(authorizationHeader);
+  try {
+    const delegated = await tryDelegateTrackerEntriesCreateMany(
+      entries,
+      sessionAccessToken,
+    );
+    if (delegated) {
+      return mapTrackerEntriesForRestResponse(delegated);
     }
     assertLegacyIdentityFallbackAllowed();
   } catch (error) {

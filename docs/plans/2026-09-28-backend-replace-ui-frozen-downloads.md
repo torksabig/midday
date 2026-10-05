@@ -118,7 +118,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — reports chart reads (`GET /reports/*` six routes) delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — notifications list/status/update-all delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — bank-accounts list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
-- [x] REST OpenAPI `:3003` — tracker-projects + tracker-entries (except bulk create) + timer routes delegate to Rust in `replacement` mode (2026-10-05)
+- [x] REST OpenAPI `:3003` — tracker-projects + tracker-entries (incl. bulk create) + timer routes delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — users `GET/PATCH /me` delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI phase closure — bulk-route clone audit + oauth/mcp inventory + `replacement-rest-*.test.ts` green (2026-10-05)
 - [ ] Legal review (below)
@@ -127,11 +127,11 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 | Status | Routes / areas |
 |--------|----------------|
-| **Rust in `replacement` mode** | documents, inbox (full OpenAPI), transactions (CRUD + create/update/delete-many incl. bulk create), customers, invoices (SQL + hybrid create jobs), teams, tags, search, reports (×6), notifications, bank-accounts, tracker-projects, tracker-entries + timer, users `/me`, presigned-url helpers |
-| **Drizzle blockers (need clone)** | `POST /tracker-entries/bulk` — no matching route on clone yet |
+| **Rust in `replacement` mode** | documents, inbox (full OpenAPI), transactions (CRUD + create/update/delete-many incl. bulk create), customers, invoices (SQL + hybrid create jobs), teams, tags, search, reports (×6), notifications, bank-accounts, tracker-projects, tracker-entries (incl. bulk create) + timer, users `/me`, presigned-url helpers |
+| **Drizzle blockers (need clone)** | _(none for REST OpenAPI product scope)_ |
 | **Permanent Node / STOP** | `/oauth/*`, `/.well-known/*`, `/mcp`, app OAuth callbacks, `GET /files/download/invoice` (React-PDF), REST auth/db middleware |
 
-**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` → **80 pass**, 14 files (after transactions bulk-create slice).
+**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` → **81 pass**, 14 files (after tracker-entries bulk-create slice).
 
 **Remaining Drizzle REST in `replacement` mode:** oauth/mcp/PDF/middleware as listed.
 
