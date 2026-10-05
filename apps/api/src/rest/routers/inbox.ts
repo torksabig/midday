@@ -11,6 +11,12 @@ import {
   updateInboxSchema,
 } from "@api/schemas/inbox";
 import {
+  deleteInboxForRest,
+  fetchInboxByIdForRest,
+  fetchInboxListForRest,
+  updateInboxForRest,
+} from "@api/rest/services/replacement-rest-inbox";
+import {
   extractBearerToken,
   fetchReplacementVaultPresignedUrl,
   normalizeVaultObjectPath,
@@ -61,13 +67,23 @@ app.openapi(
     const teamId = c.get("teamId");
     const { pageSize, cursor, order, ...filter } = c.req.valid("query");
 
-    const result = await getInbox(db, {
-      teamId,
-      pageSize,
-      cursor,
-      order,
-      ...filter,
-    });
+    const result = await fetchInboxListForRest(
+      {
+        cursor,
+        pageSize,
+        order,
+        ...filter,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getInbox(db, {
+          teamId,
+          pageSize,
+          cursor,
+          order,
+          ...filter,
+        }),
+    );
 
     return c.json(validateResponse(result, inboxResponseSchema));
   },
@@ -103,10 +119,19 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await getInboxById(db, {
+    const result = await fetchInboxByIdForRest(
       id,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () =>
+        getInboxById(db, {
+          id,
+          teamId,
+        }),
+    );
+
+    if (result == null) {
+      throw new HTTPException(404, { message: "Inbox item not found" });
+    }
 
     return c.json(validateResponse(result, inboxItemResponseSchema));
   },
@@ -285,10 +310,19 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    let result: Awaited<ReturnType<typeof deleteInbox>>;
-    try {
-      result = await deleteInbox(db, { id, teamId });
-    } catch {
+    const result = await deleteInboxForRest(
+      id,
+      c.req.header("Authorization"),
+      async () => {
+        try {
+          return await deleteInbox(db, { id, teamId });
+        } catch {
+          throw new HTTPException(404, { message: "Inbox item not found" });
+        }
+      },
+    );
+
+    if (!result) {
       throw new HTTPException(404, { message: "Inbox item not found" });
     }
 
@@ -336,7 +370,16 @@ app.openapi(
     const id = c.req.valid("param").id;
     const body = c.req.valid("json");
 
-    const result = await updateInbox(db, { ...body, id, teamId });
+    const result = await updateInboxForRest(
+      id,
+      body,
+      c.req.header("Authorization"),
+      () => updateInbox(db, { ...body, id, teamId }),
+    );
+
+    if (result == null) {
+      throw new HTTPException(404, { message: "Inbox item not found" });
+    }
 
     return c.json(validateResponse(result, inboxItemResponseSchema));
   },

@@ -4,14 +4,14 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 post–REST documents list/get/delete Rust delegation)
+## Tip SHAs (2026-10-05 post–REST inbox list/get/update/delete Rust delegation)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `3d0c4a74f` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(updated on push)_ | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
-Prior tip: `acc56b78c` (REST presigned-url vault paths).
+Prior tip: `eaa378d7d` (REST documents list/get/delete).
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
 
@@ -342,11 +342,22 @@ Public REST / MCP clients on `:3003` no longer require Drizzle for presigned vau
 
 Helpers: `apps/api/src/rest/services/replacement-rest-documents.ts` (mirrors tRPC documents router + presigned-url Bearer extraction).
 
+### Migrated (2026-10-05 REST inbox list/get/update/delete → Rust)
+
+| Capability | Now |
+|------------|-----|
+| `GET /inbox` | **Rust** — `GET /api/v1/inbox` via `tryDelegateInboxGet` + `replacement-rest-inbox` helper (replacement mode) |
+| `GET /inbox/{id}` | **Rust** — `GET /api/v1/inbox/{id}`; 404 when row missing |
+| `PATCH /inbox/{id}` | **Rust** — partial update via `tryDelegateInboxUpdate` |
+| `DELETE /inbox/{id}` | **Rust** — `POST /api/v1/inbox/{id}/delete` on clone (SQL + vault); legacy mode still Drizzle |
+
+Helpers: `apps/api/src/rest/services/replacement-rest-inbox.ts` (mirrors tRPC inbox router + presigned-url Bearer extraction).
+
 ### REST OpenAPI still Drizzle in replacement mode (inventory)
 
 | Router / area | Drizzle-backed routes (non-exhaustive) |
 |---------------|----------------------------------------|
-| `inbox` | list, get, update, delete (+ presigned-url migrated) |
+| `inbox` | _(list/get/update/delete migrated)_ |
 | `transactions` | list/get/write paths + attachment presigned-url migrated |
 | `customers`, `teams`, `users`, `bank-accounts`, `invoices`, `tags`, `search`, `reports`, `tracker-*`, `notifications` | CRUD/list reads |
 | `oauth`, `mcp`, app OAuth callbacks, webhooks | integrations |
@@ -481,7 +492,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **inbox** list/get/update/delete (mirror `replacement-rest-documents` pattern). Then transactions REST CRUD, then **`POST /chat`** co-host only (documented).
+**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next REST slice:** **transactions** list/get/write paths (attachments REST CRUD where not yet delegated). Then **`POST /chat`** co-host only (documented).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 
