@@ -1796,6 +1796,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/team/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTeam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/team/current": {
         parameters: {
             query?: never;
@@ -1812,6 +1828,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/team/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deleteTeam"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/delete-prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["teamDeletePrep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/team/invites": {
         parameters: {
             query?: never;
@@ -1821,7 +1869,7 @@ export interface paths {
         };
         get: operations["getTeamInvites"];
         put?: never;
-        post?: never;
+        post: operations["createTeamInvites"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2657,6 +2705,47 @@ export interface components {
         CreateTagBody: {
             name: string;
         };
+        CreateTeamBody: {
+            baseCurrency?: string | null;
+            categories?: components["schemas"]["CreateTeamCategoryParentSchema"][];
+            companyType?: string | null;
+            countryCode?: string | null;
+            email: string;
+            /** Format: int32 */
+            fiscalYearStartMonth?: number | null;
+            heardAbout?: string | null;
+            logoUrl?: string | null;
+            name: string;
+            switchTeam?: boolean;
+        };
+        CreateTeamCategoryChildSchema: {
+            color?: string | null;
+            excluded?: boolean | null;
+            name: string;
+            slug: string;
+            system?: boolean | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxType?: string | null;
+        };
+        CreateTeamCategoryParentSchema: {
+            children?: components["schemas"]["CreateTeamCategoryChildSchema"][];
+            color?: string | null;
+            excluded?: boolean | null;
+            name: string;
+            slug: string;
+            system?: boolean | null;
+            /** Format: double */
+            taxRate?: number | null;
+            taxType?: string | null;
+        };
+        CreateTeamInviteItemSchema: {
+            email: string;
+            role: string;
+        };
+        CreateTeamInvitesBody: {
+            invites: components["schemas"]["CreateTeamInviteItemSchema"][];
+        };
         CreateTransactionAttachmentBody: {
             name: string;
             path: string[];
@@ -3366,6 +3455,9 @@ export interface components {
             taxType?: string | null;
             to: string;
             type: string;
+        };
+        TeamDeleteBody: {
+            teamId: string;
         };
         TeamListItem: {
             canceledAt?: string | null;
@@ -4440,7 +4532,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Deleted bank connection credentials for provider teardown */
+            /** @description Deleted bank connection row (SQL only; Midday Node Trigger delete-connection teardown) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8524,6 +8616,44 @@ export interface operations {
             };
         };
     };
+    createTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTeamBody"];
+            };
+        };
+        responses: {
+            /** @description Created team id (multi-table SQL; category tax seed from Midday caller) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Free-tier team limit reached */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getCurrentTeam: {
         parameters: {
             query?: never;
@@ -8551,6 +8681,89 @@ export interface operations {
             };
         };
     };
+    deleteTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamDeleteBody"];
+            };
+        };
+        responses: {
+            /** @description Deleted team id + member user ids (SQL only; delete-team job stays Midday Node) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller lacks team access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    teamDeletePrep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamDeleteBody"];
+            };
+        };
+        responses: {
+            /** @description Team row + bank connections for delete-team job (SQL only) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller lacks team access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Team not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getTeamInvites: {
         parameters: {
             query?: never;
@@ -8571,6 +8784,44 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTeamInvites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTeamInvitesBody"];
+            };
+        };
+        responses: {
+            /** @description Inserted invite rows (SQL only; Resend Trigger stays Midday Node) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller is not a team owner */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

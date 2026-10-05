@@ -5,6 +5,7 @@ import {
   deleteTeamInviteSchema,
   deleteTeamMemberSchema,
   deleteTeamSchema,
+  enqueueDeleteTeamJobSchema,
   inviteTeamMembersSchema,
   leaveTeamSchema,
   updateBaseCurrencySchema,
@@ -68,6 +69,30 @@ import { triggerJob } from "@midday/job-client";
 import { tasks } from "@trigger.dev/sdk";
 import { TRPCError } from "@trpc/server";
 
+type DeleteTeamConnection = {
+  referenceId: string | null;
+  provider: string | null;
+  accessToken: string | null;
+};
+
+async function triggerDeleteTeamCleanupJob(
+  teamId: string,
+  bankConnections: DeleteTeamConnection[],
+) {
+  await triggerJob(
+    "delete-team",
+    {
+      teamId,
+      connections: bankConnections.map((c) => ({
+        referenceId: c.referenceId,
+        provider: c.provider,
+        accessToken: c.accessToken,
+      })),
+    },
+    "teams",
+  );
+}
+
 export const teamRouter = createTRPCRouter({
   current: protectedProcedure.query(async ({ ctx: { db, teamId, accessToken } }) => {
     if (shouldDelegateToReplacementBackend()) {
@@ -126,6 +151,7 @@ export const teamRouter = createTRPCRouter({
     return getTeamsByUserId(db, session.user.id);
   }),
 
+  /** Multi-table SQL on Rust; category tax seed computed in caller (dashboard or here). */
   create: protectedProcedure
     .input(createTeamSchema)
     .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
@@ -302,15 +328,11 @@ export const teamRouter = createTRPCRouter({
       });
     }),
 
+  /** Rust delete-prep + delete SQL; dashboard may call prep/delete direct + `enqueueDeleteTeamJob`. */
   delete: protectedProcedure
     .input(deleteTeamSchema)
     .mutation(async ({ ctx: { db, session, accessToken }, input }) => {
-      type Conn = {
-        referenceId: string | null;
-        provider: string | null;
-        accessToken: string | null;
-      };
-      let bankConnections: Conn[] | undefined;
+      let bankConnections: DeleteTeamConnection[] | undefined;
       let usedDelegatedPrep = false;
 
       if (shouldDelegateToReplacementBackend()) {
@@ -352,17 +374,9 @@ export const teamRouter = createTRPCRouter({
       }
 
       // Trigger cleanup job BEFORE deleting team from database.
-      await triggerJob(
-        "delete-team",
-        {
-          teamId: input.teamId!,
-          connections: (bankConnections ?? []).map((c) => ({
-            referenceId: c.referenceId,
-            provider: c.provider,
-            accessToken: c.accessToken,
-          })),
-        },
-        "teams",
+      await triggerDeleteTeamCleanupJob(
+        input.teamId!,
+        bankConnections ?? [],
       );
 
       let data: { id: string; memberUserIds: string[] } | null | undefined;
@@ -404,6 +418,13 @@ export const teamRouter = createTRPCRouter({
       } catch {
         // Non-fatal — team deletion succeeded, cache will expire naturally
       }
+    }),
+
+  /** Job-only half after dashboard Rust `POST /team/delete-prep`. */
+  enqueueDeleteTeamJob: protectedProcedure
+    .input(enqueueDeleteTeamJobSchema)
+    .mutation(async ({ input }) => {
+      await triggerDeleteTeamCleanupJob(input.teamId, input.connections);
     }),
 
   deleteMember: protectedProcedure

@@ -276,6 +276,26 @@ export const deleteTeamSchema = z.object({
   }),
 });
 
+/** Dashboard hybrid: Rust delete-prep already ran; Node only enqueues delete-team job. */
+export const enqueueDeleteTeamJobSchema = z.object({
+  teamId: z.string().openapi({
+    description: "Unique identifier of the team being deleted",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+  }),
+  connections: z
+    .array(
+      z.object({
+        referenceId: z.string().nullable(),
+        provider: z.string().nullable(),
+        accessToken: z.string().nullable(),
+      }),
+    )
+    .openapi({
+      description:
+        "Bank connections from Rust delete-prep for provider teardown",
+    }),
+});
+
 export const deleteTeamMemberSchema = z.object({
   teamId: z.string().openapi({
     description: "Unique identifier of the team",

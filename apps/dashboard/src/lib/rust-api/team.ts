@@ -629,6 +629,144 @@ async function throwRustApiError(response: Response): Promise<never> {
   throw new RustApiError(response.status, message);
 }
 
+export type CreateTeamCategoryChild = {
+  name: string;
+  slug: string;
+  color?: string | null;
+  system?: boolean;
+  excluded?: boolean;
+  taxRate?: number | null;
+  taxType?: string | null;
+};
+
+export type CreateTeamCategoryParent = CreateTeamCategoryChild & {
+  children?: CreateTeamCategoryChild[];
+};
+
+export type CreateTeamInput = {
+  name: string;
+  email: string;
+  baseCurrency?: string;
+  countryCode?: string;
+  fiscalYearStartMonth?: number | null;
+  logoUrl?: string;
+  companyType?: string;
+  heardAbout?: string;
+  switchTeam?: boolean;
+  categories: CreateTeamCategoryParent[];
+};
+
+export type TeamDeletePrepConnection = {
+  referenceId: string | null;
+  provider: string | null;
+  accessToken: string | null;
+};
+
+export type TeamDeletePrepResult = {
+  connections: TeamDeletePrepConnection[];
+};
+
+export type DeleteTeamInput = { teamId: string };
+
+export type DeleteTeamResult = {
+  id: string;
+  memberUserIds: string[];
+};
+
+export async function createTeam(
+  baseUrl: string,
+  accessToken: string | null,
+  input: CreateTeamInput,
+): Promise<string> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/create`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  const row = asRecord(await response.json()) ?? {};
+  const id = asString(row.id);
+  if (!id) {
+    throw new RustApiError(500, "Team create payload missing id");
+  }
+  return id;
+}
+
+export async function teamDeletePrep(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DeleteTeamInput,
+): Promise<TeamDeletePrepResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/delete-prep`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ teamId: input.teamId }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  const row = asRecord(await response.json()) ?? {};
+  const connections = Array.isArray(row.connections) ? row.connections : [];
+  return {
+    connections: connections.map((c) => {
+      const conn = asRecord(c) ?? {};
+      return {
+        referenceId:
+          asString(conn.referenceId) ?? asString(conn.reference_id),
+        provider: asString(conn.provider),
+        accessToken:
+          asString(conn.accessToken) ?? asString(conn.access_token),
+      };
+    }),
+  };
+}
+
+export async function deleteTeam(
+  baseUrl: string,
+  accessToken: string | null,
+  input: DeleteTeamInput,
+): Promise<DeleteTeamResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/team/delete`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ teamId: input.teamId }),
+    signal: AbortSignal.timeout(8_000),
+  });
+
+  if (!response.ok) await throwRustApiError(response);
+
+  const row = asRecord(await response.json()) ?? {};
+  const id = asString(row.id);
+  if (!id) {
+    throw new RustApiError(500, "Team delete payload missing id");
+  }
+  const memberUserIds = Array.isArray(row.memberUserIds)
+    ? row.memberUserIds.map(String)
+    : Array.isArray(row.member_user_ids)
+      ? row.member_user_ids.map(String)
+      : [];
+  return { id, memberUserIds };
+}
+
 export async function leaveTeam(
   baseUrl: string,
   accessToken: string | null,

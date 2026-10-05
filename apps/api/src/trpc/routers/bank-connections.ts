@@ -73,6 +73,7 @@ export const bankConnectionsRouter = createTRPCRouter({
       return event;
     }),
 
+  /** Rust SQL delete; Trigger `delete-connection` provider teardown stays Node (AP-52). */
   delete: protectedProcedure
     .input(deleteBankConnectionSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {

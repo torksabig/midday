@@ -5,13 +5,18 @@ import { getAccessToken } from "@/utils/session";
 import {
   acceptTeamInvite,
   type AcceptTeamInviteInput,
+  createTeam,
+  type CreateTeamInput,
   type DashboardTeam,
   declineTeamInvite,
   type DeclineTeamInviteInput,
+  deleteTeam,
+  type DeleteTeamInput,
   deleteTeamInvite,
   type DeleteTeamInviteInput,
   deleteTeamMember,
   type DeleteTeamMemberInput,
+  teamDeletePrep,
   fetchCurrentTeam,
   fetchTeamConnectionStatus,
   fetchTeamInvites,
@@ -135,4 +140,16 @@ export async function deleteTeamMemberFromRust(input: DeleteTeamMemberInput) {
 
 export async function leaveTeamFromRust(input: LeaveTeamInput) {
   return leaveTeam(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function createTeamFromRust(input: CreateTeamInput) {
+  return createTeam(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function teamDeletePrepFromRust(input: DeleteTeamInput) {
+  return teamDeletePrep(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function deleteTeamFromRust(input: DeleteTeamInput) {
+  return deleteTeam(getRustApiUrl(), await getAccessToken(), input);
 }

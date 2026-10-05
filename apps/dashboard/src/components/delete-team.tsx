@@ -26,6 +26,10 @@ import { AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useUserQuery } from "@/hooks/use-user";
+import {
+  deleteTeamFromRust,
+  teamDeletePrepFromRust,
+} from "@/lib/rust-api/team-client";
 import { useTRPC } from "@/trpc/client";
 
 export function DeleteTeam() {
@@ -37,14 +41,23 @@ export function DeleteTeam() {
   const hasPaidPlan =
     user?.team?.plan === "starter" || user?.team?.plan === "pro";
 
-  const deleteTeamMutation = useMutation(
-    trpc.team.delete.mutationOptions({
-      onSuccess: async () => {
-        // Revalidate server state and redirect
-        router.push("/teams");
-      },
-    }),
+  const enqueueDeleteTeamJobMutation = useMutation(
+    trpc.team.enqueueDeleteTeamJob.mutationOptions(),
   );
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: async ({ teamId }: { teamId: string }) => {
+      const prep = await teamDeletePrepFromRust({ teamId });
+      await enqueueDeleteTeamJobMutation.mutateAsync({
+        teamId,
+        connections: prep.connections,
+      });
+      await deleteTeamFromRust({ teamId });
+    },
+    onSuccess: async () => {
+      router.push("/teams");
+    },
+  });
 
   const getPortalUrlMutation = useMutation(
     trpc.billing.getPortalUrl.mutationOptions({

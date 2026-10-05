@@ -24,8 +24,11 @@ import { SelectCompanyType } from "@/components/select-company-type";
 import { SelectCurrency } from "@/components/select-currency";
 import { SelectFiscalMonth } from "@/components/select-fiscal-month";
 import { SelectHeardAbout } from "@/components/select-heard-about";
+import { useUserQuery } from "@/hooks/use-user";
 import { useZodForm } from "@/hooks/use-zod-form";
-import { useTRPC } from "@/trpc/client";
+import { RustApiError } from "@/lib/rust-api/overview";
+import { createTeamFromRust } from "@/lib/rust-api/team-client";
+import { buildCreateTeamCategorySeed } from "@/lib/team-category-seed";
 
 const formSchema = z.object({
   name: z.string().min(2, "Company name must be at least 2 characters."),
@@ -81,42 +84,60 @@ export function CreateTeamStep({
 }: Props) {
   const currency = use(defaultCurrencyPromise);
   const countryCode = use(defaultCountryCodePromise);
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: user } = useUserQuery();
   const [isLoading, setIsLoading] = useState(false);
   const isSubmittedRef = useRef(false);
 
-  const createTeamMutation = useMutation(
-    trpc.team.create.mutationOptions({
-      onSuccess: async () => {
-        track({
-          event: LogEvents.OnboardingTeamCreated.name,
-          channel: LogEvents.OnboardingTeamCreated.channel,
-          countryCode: form.getValues("countryCode"),
-          currency: form.getValues("baseCurrency"),
-          companyType: form.getValues("companyType"),
-          heardAbout: form.getValues("heardAbout"),
-        });
-        await queryClient.invalidateQueries();
-        onComplete();
-      },
-      onError: (error) => {
-        setIsLoading(false);
-        isSubmittedRef.current = false;
+  const createTeamMutation = useMutation({
+    mutationFn: async (values: FormValues & { switchTeam: boolean }) => {
+      const email = user?.email;
+      if (!email) {
+        throw new Error("Email is required to create a team");
+      }
 
-        toast({
-          duration: 6000,
-          title: "Unable to create team",
-          variant: "info",
-          description:
-            error.data?.code === "FORBIDDEN"
-              ? "All existing teams must be on a paid plan before creating another."
-              : "Something went wrong. Please try again.",
-        });
-      },
-    }),
-  );
+      return createTeamFromRust({
+        name: values.name,
+        email,
+        baseCurrency: values.baseCurrency,
+        countryCode: values.countryCode,
+        fiscalYearStartMonth: values.fiscalYearStartMonth,
+        companyType: values.companyType,
+        heardAbout: values.heardAbout,
+        switchTeam: values.switchTeam,
+        categories: buildCreateTeamCategorySeed(values.countryCode),
+      });
+    },
+    onSuccess: async () => {
+      track({
+        event: LogEvents.OnboardingTeamCreated.name,
+        channel: LogEvents.OnboardingTeamCreated.channel,
+        countryCode: form.getValues("countryCode"),
+        currency: form.getValues("baseCurrency"),
+        companyType: form.getValues("companyType"),
+        heardAbout: form.getValues("heardAbout"),
+      });
+      await queryClient.invalidateQueries();
+      onComplete();
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      isSubmittedRef.current = false;
+
+      const forbidden =
+        error instanceof RustApiError && error.data.code === "FORBIDDEN";
+
+      toast({
+        duration: 6000,
+        title: "Unable to create team",
+        variant: "info",
+        description: forbidden
+          ? "All existing teams must be on a paid plan before creating another."
+          : "Something went wrong. Please try again.",
+      });
+    },
+  });
 
   const form = useZodForm(formSchema, {
     defaultValues: {

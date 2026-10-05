@@ -32,11 +32,13 @@ export class RustApiError extends Error {
       code:
         status === 401
           ? "UNAUTHORIZED"
-          : status === 409
-            ? "CONFLICT"
-            : status === 404
-              ? "NOT_FOUND"
-              : "INTERNAL_SERVER_ERROR",
+          : status === 403
+            ? "FORBIDDEN"
+            : status === 409
+              ? "CONFLICT"
+              : status === 404
+                ? "NOT_FOUND"
+                : "INTERNAL_SERVER_ERROR",
     };
   }
 }
