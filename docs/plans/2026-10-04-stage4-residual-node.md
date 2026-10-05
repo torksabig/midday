@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(post-push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `ee29c0e8c` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `a4b10244e` (REST search global → Rust).
