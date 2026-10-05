@@ -31,7 +31,7 @@ import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
 import {
-  getInvoiceFilesApiUrl,
+  getInvoiceDownloadApiUrl,
   getVaultFilesApiUrl,
 } from "@/lib/files-api-url";
 import { globalSearchQueryOptions } from "@/lib/rust-api/search-client";
@@ -436,7 +436,9 @@ const SearchResultItemDisplay = ({
             <div className="flex items-center gap-2 invisible group-hover/item:visible group-focus/item:visible group-aria-selected/item:visible">
               <CopyButton path={`?invoiceId=${item.id}&invoiceType=details`} />
               <DownloadButton
-                href={`${getInvoiceFilesApiUrl()}/files/download/invoice?id=${item.id}&size=${item?.data?.template?.size}`}
+                href={`${getInvoiceDownloadApiUrl({
+                  filePath: item.data?.file_path as string[] | undefined,
+                })}/files/download/invoice?id=${item.id}&size=${item?.data?.template?.size}`}
                 filename={`${item.data.invoice_number || "invoice"}.pdf`}
               />
               <Icons.ArrowOutward className="size-4 dark:text-[#666] text-primary hover:!text-primary cursor-pointer" />

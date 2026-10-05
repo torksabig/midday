@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useUserQuery } from "@/hooks/use-user";
 import {
-  getInvoiceFilesApiUrl,
+  getInvoiceDownloadApiUrl,
   getVaultFilesApiUrl,
 } from "@/lib/files-api-url";
 
@@ -15,6 +15,8 @@ type FileUrlOptions =
       type: "invoice";
       invoiceId: string;
       isReceipt?: boolean;
+      /** When set, download hits Rust directly (stored PDF); skips residual Node. */
+      filePath?: string[] | string | null;
     }
   | {
       type: "url";
@@ -79,8 +81,11 @@ export function useFileUrl(options: FileUrlOptions | null) {
     }
 
     if (options.type === "invoice") {
-      // Build invoice download URL (residual Node PDF render)
-      const baseUrl = `${getInvoiceFilesApiUrl()}/files/download/invoice`;
+      // Stored PDF → Rust; drafts/receipts → residual Node React-PDF
+      const baseUrl = `${getInvoiceDownloadApiUrl({
+        filePath: options.filePath,
+        isReceipt: options.isReceipt,
+      })}/files/download/invoice`;
       const url = new URL(baseUrl);
       url.searchParams.set("id", options.invoiceId);
       url.searchParams.set("fk", user.fileKey);

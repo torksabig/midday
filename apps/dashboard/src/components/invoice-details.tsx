@@ -76,10 +76,15 @@ export function InvoiceDetails() {
       | undefined;
   };
 
-  const { url: downloadUrl } = useFileUrl({
-    type: "invoice",
-    invoiceId: invoiceId!,
-  });
+  const { url: downloadUrl } = useFileUrl(
+    invoiceId
+      ? {
+          type: "invoice",
+          invoiceId,
+          filePath: data?.filePath ?? null,
+        }
+      : null,
+  );
 
   if (isLoading) {
     return <InvoiceDetailsSkeleton />;

@@ -80,6 +80,32 @@ const logger = createLoggerWithContext("trpc:invoice");
 // Use the shared default template from @midday/invoice
 const defaultTemplate = DEFAULT_TEMPLATE;
 
+type InvoiceRow = NonNullable<Awaited<ReturnType<typeof getInvoiceById>>>;
+
+/** Prefer Rust get-by-id; keep Trigger/BullMQ side effects on Node. */
+async function resolveInvoiceById(params: {
+  db: Parameters<typeof getInvoiceById>[0];
+  id: string;
+  teamId: string;
+  accessToken?: string | null;
+}): Promise<InvoiceRow | null> {
+  if (shouldDelegateToReplacementBackend()) {
+    const delegated = await tryDelegateInvoicesGetById(
+      params.id,
+      params.accessToken,
+    );
+    if (delegated.delegated) {
+      return (delegated.invoice as InvoiceRow | null) ?? null;
+    }
+    assertLegacyIdentityFallbackAllowed();
+  }
+
+  return getInvoiceById(params.db, {
+    id: params.id,
+    teamId: params.teamId,
+  });
+}
+
 export const invoiceRouter = createTRPCRouter({
   get: protectedProcedure
     .input(getInvoicesSchema.optional())
@@ -645,10 +671,12 @@ export const invoiceRouter = createTRPCRouter({
           });
         }
 
-        // Check if this is an existing scheduled invoice
-        const existingInvoice = await getInvoiceById(db, {
+        // Check if this is an existing scheduled invoice (SQL via Rust in replacement mode)
+        const existingInvoice = await resolveInvoiceById({
+          db,
           id: input.id,
           teamId: teamId!,
+          accessToken,
         });
 
         let scheduledJobId: string | null = null;
@@ -829,13 +857,8 @@ export const invoiceRouter = createTRPCRouter({
   remind: protectedProcedure
     .input(remindInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      await triggerJob(
-        "send-invoice-reminder",
-        {
-          invoiceId: input.id,
-        },
-        "invoices",
-      );
+      // SQL first (Rust in replacement mode), then Trigger email job on Node
+      let invoice: unknown | null = null;
 
       if (shouldDelegateToReplacementBackend()) {
         const delegated = await tryDelegateInvoiceUpdate(
@@ -846,16 +869,29 @@ export const invoiceRouter = createTRPCRouter({
           accessToken,
         );
         if (delegated.delegated) {
-          return delegated.invoice;
+          invoice = delegated.invoice;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
         }
-        assertLegacyIdentityFallbackAllowed();
       }
 
-      return updateInvoice(db, {
-        id: input.id,
-        teamId: teamId!,
-        reminderSentAt: input.date,
-      });
+      if (!invoice) {
+        invoice = await updateInvoice(db, {
+          id: input.id,
+          teamId: teamId!,
+          reminderSentAt: input.date,
+        });
+      }
+
+      await triggerJob(
+        "send-invoice-reminder",
+        {
+          invoiceId: input.id,
+        },
+        "invoices",
+      );
+
+      return invoice;
     }),
 
   duplicate: protectedProcedure
@@ -888,10 +924,12 @@ export const invoiceRouter = createTRPCRouter({
   updateSchedule: protectedProcedure
     .input(updateScheduledInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      // Get the current invoice to find the old scheduled job ID
-      const invoice = await getInvoiceById(db, {
+      // Get the current invoice to find the old scheduled job ID (SQL via Rust)
+      const invoice = await resolveInvoiceById({
+        db,
         id: input.id,
         teamId: teamId!,
+        accessToken,
       });
 
       if (!invoice?.scheduledJobId) {
@@ -1004,10 +1042,12 @@ export const invoiceRouter = createTRPCRouter({
   cancelSchedule: protectedProcedure
     .input(cancelScheduledInvoiceSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {
-      // Get the current invoice to find the scheduled job ID
-      const invoice = await getInvoiceById(db, {
+      // SQL read via Rust; BullMQ cancel stays on Node
+      const invoice = await resolveInvoiceById({
+        db,
         id: input.id,
         teamId: teamId!,
+        accessToken,
       });
 
       if (!invoice) {
@@ -1028,7 +1068,7 @@ export const invoiceRouter = createTRPCRouter({
         }
       }
 
-      // Update the invoice status back to draft and clear scheduling fields
+      // Status/schedule clear via Rust PUT in replacement mode
       if (shouldDelegateToReplacementBackend()) {
         const delegated = await tryDelegateInvoiceUpdate(
           {

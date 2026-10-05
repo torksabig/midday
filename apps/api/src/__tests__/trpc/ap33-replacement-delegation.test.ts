@@ -40,13 +40,6 @@ describe("tRPC: AP-33 invoice schedule/duplicate replacement fail-closed", () =>
   });
 
   test("updateSchedule throws without Drizzle when API is down", async () => {
-    mocks.getInvoiceById.mockImplementation(() =>
-      Promise.resolve({
-        id: INVOICE_ID,
-        scheduledJobId: "invoices:old-job",
-        status: "scheduled",
-      }),
-    );
     const caller = createCallerFactory(invoiceRouter)(
       createTestContext({ accessToken: "fake-session-jwt" }),
     );
@@ -56,17 +49,11 @@ describe("tRPC: AP-33 invoice schedule/duplicate replacement fail-closed", () =>
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
     });
+    expect(mocks.getInvoiceById).not.toHaveBeenCalled();
     expect(mocks.updateInvoice).not.toHaveBeenCalled();
   });
 
   test("cancelSchedule throws without Drizzle when API is down", async () => {
-    mocks.getInvoiceById.mockImplementation(() =>
-      Promise.resolve({
-        id: INVOICE_ID,
-        scheduledJobId: "invoices:old-job",
-        status: "scheduled",
-      }),
-    );
     const caller = createCallerFactory(invoiceRouter)(
       createTestContext({ accessToken: "fake-session-jwt" }),
     );
@@ -75,6 +62,7 @@ describe("tRPC: AP-33 invoice schedule/duplicate replacement fail-closed", () =>
     ).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
     });
+    expect(mocks.getInvoiceById).not.toHaveBeenCalled();
     expect(mocks.updateInvoice).not.toHaveBeenCalled();
   });
 });

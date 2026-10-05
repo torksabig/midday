@@ -52,6 +52,8 @@ describe("tRPC: AP-59 enrich/remind/reprocess hybrid fail-closed", () => {
       code: "INTERNAL_SERVER_ERROR",
     });
     expect(mocks.updateInvoice).not.toHaveBeenCalled();
+    // SQL fails before Trigger enqueue
+    expect(mocks.triggerJob).not.toHaveBeenCalled();
   });
 
   test("documents.reprocessDocument throws without Drizzle when API is down", async () => {

@@ -35,10 +35,15 @@ export function InvoiceSuccess() {
     ),
   );
 
-  const { url: downloadUrl } = useFileUrl({
-    type: "invoice",
-    invoiceId: invoiceId!,
-  });
+  const { url: downloadUrl } = useFileUrl(
+    invoiceId
+      ? {
+          type: "invoice",
+          invoiceId,
+          filePath: invoice?.filePath ?? null,
+        }
+      : null,
+  );
 
   if (!invoice) {
     return null;
