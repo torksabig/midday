@@ -1,4 +1,5 @@
 import type { Context } from "@api/rest/types";
+import { globalSearchForRest } from "@api/rest/services/replacement-rest-search";
 import { globalSearchSchema, searchResponseSchema } from "@api/schemas/search";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
@@ -37,26 +38,28 @@ app.openapi(
     const teamId = c.get("teamId");
     const { searchTerm, ...input } = c.req.valid("query");
 
-    const results = await globalSearchQuery(db, {
-      teamId: teamId!,
-      ...input,
-      searchTerm: searchTerm,
-      /**
-       * Tighten the relevance threshold whenever the user enters a multi-word query.
-       *
-       * Rationale:
-       * 1. A longer query usually implies a more specific intent, so we only want
-       *    results that score highly on relevance.
-       * 2. If this stricter search returns nothing, we immediately fall back to the
-       *    LLM-generated filter logic below.  By filtering aggressively here we avoid
-       *    surfacing low-quality matches and give the LLM a chance to produce a more
-       *    intelligent result instead.
-       */
-      relevanceThreshold: 0.01,
-      // relevanceThreshold: shouldUseLLMFilters
-      //   ? 0.9
-      //   : input.relevanceThreshold,
-    });
+    const results = await globalSearchForRest(
+      { searchTerm, ...input },
+      c.req.header("Authorization"),
+      () =>
+        globalSearchQuery(db, {
+          teamId: teamId!,
+          ...input,
+          searchTerm: searchTerm,
+          /**
+           * Tighten the relevance threshold whenever the user enters a multi-word query.
+           *
+           * Rationale:
+           * 1. A longer query usually implies a more specific intent, so we only want
+           *    results that score highly on relevance.
+           * 2. If this stricter search returns nothing, we immediately fall back to the
+           *    LLM-generated filter logic below.  By filtering aggressively here we avoid
+           *    surfacing low-quality matches and give the LLM a chance to produce a more
+           *    intelligent result instead.
+           */
+          relevanceThreshold: 0.01,
+        }),
+    );
 
     return c.json(validateResponse(results, searchResponseSchema));
   },
