@@ -24,6 +24,7 @@ import { useSuccessSound } from "@/hooks/use-success-sound";
 import { useTransactionTab } from "@/hooks/use-transaction-tab";
 import { useExportStore } from "@/store/export";
 import { useTransactionsStore } from "@/store/transactions";
+import { prepareAccountingProviderForExport } from "@/lib/rust-api/accounting-client";
 import { appsQueryOptions } from "@/lib/rust-api/apps-client";
 import { useTRPC } from "@/trpc/client";
 
@@ -111,7 +112,7 @@ export function ExportBar() {
 
   // Accounting export mutation
   const accountingExportMutation = useMutation(
-    trpc.accounting.export.mutationOptions({
+    trpc.accounting.enqueueExportToAccounting.mutationOptions({
       onSuccess: (data) => {
         if (data?.id) {
           hasShownErrorRef.current = false; // Reset error flag for new export
@@ -256,7 +257,7 @@ export function ExportBar() {
   };
 
   // Execute accounting export
-  const executeAccountingExport = () => {
+  const executeAccountingExport = async () => {
     if (!activeProvider) return;
     if (transactionIdsForExport.length === 0) return;
 
@@ -264,10 +265,21 @@ export function ExportBar() {
     setExportingCount(transactionIdsForExport.length);
     setExportingTransactionIds(transactionIdsForExport);
     setIsExporting(true);
-    accountingExportMutation.mutate({
-      transactionIds: transactionIdsForExport,
-      providerId: activeProvider.app_id as "xero" | "quickbooks" | "fortnox",
-    });
+
+    try {
+      await prepareAccountingProviderForExport(activeProvider.app_id);
+      accountingExportMutation.mutate({
+        transactionIds: transactionIdsForExport,
+        providerId: activeProvider.app_id as "xero" | "quickbooks" | "fortnox",
+      });
+    } catch {
+      setIsExporting(false);
+      setExportingTransactionIds([]);
+      setExportingCount(null);
+      showMutationError(
+        PROVIDER_NAMES[activeProvider.app_id] ?? activeProvider.app_id,
+      );
+    }
   };
 
   // Execute file export (opens modal)

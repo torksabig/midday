@@ -36,6 +36,30 @@ async function rustFetch(
   });
 }
 
+export async function fetchAppById(
+  baseUrl: string,
+  accessToken: string | null,
+  appId: string,
+): Promise<InstalledApp | null> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await rustFetch(
+    `${baseUrl}/api/v1/apps/${encodeURIComponent(appId)}`,
+    accessToken,
+  );
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as InstalledApp;
+}
+
 export async function fetchApps(
   baseUrl: string,
   accessToken: string | null,

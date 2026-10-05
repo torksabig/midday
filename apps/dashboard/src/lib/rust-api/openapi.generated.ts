@@ -187,7 +187,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getBankAccountById"];
         put: operations["updateBankAccount"];
         post?: never;
         delete: operations["deleteBankAccount"];
@@ -4317,6 +4317,50 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getBankAccountById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Bank account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bank account row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountMutationResponse"];
+                };
+            };
+            /** @description Bank accounts require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bank account not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

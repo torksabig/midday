@@ -198,7 +198,8 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `accounting.getConnections` | yes | read · connected apps (Phase 9) |
 | `accounting.getAccounts` | no | external provider API |
 | `accounting.disconnect` | yes | **write** · delete app row (reuses `/apps/:appId` DELETE) (AP-43) |
-| `accounting.export` | yes | **write** · app lookup SQL; export-to-accounting job stays Node (AP-60) |
+| `accounting.enqueueExportToAccounting` | no | **write** · BullMQ `export-to-accounting` only (dashboard hybrid; no app SQL) |
+| `accounting.export` | yes | **write** · app lookup SQL + export job; non-dashboard callers; dashboard uses Rust GET `/api/v1/apps/{app_id}` + `enqueueExportToAccounting` |
 | `accounting.*` (other) | no | getAccounts (external provider) |
 | `search.global` | direct Rust | read · `global_search()` RPC; cmd-k + layout prefetch call `GET /api/v1/search/global` directly |
 | `search.attachments` | direct Rust | read · inbox ILIKE + invoice list (Phase 5 slice 4); dashboard calls `GET /api/v1/search/attachments` directly |

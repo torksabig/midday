@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
+import { accountingRouter } from "../../trpc/routers/accounting";
 import { documentsRouter } from "../../trpc/routers/documents";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
 import { inboxRouter } from "../../trpc/routers/inbox";
@@ -465,6 +466,46 @@ describe("tRPC: AP-67 transactions.enqueueExportTransactions (job-only hybrid)",
         transactionIds: [txId],
       }),
       "transactions",
+    );
+  });
+});
+
+describe("tRPC: AP-68 accounting.enqueueExportToAccounting (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-acct-export" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueExportToAccounting triggers export-to-accounting without Drizzle", async () => {
+    const caller = createCallerFactory(accountingRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const txId = "a1a2b3c4-5d6e-4f8a-9b0c-1d2e3f4a5b6c";
+    await caller.enqueueExportToAccounting({
+      providerId: "xero",
+      transactionIds: [txId],
+    });
+    expect(mocks.getAppByAppId).not.toHaveBeenCalled();
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "export-to-accounting",
+      {
+        teamId: "test-team-id",
+        userId: "test-user-id",
+        providerId: "xero",
+        transactionIds: [txId],
+      },
+      "accounting",
     );
   });
 });

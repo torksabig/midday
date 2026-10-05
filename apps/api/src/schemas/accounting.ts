@@ -18,6 +18,9 @@ export const exportToAccountingSchema = z.object({
   providerId: accountingProviderIdSchema,
 });
 
+/** Dashboard hybrid: Rust GET `/api/v1/apps/{app_id}` already verified config; Node only BullMQ. */
+export const enqueueExportToAccountingSchema = exportToAccountingSchema;
+
 /**
  * Schema for getting sync status
  */

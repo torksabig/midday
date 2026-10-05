@@ -154,6 +154,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `transactions.import` manual account SQL | **Rust direct** — dashboard `GET/PUT /api/v1/bank-accounts/{id}` via `prepareManualBankAccountForImport` → Node `transactions.enqueueImportTransactions` (BullMQ `import-transactions`); full `import` tRPC retained for non-dashboard callers |
 | `transactions.generateCsvMapping` | **Node AI** — dashboard still uses tRPC (Claude Haiku); no Rust SQL |
 
+### Migrated (2026-10-05 accounting export hybrid)
+
+| Capability | Now |
+|------------|-----|
+| `accounting.export` | **Node job-only** — dashboard Rust GET `/api/v1/apps/{app_id}` via `prepareAccountingProviderForExport` → Node `accounting.enqueueExportToAccounting` (BullMQ `export-to-accounting`); full `export` tRPC retained for non-dashboard callers |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
@@ -186,7 +192,8 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `transactions.enqueueImportTransactions` | BullMQ `import-transactions` only (manual bank-account prep on Rust) |
 | `transactions.import` / `export` (tRPC) | Non-dashboard callers; dashboard uses Rust prep + enqueue* |
 | `transactions.generateCsvMapping` | Claude Haiku CSV mapping (Node AI; dashboard tRPC) |
-| `accounting.export` | Export job (+ provider HTTP gated) |
+| `accounting.enqueueExportToAccounting` | BullMQ `export-to-accounting` only (app lookup on Rust) |
+| `accounting.export` (tRPC) | Non-dashboard callers; dashboard uses Rust prep + enqueue* |
 
 #### STOP gates (do not invent cutover)
 
@@ -245,6 +252,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | `transactions.export` | **BullMQ only** — dashboard `enqueueExportTransactions`; tRPC `export` fallback Node |
 | `transactions.import` | **Rust** manual bank-account get/update (dashboard) + BullMQ `enqueueImportTransactions`; tRPC `import` fallback Node |
 | `transactions.generateCsvMapping` | **Node AI** — dashboard tRPC (no Rust) |
+| `accounting.export` | **Rust** app lookup (dashboard) + BullMQ `enqueueExportToAccounting`; tRPC `export` fallback Node |
 | `documents.processDocument` / reprocess SQL | **Rust direct** — dashboard `processDocumentsFromRust` / `reprocessDocumentFromRust` → `documents.enqueueProcessDocument`; tRPC orchestrators for non-dashboard |
 | `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
@@ -263,7 +271,6 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 ### Next recommended residual slice
 
 1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).  
-2. **`accounting.export`** — export job hybrid when provider SQL fully on Rust.  
-3. **OpenAPI** — document `GET /api/v1/bank-accounts/{id}` (already used by Node delegation + dashboard import prep; generated client still omits GET).
+2. **OpenAPI** — document `GET /api/v1/apps/{app_id}` (runtime exists; used by accounting export prep + Node delegation).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

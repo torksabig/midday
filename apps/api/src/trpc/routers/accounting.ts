@@ -1,5 +1,6 @@
 import {
   disconnectProviderSchema,
+  enqueueExportToAccountingSchema,
   exportToAccountingSchema,
   getAccountsSchema,
   getSyncStatusSchema,
@@ -27,15 +28,50 @@ import {
 } from "@midday/db/queries";
 import { triggerJob } from "@midday/job-client";
 import { TRPCError } from "@trpc/server";
+import type { z } from "zod";
+
+type ExportToAccountingJobInput = z.infer<typeof exportToAccountingSchema>;
+
+async function triggerExportToAccountingJob(
+  teamId: string,
+  userId: string,
+  input: ExportToAccountingJobInput,
+) {
+  return triggerJob(
+    "export-to-accounting",
+    {
+      teamId,
+      userId,
+      providerId: input.providerId,
+      transactionIds: input.transactionIds,
+    },
+    "accounting",
+  );
+}
 
 export const accountingRouter = createTRPCRouter({
+  /** Job-only export; no app SQL on Node. */
+  enqueueExportToAccounting: protectedProcedure
+    .input(enqueueExportToAccountingSchema)
+    .mutation(async ({ input, ctx: { teamId, session } }) => {
+      if (!teamId) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Team not found",
+        });
+      }
+
+      return triggerExportToAccountingJob(teamId, session.user.id, input);
+    }),
+
   /**
-   * Export selected transactions to accounting provider
+   * Export selected transactions to accounting provider.
+   * Non-dashboard callers; dashboard uses Rust app lookup + `enqueueExportToAccounting`.
    */
   export: protectedProcedure
     .input(exportToAccountingSchema)
     .mutation(async ({ input, ctx: { db, teamId, session, accessToken } }) => {
-      const { transactionIds, providerId } = input;
+      const { providerId } = input;
 
       if (!teamId) {
         throw new TRPCError({
@@ -67,18 +103,7 @@ export const accountingRouter = createTRPCRouter({
         });
       }
 
-      const result = await triggerJob(
-        "export-to-accounting",
-        {
-          teamId,
-          userId: session.user.id,
-          providerId,
-          transactionIds,
-        },
-        "accounting",
-      );
-
-      return result;
+      return triggerExportToAccountingJob(teamId, session.user.id, input);
     }),
 
   /**
