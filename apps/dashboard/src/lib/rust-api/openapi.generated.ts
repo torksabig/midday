@@ -2228,6 +2228,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/create-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTransactionsMany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/delete-many": {
         parameters: {
             query?: never;
@@ -9832,6 +9848,56 @@ export interface operations {
                 content: {
                     "application/json": Record<string, never>;
                 };
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createTransactionsMany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Transactions to create (1-100) */
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: double */
+                    amount: number;
+                    assignedId?: string | null;
+                    attachments?: components["schemas"]["CreateTransactionAttachmentBody"][] | null;
+                    bankAccountId: string;
+                    categorySlug?: string | null;
+                    currency: string;
+                    date: string;
+                    name: string;
+                    note?: string | null;
+                }[];
+            };
+        };
+        responses: {
+            /** @description Created transactions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TxDetailItem"][];
+                };
+            };
+            /** @description Bulk create requires Midday Postgres or too many items */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {

@@ -4,12 +4,16 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 REST OpenAPI phase closure — bulk/oauth inventory)
+## Tip SHAs (2026-10-05 transactions REST bulk-create → Rust)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `b0646db3a` | torksabig |
-| **clone** (origin) | (default) | `9bf4592` | origin |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see latest push)_ | torksabig |
+| **clone** (origin) | `cursor/backend-replace-ui-frozen-plans` | `2247011` | origin |
+
+Prior midday tip: `9644b9098` (REST OpenAPI phase closure docs).
+
+Prior clone tip: `9bf4592` (typed InstalledAppResponse OpenAPI).
 
 Prior midday tip: `5d140f102` (REST inbox create/match/blocklist → Rust).
 
@@ -57,7 +61,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 ### Prioritized next slices (no invoice PDF live render)
 
 1. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
-2. **REST OpenAPI product migration** — **DONE** (2026-10-05 closure): all scoped product routers on `:3003` delegate in `replacement` mode except **`POST /transactions/bulk`**, **`POST /tracker-entries/bulk`** (clone blockers), plus permanent **oauth/mcp/PDF/middleware** (see **REST OpenAPI product migration status** above).
+2. **REST OpenAPI product migration** — **DONE** (2026-10-05 closure): all scoped product routers on `:3003` delegate in `replacement` mode except **`POST /tracker-entries/bulk`** (clone blocker), plus permanent **oauth/mcp/PDF/middleware** (see **REST OpenAPI product migration status** above).
 3. **`POST /chat`** — move off Node or document long-term co-host (**permanent block** until ported).
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*` (**permanent block** for full Node teardown).
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -381,7 +385,7 @@ Clone baseline: **`9bf4592`** (inbox match/blocklist/create routes already on Ru
 | `PATCH /transactions/{id}` | **Rust** — `PUT /api/v1/transactions/{id}` via `tryDelegateTransactionUpdate` |
 | `PATCH /transactions/bulk` | **Rust** — `POST /api/v1/transactions/update-many` |
 | `DELETE /transactions/{id}` / `DELETE /transactions/bulk` | **Rust** — `POST /api/v1/transactions/delete-many` |
-| `POST /transactions/bulk` | **Drizzle** — no Rust bulk-create on clone yet |
+| `POST /transactions/bulk` | **Rust** — `POST /api/v1/transactions/create-many` via `tryDelegateTransactionsCreateMany` |
 | `POST /transactions/{transactionId}/attachments/{attachmentId}/presigned-url` | **Rust** — unchanged (delegated get + vault signed-url) |
 
 Helpers: `apps/api/src/rest/services/replacement-rest-transactions.ts` (mirrors tRPC transactions router + presigned-url Bearer extraction).
@@ -509,13 +513,12 @@ Helpers: `apps/api/src/rest/services/replacement-rest-users.ts` (mirrors tRPC id
 
 ### REST OpenAPI product migration status (phase closure 2026-10-05)
 
-**Shipped on `:3003` in `MIDDAY_BACKEND_MODE=replacement`:** product routers delegate SQL reads/writes to clone **`9bf4592`** via `replacement-rest-*` + `tryDelegate*` — **documents**, **inbox** (full OpenAPI surface), **transactions** (except bulk create), **customers**, **invoices** (create hybrid: Rust draft/status + Node BullMQ jobs), **teams**, **tags**, **search**, **reports** (six chart routes), **notifications**, **bank-accounts**, **tracker-projects**, **tracker-entries** (+ timer; except bulk create), **users** (`/me`), plus vault **presigned-url** paths for documents/inbox/transactions.
+**Shipped on `:3003` in `MIDDAY_BACKEND_MODE=replacement`:** product routers delegate SQL reads/writes to clone (see tip SHAs) via `replacement-rest-*` + `tryDelegate*` — **documents**, **inbox** (full OpenAPI surface), **transactions** (incl. bulk create), **customers**, **invoices** (create hybrid: Rust draft/status + Node BullMQ jobs), **teams**, **tags**, **search**, **reports** (six chart routes), **notifications**, **bank-accounts**, **tracker-projects**, **tracker-entries** (+ timer; except bulk create), **users** (`/me`), plus vault **presigned-url** paths for documents/inbox/transactions.
 
 **Verified blockers (no clone Rust — do not wire until clone adds routes):**
 
 | OpenAPI route | Clone `@ 9bf4592` | Blocker |
 |---------------|-------------------|---------|
-| `POST /transactions/bulk` | Has `POST /api/v1/transactions/create` (single) and `update-many` / `delete-many` only | **No** `create-many` / bulk insert handler in `crates/api` utoipa or `domains.rs` |
 | `POST /tracker-entries/bulk` | Has `upsert_tracker_entries` (array upsert) only | **No** dedicated bulk-create route matching OpenAPI `bulkCreateTrackerEntries` semantics |
 
 **Permanent / intentional Drizzle or Node on `:3003` (not in REST product migration scope):**
@@ -540,7 +543,7 @@ Helpers: `apps/api/src/rest/services/replacement-rest-users.ts` (mirrors tRPC id
 | Router / area | Drizzle-backed routes (non-exhaustive) |
 |---------------|----------------------------------------|
 | `inbox` | _(OpenAPI inbox routes migrated; presigned-url Rust)_ |
-| `transactions` | _(list/get/write/delete migrated; bulk create still Drizzle)_ |
+| `transactions` | _(fully migrated incl. bulk create)_ |
 | `customers` | _(list/get/write/delete migrated)_ |
 | `invoices` | _(list/get/summary/payment-status/write/delete migrated; POST jobs hybrid)_ |
 | `teams` | _(list/get/update/members migrated)_ |
@@ -552,7 +555,6 @@ Helpers: `apps/api/src/rest/services/replacement-rest-users.ts` (mirrors tRPC id
 | `tracker-projects` | _(list/get/create/update/delete migrated)_ |
 | `tracker-entries` | _(list/upsert/delete + timer migrated; `POST /bulk` still Drizzle)_ |
 | `users` | _(GET/PATCH `/me` migrated)_ |
-| `transactions` | `POST /transactions/bulk` bulk create (no clone route) |
 | `oauth`, `mcp`, app OAuth callbacks, webhooks | integrations |
 | `files/download` | invoice React-PDF fallback + partial delegation |
 | REST middleware (`auth`, `db`) | identity / team resolution (required until REST auth moves) |
@@ -685,7 +687,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**REST OpenAPI product migration is closed** until clone adds **`POST /api/v1/transactions/create-many`** (or equivalent) and **`POST /api/v1/tracker-entries/bulk`** (or maps bulk create to documented upsert). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next milestone:** **`POST /chat`** co-host documentation + long-term port plan; parallel **worker `trpc.banking.*`** inventory; optional clone bulk-create routes if MCP/REST clients need them in `replacement` mode.
+**REST OpenAPI product migration is closed** until clone adds **`POST /api/v1/tracker/entries/bulk`** (or maps bulk create to documented upsert). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next milestone:** **`POST /chat`** co-host documentation + long-term port plan; parallel **worker `trpc.banking.*`** inventory (inventory-only until tracker bulk ships).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 

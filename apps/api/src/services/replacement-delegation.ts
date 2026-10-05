@@ -204,6 +204,7 @@ import {
   fetchReplacementSimilarTransactions,
   fetchReplacementSearchTransactionMatch,
   fetchReplacementCreateTransaction,
+  fetchReplacementTransactionsCreateMany,
   type ReplacementSearchTransactionMatchQuery,
   type ReplacementCreateTransactionInput,
   fetchReplacementTogglePortal,
@@ -2813,6 +2814,15 @@ export async function tryDelegateTransactionsUpdateMany(
 ) {
   return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
     fetchReplacementTransactionsUpdateMany(baseUrl, token, input),
+  );
+}
+
+export async function tryDelegateTransactionsCreateMany(
+  input: ReplacementCreateTransactionInput[],
+  sessionAccessToken?: string | null,
+) {
+  return tryDelegateReplacementRead(sessionAccessToken, (baseUrl, token) =>
+    fetchReplacementTransactionsCreateMany(baseUrl, token, input),
   );
 }
 

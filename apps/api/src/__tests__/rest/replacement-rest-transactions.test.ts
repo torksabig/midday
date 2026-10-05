@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
   createTransactionForRest,
+  createTransactionsForRest,
   deleteTransactionsForRest,
   fetchTransactionByIdForRest,
   fetchTransactionsListForRest,
@@ -72,6 +73,26 @@ describe("REST transactions replacement delegation", () => {
     await expect(
       updateTransactionForRest(
         { id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", name: "Updated" },
+        "Bearer fake-session-jwt",
+        legacy,
+      ),
+    ).rejects.toMatchObject({ status: 500 });
+    expect(legacy).not.toHaveBeenCalled();
+  });
+
+  test("createMany fails closed without Drizzle when Rust is down", async () => {
+    const legacy = mock(() => Promise.resolve([]));
+    await expect(
+      createTransactionsForRest(
+        [
+          {
+            name: "Test",
+            amount: 100,
+            currency: "USD",
+            date: "2026-01-01",
+            bankAccountId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          },
+        ],
         "Bearer fake-session-jwt",
         legacy,
       ),

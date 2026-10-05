@@ -3499,6 +3499,20 @@ export async function fetchReplacementCreateTransaction(
   return mapReplacementToTransactionById(payload);
 }
 
+export async function fetchReplacementTransactionsCreateMany(
+  baseUrl: string,
+  token: string,
+  input: ReplacementCreateTransactionInput[],
+): Promise<MiddayTransactionByIdShape[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/transactions/create-many`,
+    token,
+    input,
+  );
+  return mapReplacementToTransactionsUpdateMany(payload);
+}
+
 export async function fetchReplacementTogglePortal(
   baseUrl: string,
   token: string,

@@ -2,6 +2,7 @@ import {
   assertLegacyIdentityFallbackAllowed,
   tryDelegateCreateTransaction,
   tryDelegateTransactionUpdate,
+  tryDelegateTransactionsCreateMany,
   tryDelegateTransactionsDeleteMany,
   tryDelegateTransactionsGet,
   tryDelegateTransactionsGetById,
@@ -99,6 +100,32 @@ export async function updateTransactionForRest(
     const delegated = await tryDelegateTransactionUpdate(input, sessionAccessToken);
     if (delegated.delegated) {
       return delegated.transaction;
+    }
+    assertLegacyIdentityFallbackAllowed();
+  } catch (error) {
+    mapDelegationErrorToHttp(error);
+  }
+
+  return fetchLegacy();
+}
+
+export async function createTransactionsForRest(
+  input: ReplacementCreateTransactionInput[],
+  authorizationHeader: string | undefined,
+  fetchLegacy: () => Promise<unknown>,
+): Promise<unknown> {
+  if (!shouldDelegateToReplacementBackend()) {
+    return fetchLegacy();
+  }
+
+  const sessionAccessToken = extractBearerToken(authorizationHeader);
+  try {
+    const delegated = await tryDelegateTransactionsCreateMany(
+      input,
+      sessionAccessToken,
+    );
+    if (delegated) {
+      return delegated;
     }
     assertLegacyIdentityFallbackAllowed();
   } catch (error) {

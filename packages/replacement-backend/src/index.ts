@@ -81,6 +81,7 @@ export {
   fetchReplacementBankAccountTransactionCount,
   fetchReplacementTransactionUpdate,
   fetchReplacementTransactionsUpdateMany,
+  fetchReplacementTransactionsCreateMany,
   fetchReplacementNotificationsList,
   fetchReplacementNotificationUpdateStatus,
   fetchReplacementNotificationsUpdateAll,

@@ -109,7 +109,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — documents list/get/delete + vault presigned-url delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — inbox list/get/patch/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — inbox create/match/unmatch/confirm/decline/blocklist/search/by-status/bulk-delete delegate to Rust in `replacement` mode (2026-10-05)
-- [x] REST OpenAPI `:3003` — transactions list/get/create/update/delete delegate to Rust in `replacement` mode; bulk create still Drizzle (2026-10-05)
+- [x] REST OpenAPI `:3003` — transactions list/get/create/update/delete/bulk-create delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — customers list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — invoices list/get/summary/payment-status/create/update/delete delegate to Rust in `replacement` mode; create/send uses Node BullMQ only (2026-10-05)
 - [x] REST OpenAPI `:3003` — teams list/get/update/members delegate to Rust in `replacement` mode (2026-10-05)
@@ -127,13 +127,13 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 | Status | Routes / areas |
 |--------|----------------|
-| **Rust in `replacement` mode** | documents, inbox (full OpenAPI), transactions (single CRUD + update/delete-many), customers, invoices (SQL + hybrid create jobs), teams, tags, search, reports (×6), notifications, bank-accounts, tracker-projects, tracker-entries + timer, users `/me`, presigned-url helpers |
-| **Drizzle blockers (need clone)** | `POST /transactions/bulk`, `POST /tracker-entries/bulk` — no matching routes on clone **`9bf4592`** |
+| **Rust in `replacement` mode** | documents, inbox (full OpenAPI), transactions (CRUD + create/update/delete-many incl. bulk create), customers, invoices (SQL + hybrid create jobs), teams, tags, search, reports (×6), notifications, bank-accounts, tracker-projects, tracker-entries + timer, users `/me`, presigned-url helpers |
+| **Drizzle blockers (need clone)** | `POST /tracker-entries/bulk` — no matching route on clone yet |
 | **Permanent Node / STOP** | `/oauth/*`, `/.well-known/*`, `/mcp`, app OAuth callbacks, `GET /files/download/invoice` (React-PDF), REST auth/db middleware |
 
-**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` → **79 pass**, 14 files.
+**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` → **80 pass**, 14 files (after transactions bulk-create slice).
 
-**Remaining Drizzle REST in `replacement` mode:** bulk create pair above; oauth/mcp/PDF/middleware as listed. No new clone Rust in this slice.
+**Remaining Drizzle REST in `replacement` mode:** oauth/mcp/PDF/middleware as listed.
 
 ## Env reference
 

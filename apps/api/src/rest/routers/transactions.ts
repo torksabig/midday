@@ -18,6 +18,7 @@ import {
 } from "@api/schemas/transactions";
 import {
   createTransactionForRest,
+  createTransactionsForRest,
   deleteTransactionsForRest,
   fetchTransactionByIdForRest,
   fetchTransactionsListForRest,
@@ -523,8 +524,14 @@ app.openapi(
     const teamId = c.get("teamId");
     const params = c.req.valid("json");
 
-    const data = params.map((item) => ({ ...item, teamId }));
-    const result = await createTransactions(db, data);
+    const result = await createTransactionsForRest(
+      params,
+      c.req.header("Authorization"),
+      () => {
+        const data = params.map((item) => ({ ...item, teamId }));
+        return createTransactions(db, data);
+      },
+    );
 
     return c.json(validateResponse(result, createTransactionsResponseSchema));
   },
