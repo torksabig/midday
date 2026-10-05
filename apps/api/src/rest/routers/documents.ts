@@ -15,8 +15,11 @@ import {
   normalizeVaultObjectPath,
 } from "@api/rest/services/vault-presigned-url";
 import {
-  tryDelegateDocumentsGetById,
-} from "@api/services/replacement-delegation";
+  deleteDocumentForRest,
+  fetchDocumentByIdForRest,
+  fetchDocumentsListForRest,
+} from "@api/rest/services/replacement-rest-documents";
+import { tryDelegateDocumentsGetById } from "@api/services/replacement-delegation";
 import { createAdminClient } from "@api/services/supabase";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -63,14 +66,23 @@ app.openapi(
   async (c) => {
     const db = c.get("db");
     const teamId = c.get("teamId");
-    const { pageSize, cursor, sort, ...filter } = c.req.valid("query");
+    const { pageSize, cursor, sort: _sort, ...filter } = c.req.valid("query");
 
-    const result = await getDocuments(db, {
-      teamId,
-      pageSize,
-      cursor,
-      ...filter,
-    });
+    const result = await fetchDocumentsListForRest(
+      {
+        cursor,
+        pageSize,
+        ...filter,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getDocuments(db, {
+          teamId,
+          pageSize,
+          cursor,
+          ...filter,
+        }),
+    );
 
     return c.json(validateResponse(result, documentsResponseSchema));
   },
@@ -106,10 +118,19 @@ app.openapi(
     const teamId = c.get("teamId");
     const id = c.req.valid("param").id;
 
-    const result = await getDocumentById(db, {
-      teamId,
+    const result = await fetchDocumentByIdForRest(
       id,
-    });
+      c.req.header("Authorization"),
+      () =>
+        getDocumentById(db, {
+          teamId,
+          id,
+        }),
+    );
+
+    if (result == null) {
+      throw new HTTPException(404, { message: "Document not found" });
+    }
 
     return c.json(validateResponse(result, documentResponseSchema));
   },
@@ -291,7 +312,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const id = c.req.valid("param").id;
 
-    const result = await deleteDocument(db, { teamId, id });
+    const result = await deleteDocumentForRest(
+      id,
+      c.req.header("Authorization"),
+      () => deleteDocument(db, { teamId, id }),
+    );
 
     if (!result) {
       throw new HTTPException(404, { message: "Document not found" });

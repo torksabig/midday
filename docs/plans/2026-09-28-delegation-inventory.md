@@ -537,6 +537,17 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | AP-66 | DONE | Dashboard hybrid: `inbox.enqueueProcessAttachments` / `enqueueRetryMatching` + `transactionAttachments.enqueueProcessTransactionAttachments` (BullMQ only; SQL on Rust) | write |
 | AP-STAGE4 | PARTIAL | Incremental decommission after user **decommission** (2026-10-04): dead-façade routers fail-closed; residual Node kept — [stage4 residual](./2026-10-04-stage4-residual-node.md) | delete |
 
+### REST OpenAPI on `:3003` (public API key / OAuth scopes)
+
+| Route | Delegated in `replacement`? | Notes |
+| --- | --- | --- |
+| `GET /documents`, `GET /documents/{id}`, `DELETE /documents/{id}` | yes | Rust list/get/delete via `replacement-rest-documents.ts` (2026-10-05) |
+| `POST /documents/{id}/presigned-url` | yes | Rust signed-url + delegated get (2026-10-05) |
+| `POST /inbox/{id}/presigned-url` | yes | Rust signed-url |
+| `POST /transactions/.../presigned-url` | yes | Rust signed-url |
+| `GET/DELETE /inbox`, inbox CRUD | no | Next REST slice |
+| Other REST routers (customers, teams, invoices, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
+
 **Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
