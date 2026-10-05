@@ -35,6 +35,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `team.create` | yes | **write** · multi-table + category seed SQL (AP-62) — dashboard Rust direct + browser category seed; tRPC for non-dashboard |
 | `team.enqueueInviteTeamEmails` | no | **write** · Trigger `invite-team-members` only (dashboard hybrid) |
 | `team.enqueueDeleteTeamJob` | no | **write** · BullMQ `delete-team` only (dashboard hybrid) |
+| `team.enqueueUpdateBaseCurrency` | no | **write** · BullMQ `update-base-currency` only (dashboard hybrid; team row via Rust `team.update`) |
+| `team.enqueueExportAllData` | no | **write** · BullMQ `export-team-data` only (dashboard hybrid; no team SQL) |
+| `team.updateBaseCurrency` | no | **write** · BullMQ job only; non-dashboard callers; dashboard uses Rust update + `enqueueUpdateBaseCurrency` |
+| `team.exportAllData` | no | **write** · BullMQ job only; non-dashboard callers; dashboard uses `enqueueExportAllData` |
 | `team.*` (other) | no | — |
 | `notifications.list` | direct Rust | read · activities feed (AP-12); dashboard calls `GET /api/v1/notifications` with the Supabase session JWT and preserves the old React Query keys |
 | `notifications.updateStatus` | direct Rust | **write** · single activity status (AP-20 follow-on); dashboard calls `PUT /api/v1/notifications/:id/status` directly |

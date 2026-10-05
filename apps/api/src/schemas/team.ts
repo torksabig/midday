@@ -376,6 +376,14 @@ export const updateBaseCurrencySchema = z.object({
   }),
 });
 
+/** Dashboard hybrid: Rust PUT `/api/v1/team` (baseCurrency) already ran; Node only BullMQ recalc. */
+export const enqueueUpdateBaseCurrencySchema = updateBaseCurrencySchema;
+
+/** Dashboard hybrid: Node only BullMQ `export-team-data` (no team SQL on Node). */
+export const enqueueExportAllDataSchema = z.object({}).openapi({
+  description: "No input; team and user come from session context",
+});
+
 export const teamMemberResponseSchema = z.object({
   id: z.string().uuid().openapi({
     description: "Unique identifier of the user",

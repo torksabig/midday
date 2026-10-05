@@ -6,7 +6,9 @@ import {
   deleteTeamMemberSchema,
   deleteTeamSchema,
   enqueueDeleteTeamJobSchema,
+  enqueueExportAllDataSchema,
   enqueueInviteTeamEmailsSchema,
+  enqueueUpdateBaseCurrencySchema,
   inviteTeamMembersSchema,
   leaveTeamSchema,
   updateBaseCurrencySchema,
@@ -109,6 +111,36 @@ async function triggerInviteTeamMembersJob(
     ip,
     locale: "en",
   } satisfies InviteTeamMembersPayload);
+}
+
+async function triggerUpdateBaseCurrencyJob(
+  teamId: string,
+  baseCurrency: string,
+) {
+  return triggerJob(
+    "update-base-currency",
+    {
+      teamId,
+      baseCurrency,
+    },
+    "transactions",
+  );
+}
+
+async function triggerExportTeamDataJob(
+  teamId: string,
+  userId: string,
+  userEmail?: string,
+) {
+  return triggerJob(
+    "export-team-data",
+    {
+      teamId,
+      userId,
+      userEmail,
+    },
+    "transactions",
+  );
 }
 
 export const teamRouter = createTRPCRouter({
@@ -445,6 +477,31 @@ export const teamRouter = createTRPCRouter({
       await triggerDeleteTeamCleanupJob(input.teamId, input.connections);
     }),
 
+  /** Job-only half after dashboard Rust PUT `/api/v1/team` (baseCurrency). */
+  enqueueUpdateBaseCurrency: protectedProcedure
+    .input(enqueueUpdateBaseCurrencySchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      return triggerUpdateBaseCurrencyJob(teamId!, input.baseCurrency);
+    }),
+
+  /** Job-only export; no team SQL on Node. */
+  enqueueExportAllData: protectedProcedure
+    .input(enqueueExportAllDataSchema)
+    .mutation(async ({ ctx: { teamId, session } }) => {
+      if (!teamId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Team not found",
+        });
+      }
+
+      return triggerExportTeamDataJob(
+        teamId,
+        session.user.id,
+        session.user.email ?? undefined,
+      );
+    }),
+
   /** Email-only half after dashboard Rust `POST /api/v1/team/invites`. */
   enqueueInviteTeamEmails: protectedProcedure
     .input(enqueueInviteTeamEmailsSchema)
@@ -719,19 +776,14 @@ export const teamRouter = createTRPCRouter({
     },
   ),
 
+  /** Non-dashboard callers; dashboard uses Rust team update + `enqueueUpdateBaseCurrency`. */
   updateBaseCurrency: protectedProcedure
     .input(updateBaseCurrencySchema)
     .mutation(async ({ ctx: { teamId }, input }) => {
-      return triggerJob(
-        "update-base-currency",
-        {
-          teamId: teamId!,
-          baseCurrency: input.baseCurrency,
-        },
-        "transactions",
-      );
+      return triggerUpdateBaseCurrencyJob(teamId!, input.baseCurrency);
     }),
 
+  /** Non-dashboard callers; dashboard uses `enqueueExportAllData`. */
   exportAllData: protectedProcedure.mutation(
     async ({ ctx: { teamId, session } }) => {
       if (!teamId) {
@@ -741,14 +793,10 @@ export const teamRouter = createTRPCRouter({
         });
       }
 
-      return triggerJob(
-        "export-team-data",
-        {
-          teamId,
-          userId: session.user.id,
-          userEmail: session.user.email ?? undefined,
-        },
-        "transactions",
+      return triggerExportTeamDataJob(
+        teamId,
+        session.user.id,
+        session.user.email ?? undefined,
       );
     },
   ),

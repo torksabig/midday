@@ -25,7 +25,7 @@ export function SelectCurrency() {
   const invalidateTransactionQueries = useInvalidateTransactionQueries();
 
   const updateBaseCurrencyMutation = useMutation(
-    trpc.team.updateBaseCurrency.mutationOptions({
+    trpc.team.enqueueUpdateBaseCurrency.mutationOptions({
       onMutate: () => {
         setSyncing(true);
       },

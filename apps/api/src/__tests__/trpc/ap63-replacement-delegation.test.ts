@@ -56,6 +56,73 @@ describe("tRPC: AP-63 team.enqueueInviteTeamEmails (email-only hybrid)", () => {
   });
 });
 
+describe("tRPC: AP-63 team.enqueueUpdateBaseCurrency (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-base-currency" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueUpdateBaseCurrency triggers update-base-currency without Drizzle", async () => {
+    const caller = createCallerFactory(teamRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueUpdateBaseCurrency({ baseCurrency: "EUR" });
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "update-base-currency",
+      {
+        teamId: "test-team-id",
+        baseCurrency: "EUR",
+      },
+      "transactions",
+    );
+  });
+});
+
+describe("tRPC: AP-63 team.enqueueExportAllData (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-export" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueExportAllData triggers export-team-data without Drizzle", async () => {
+    const caller = createCallerFactory(teamRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueExportAllData({});
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "export-team-data",
+      {
+        teamId: "test-team-id",
+        userId: "test-user-id",
+        userEmail: "test@example.com",
+      },
+      "transactions",
+    );
+  });
+});
+
 describe("tRPC: AP-63 team.enqueueDeleteTeamJob (job-only hybrid)", () => {
   beforeEach(() => {
     mocks.triggerJob?.mockReset?.();
