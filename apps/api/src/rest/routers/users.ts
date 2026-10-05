@@ -1,3 +1,7 @@
+import {
+  fetchCurrentUserForRest,
+  updateCurrentUserForRest,
+} from "@api/rest/services/replacement-rest-users";
 import type { Context } from "@api/rest/types";
 import { updateUserSchema, userSchema } from "@api/schemas/users";
 import { validateResponse } from "@api/utils/validate-response";
@@ -33,15 +37,19 @@ app.openapi(
     const db = c.get("db");
     const session = c.get("session");
 
-    const result = await getUserById(db, session.user.id);
-
-    // Add fileKey if user has a teamId
-    const response = result
-      ? {
+    const response = await fetchCurrentUserForRest(
+      c.req.header("Authorization"),
+      async () => {
+        const result = await getUserById(db, session.user.id);
+        if (!result) {
+          return null;
+        }
+        return {
           ...result,
           fileKey: result.teamId ? await generateFileKey(result.teamId) : null,
-        }
-      : null;
+        };
+      },
+    );
 
     return c.json(validateResponse(response, userSchema));
   },
@@ -83,19 +91,25 @@ app.openapi(
     const session = c.get("session");
     const body = c.req.valid("json");
 
-    await updateUser(db, {
-      id: session.user.id,
-      ...body,
-    });
+    const response = await updateCurrentUserForRest(
+      body,
+      c.req.header("Authorization"),
+      async () => {
+        await updateUser(db, {
+          id: session.user.id,
+          ...body,
+        });
 
-    const result = await getUserById(db, session.user.id);
-
-    const response = result
-      ? {
+        const result = await getUserById(db, session.user.id);
+        if (!result) {
+          return null;
+        }
+        return {
           ...result,
           fileKey: result.teamId ? await generateFileKey(result.teamId) : null,
-        }
-      : null;
+        };
+      },
+    );
 
     return c.json(validateResponse(response, userSchema));
   },

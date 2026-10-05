@@ -564,8 +564,17 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `POST /notifications/update-all-status` | yes | Rust bulk status via `tryDelegateNotificationsUpdateAll` (2026-10-05) |
 | `GET /bank-accounts`, `GET /bank-accounts/{id}` | yes | Rust list/get via `replacement-rest-bank-accounts.ts` + `tryDelegateBankAccountsGet` / `tryDelegateBankAccountGetById` (2026-10-05) |
 | `POST /bank-accounts`, `PATCH /bank-accounts/{id}`, `DELETE /bank-accounts/{id}` | yes | Rust create/update/delete via `tryDelegateBankAccount*` (2026-10-05) |
+| `GET /tracker-projects`, `GET /tracker-projects/{id}` | yes | Rust list/get via `replacement-rest-tracker-projects.ts` + `tryDelegateTrackerProjectsGet` / `tryDelegateTrackerProjectGetById` (2026-10-05) |
+| `POST /tracker-projects`, `PATCH /tracker-projects/{id}`, `DELETE /tracker-projects/{id}` | yes | Rust upsert/delete via `tryDelegateTrackerProjectUpsert` / `tryDelegateTrackerProjectDelete` (2026-10-05) |
+| `GET /tracker-entries` | yes | Rust by-range via `tryDelegateTrackerEntriesByRange` (2026-10-05) |
+| `POST /tracker-entries`, `PATCH /tracker-entries/{id}`, `DELETE /tracker-entries/{id}` | yes | Rust upsert/delete via `tryDelegateTrackerEntriesUpsert` / `tryDelegateTrackerEntryDelete` (2026-10-05) |
+| `POST /tracker-entries/timer/start`, `POST /tracker-entries/timer/stop` | yes | Rust timer mutations via `tryDelegateTrackerStartTimer` / `tryDelegateTrackerStopTimer` (2026-10-05) |
+| `GET /tracker-entries/timer/current`, `GET /tracker-entries/timer/status` | yes | Rust timer reads via `tryDelegateTrackerCurrentTimer` / `tryDelegateTrackerTimerStatus` (2026-10-05) |
+| `POST /tracker-entries/bulk` | no | bulk create — Drizzle only (no clone route) |
+| `GET /users/me` | yes | Rust auth/me via `tryDelegateUserMe` + `replacement-rest-users.ts` (2026-10-05) |
+| `PATCH /users/me` | yes | Rust user update via `tryDelegateUserUpdate` (2026-10-05) |
 | Other REST inbox routes | no | create/match/blocklist stay Drizzle on `:3003` |
-| Other REST routers (tracker, users, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
+| Other REST routers (oauth, mcp, files, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 
 **Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 

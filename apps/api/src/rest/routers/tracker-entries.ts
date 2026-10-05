@@ -1,3 +1,13 @@
+import {
+  deleteTrackerEntryForRest,
+  fetchTrackerEntriesByRangeForRest,
+  getCurrentTimerForRest,
+  getTimerStatusForRest,
+  mapTrackerEntriesForRestResponse,
+  startTimerForRest,
+  stopTimerForRest,
+  upsertTrackerEntriesForRest,
+} from "@api/rest/services/replacement-rest-tracker-entries";
 import type { Context } from "@api/rest/types";
 import {
   bulkCreateTrackerEntriesSchema,
@@ -59,10 +69,17 @@ app.openapi(
     const db = c.get("db");
     const teamId = c.get("teamId");
 
-    const result = await getTrackerRecordsByRange(db, {
-      teamId,
-      ...c.req.valid("query"),
-    });
+    const query = c.req.valid("query");
+
+    const result = await fetchTrackerEntriesByRangeForRest(
+      query,
+      c.req.header("Authorization"),
+      () =>
+        getTrackerRecordsByRange(db, {
+          teamId,
+          ...query,
+        }),
+    );
 
     return c.json(validateResponse(result, trackerEntriesResponseSchema));
   },
@@ -104,23 +121,24 @@ app.openapi(
     const session = c.get("session");
     const { assignedId, ...rest } = c.req.valid("json");
 
-    const result = await upsertTrackerEntries(db, {
-      teamId,
-      assignedId: assignedId ?? session.user.id,
-      ...rest,
-    });
-
-    // Map trackerProject to project to match the response schema
-    const dataWithProject = result.map((item) => ({
-      ...item,
-      project: item.trackerProject,
-    }));
+    const result = await upsertTrackerEntriesForRest(
+      {
+        assignedId: assignedId ?? session.user.id,
+        ...rest,
+      },
+      c.req.header("Authorization"),
+      async () => {
+        const rows = await upsertTrackerEntries(db, {
+          teamId,
+          assignedId: assignedId ?? session.user.id,
+          ...rest,
+        });
+        return mapTrackerEntriesForRestResponse(rows);
+      },
+    );
 
     return c.json(
-      validateResponse(
-        { data: dataWithProject },
-        createTrackerEntriesResponseSchema,
-      ),
+      validateResponse({ data: result }, createTrackerEntriesResponseSchema),
     );
   },
 );
@@ -221,24 +239,26 @@ app.openapi(
     const { id } = c.req.valid("param");
     const { assignedId, ...rest } = c.req.valid("json");
 
-    const result = await upsertTrackerEntries(db, {
-      id,
-      teamId,
-      ...rest,
-      ...(assignedId !== undefined && { assignedId }),
-    });
-
-    // Map trackerProject to project to match the response schema
-    const dataWithProject = result.map((item) => ({
-      ...item,
-      project: item.trackerProject,
-    }));
+    const result = await upsertTrackerEntriesForRest(
+      {
+        id,
+        ...rest,
+        ...(assignedId !== undefined && { assignedId }),
+      },
+      c.req.header("Authorization"),
+      async () => {
+        const rows = await upsertTrackerEntries(db, {
+          id,
+          teamId,
+          ...rest,
+          ...(assignedId !== undefined && { assignedId }),
+        });
+        return mapTrackerEntriesForRestResponse(rows);
+      },
+    );
 
     return c.json(
-      validateResponse(
-        { data: dataWithProject },
-        createTrackerEntriesResponseSchema,
-      ),
+      validateResponse({ data: result }, createTrackerEntriesResponseSchema),
     );
   },
 );
@@ -272,7 +292,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await deleteTrackerEntry(db, { teamId, id });
+    const result = await deleteTrackerEntryForRest(
+      id,
+      c.req.header("Authorization"),
+      () => deleteTrackerEntry(db, { teamId, id }),
+    );
 
     if (!result) {
       throw new HTTPException(404, { message: "Tracker entry not found" });
@@ -319,11 +343,19 @@ app.openapi(
     const session = c.get("session");
     const { assignedId, ...rest } = c.req.valid("json");
 
-    const result = await startTimer(db, {
-      teamId,
-      assignedId: assignedId ?? session.user.id,
-      ...rest,
-    });
+    const result = await startTimerForRest(
+      {
+        assignedId: assignedId ?? session.user.id,
+        ...rest,
+      },
+      c.req.header("Authorization"),
+      () =>
+        startTimer(db, {
+          teamId,
+          assignedId: assignedId ?? session.user.id,
+          ...rest,
+        }),
+    );
 
     return c.json(
       validateResponse({ data: result }, startTimerResponseSchema),
@@ -370,12 +402,23 @@ app.openapi(
 
     let result: Awaited<ReturnType<typeof stopTimer>>;
     try {
-      result = await stopTimer(db, {
-        teamId,
-        assignedId: assignedId ?? session.user.id,
-        ...rest,
-      });
-    } catch {
+      result = (await stopTimerForRest(
+        {
+          assignedId: assignedId ?? session.user.id,
+          ...rest,
+        },
+        c.req.header("Authorization"),
+        () =>
+          stopTimer(db, {
+            teamId,
+            assignedId: assignedId ?? session.user.id,
+            ...rest,
+          }),
+      )) as Awaited<ReturnType<typeof stopTimer>>;
+    } catch (error) {
+      if (error instanceof HTTPException) {
+        throw error;
+      }
       throw new HTTPException(404, { message: "No running timer found" });
     }
 
@@ -413,10 +456,17 @@ app.openapi(
     const session = c.get("session");
     const { assignedId } = c.req.valid("query");
 
-    const result = await getCurrentTimer(db, {
-      teamId,
-      assignedId: assignedId ?? session.user.id,
-    });
+    const resolvedAssignedId = assignedId ?? session.user.id;
+
+    const result = await getCurrentTimerForRest(
+      { assignedId: resolvedAssignedId },
+      c.req.header("Authorization"),
+      () =>
+        getCurrentTimer(db, {
+          teamId,
+          assignedId: resolvedAssignedId,
+        }),
+    );
 
     return c.json(
       validateResponse({ data: result }, getCurrentTimerResponseSchema),
@@ -455,10 +505,17 @@ app.openapi(
     const session = c.get("session");
     const { assignedId } = c.req.valid("query");
 
-    const result = await getTimerStatus(db, {
-      teamId,
-      assignedId: assignedId ?? session.user.id,
-    });
+    const resolvedAssignedId = assignedId ?? session.user.id;
+
+    const result = await getTimerStatusForRest(
+      { assignedId: resolvedAssignedId },
+      c.req.header("Authorization"),
+      () =>
+        getTimerStatus(db, {
+          teamId,
+          assignedId: resolvedAssignedId,
+        }),
+    );
 
     return c.json(
       validateResponse({ data: result }, getTimerStatusResponseSchema),

@@ -1,3 +1,9 @@
+import {
+  deleteTrackerProjectForRest,
+  fetchTrackerProjectByIdForRest,
+  fetchTrackerProjectsListForRest,
+  upsertTrackerProjectForRest,
+} from "@api/rest/services/replacement-rest-tracker-projects";
 import type { Context } from "@api/rest/types";
 import {
   deleteTrackerProjectSchema,
@@ -49,13 +55,18 @@ app.openapi(
 
     const { cursor, pageSize, sort, ...filter } = c.req.valid("query");
 
-    const result = await getTrackerProjects(db, {
-      teamId,
-      cursor,
-      pageSize,
-      ...filter,
-      sort,
-    });
+    const result = await fetchTrackerProjectsListForRest(
+      { cursor, pageSize, sort, ...filter },
+      c.req.header("Authorization"),
+      () =>
+        getTrackerProjects(db, {
+          teamId,
+          cursor,
+          pageSize,
+          ...filter,
+          sort,
+        }),
+    );
 
     return c.json(validateResponse(result, trackerProjectsResponseSchema));
   },
@@ -100,11 +111,18 @@ app.openapi(
     const teamId = c.get("teamId");
     const userId = c.get("session").user.id;
 
-    const result = await upsertTrackerProject(db, {
-      teamId,
-      userId,
-      ...c.req.valid("json"),
-    });
+    const body = c.req.valid("json");
+
+    const result = await upsertTrackerProjectForRest(
+      body,
+      c.req.header("Authorization"),
+      () =>
+        upsertTrackerProject(db, {
+          teamId,
+          userId,
+          ...body,
+        }),
+    );
 
     return c.json(validateResponse(result, trackerProjectResponseSchema));
   },
@@ -147,12 +165,19 @@ app.openapi(
     const userId = c.get("session").user.id;
     const { id } = c.req.valid("param");
 
-    const result = await upsertTrackerProject(db, {
-      teamId,
-      id,
-      userId,
-      ...c.req.valid("json"),
-    });
+    const body = c.req.valid("json");
+
+    const result = await upsertTrackerProjectForRest(
+      { id, ...body },
+      c.req.header("Authorization"),
+      () =>
+        upsertTrackerProject(db, {
+          teamId,
+          id,
+          userId,
+          ...body,
+        }),
+    );
 
     return c.json(validateResponse(result, trackerProjectResponseSchema));
   },
@@ -188,10 +213,15 @@ app.openapi(
 
     const { id } = c.req.valid("param");
 
-    const result = await getTrackerProjectById(db, {
-      teamId,
+    const result = await fetchTrackerProjectByIdForRest(
       id,
-    });
+      c.req.header("Authorization"),
+      () =>
+        getTrackerProjectById(db, {
+          teamId,
+          id,
+        }),
+    );
 
     return c.json(validateResponse(result, trackerProjectResponseSchema));
   },
@@ -227,10 +257,15 @@ app.openapi(
 
     const { id } = c.req.valid("param");
 
-    const result = await deleteTrackerProject(db, {
-      teamId,
+    const result = await deleteTrackerProjectForRest(
       id,
-    });
+      c.req.header("Authorization"),
+      () =>
+        deleteTrackerProject(db, {
+          teamId,
+          id,
+        }),
+    );
 
     return c.json(validateResponse(result, deleteTrackerProjectSchema));
   },
