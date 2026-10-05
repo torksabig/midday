@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { useState } from "react";
 import { useUserQuery } from "@/hooks/use-user";
+import { fetchInvoicePdfBlob } from "@/lib/fetch-invoice-pdf";
 import { saveFile } from "@/lib/save-file";
 
 type Invoice = {
@@ -23,26 +24,17 @@ export function useDownloadInvoicesZip() {
 
     try {
       const zip = new JSZip();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
       // Track used filenames to avoid duplicates
       const usedFilenames = new Set<string>();
 
-      // Fetch each invoice PDF and add to zip
+      // Rust stored PDF first; Node React-PDF on no_stored_pdf
       const filePromises = invoices.map(async (invoice, index) => {
         try {
-          const url = new URL(`${apiUrl}/files/download/invoice`);
-          url.searchParams.set("id", invoice.id);
-          url.searchParams.set("fk", user.fileKey!);
-
-          const response = await fetch(url.toString());
-          if (!response.ok) {
-            throw new Error(
-              `Failed to fetch invoice ${invoice.id}: ${response.statusText}`,
-            );
-          }
-
-          const blob = await response.blob();
+          const blob = await fetchInvoicePdfBlob({
+            id: invoice.id,
+            fk: user.fileKey!,
+          });
 
           // Generate unique filename
           const baseName = invoice.invoiceNumber ?? `invoice-${invoice.id}`;

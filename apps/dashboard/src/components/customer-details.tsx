@@ -46,7 +46,7 @@ import { useCustomerParams } from "@/hooks/use-customer-params";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useRealtime } from "@/hooks/use-realtime";
 import { useUserQuery } from "@/hooks/use-user";
-import { downloadFile } from "@/lib/download";
+import { downloadInvoicePdf } from "@/lib/fetch-invoice-pdf";
 import {
   cancelCustomerEnrichmentFromRust,
   clearCustomerEnrichmentFromRust,
@@ -302,12 +302,10 @@ export function CustomerDetails() {
       console.error("File key not available");
       return;
     }
-    const url = new URL(
-      `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice`,
+    void downloadInvoicePdf(
+      { id: invoiceId, fk: user.fileKey },
+      "invoice.pdf",
     );
-    url.searchParams.set("id", invoiceId);
-    url.searchParams.set("fk", user.fileKey);
-    downloadFile(url.toString(), "invoice.pdf");
   };
 
   if (isLoadingCustomer) {

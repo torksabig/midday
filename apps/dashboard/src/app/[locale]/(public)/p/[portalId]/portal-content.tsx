@@ -25,6 +25,10 @@ import { useMemo, useState } from "react";
 import { InvoiceStatus } from "@/components/invoice-status";
 import { downloadFile } from "@/lib/download";
 import {
+  downloadInvoicePdf,
+  fetchInvoicePdfBlob,
+} from "@/lib/fetch-invoice-pdf";
+import {
   customerByPortalIdQueryOptions,
   portalInvoicesInfiniteQueryOptions,
 } from "@/lib/rust-api/customers-client";
@@ -95,8 +99,8 @@ export function PortalContent({ portalId }: Props) {
   const handleDownloadSingle = async (invoice: (typeof invoices)[number]) => {
     setDownloadingId(invoice.id);
     try {
-      downloadFile(
-        `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice?token=${invoice.token}`,
+      await downloadInvoicePdf(
+        { token: invoice.token },
         `${invoice.invoiceNumber || "invoice"}.pdf`,
       );
     } finally {
@@ -121,13 +125,7 @@ export function PortalContent({ portalId }: Props) {
 
       const filePromises = selected.map(async (invoice) => {
         try {
-          const url = `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice?token=${invoice.token}`;
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch invoice ${invoice.id}`);
-          }
-
-          const blob = await response.blob();
+          const blob = await fetchInvoicePdfBlob({ token: invoice.token });
           const baseName = invoice.invoiceNumber ?? `invoice-${invoice.id}`;
           let filename = `${baseName}.pdf`;
           let counter = 1;

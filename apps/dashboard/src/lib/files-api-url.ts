@@ -1,7 +1,8 @@
 /**
  * Vault proxy/download is served by the Rust API (`/files/proxy`, `/files/download/file`).
  * Stored invoice PDFs (`file_path` set) also hit Rust `/files/download/invoice` directly.
- * Drafts / receipts / missing vault object still enter residual Node for React-PDF.
+ * Blind downloads (token/zip without `file_path`) should use `fetchInvoicePdfBlob`
+ * (Rust first, Node on `no_stored_pdf`). Receipts stay on residual Node React-PDF.
  */
 export function getVaultFilesApiUrl(): string {
   const rust = process.env.NEXT_PUBLIC_RUST_API_URL?.replace(/\/$/, "");

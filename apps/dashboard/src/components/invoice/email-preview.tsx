@@ -16,7 +16,7 @@ import { SavingBar } from "@/components/saving-bar";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useTemplateUpdate } from "@/hooks/use-template-update";
 import { useUserQuery } from "@/hooks/use-user";
-import { downloadFile } from "@/lib/download";
+import { downloadInvoicePdf } from "@/lib/fetch-invoice-pdf";
 
 /** Single-line inline editable text (contentEditable — ideal for span/h2). */
 function EditableText({
@@ -332,10 +332,7 @@ export function EmailPreview() {
                 const filename = invoiceNumber
                   ? `invoice-${invoiceNumber}.pdf`
                   : "invoice.pdf";
-                downloadFile(
-                  `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice?token=${token}`,
-                  filename,
-                );
+                void downloadInvoicePdf({ token }, filename);
               }}
               className="mx-6 mb-4 flex items-center gap-2 px-3 py-2 border border-border hover:bg-accent transition-colors cursor-pointer text-left w-auto"
             >

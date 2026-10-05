@@ -34,7 +34,7 @@ import { useFileUrl } from "@/hooks/use-file-url";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
 import { downloadFile } from "@/lib/download";
-import { getInvoiceDownloadApiUrl } from "@/lib/files-api-url";
+import { downloadInvoicePdf } from "@/lib/fetch-invoice-pdf";
 import { invoiceDefaultSettingsQueryKey } from "@/lib/rust-api/invoice-default-settings";
 import {
   deleteInvoiceFromRust,
@@ -289,13 +289,9 @@ export function ActionsMenu({ row }: Props) {
                   console.error("File key not available");
                   return;
                 }
-                const url = new URL(
-                  `${getInvoiceDownloadApiUrl({ filePath: row.filePath })}/files/download/invoice`,
-                );
-                url.searchParams.set("id", row.id);
-                url.searchParams.set("fk", user.fileKey);
-                downloadFile(
-                  url.toString(),
+                // Known filePath → Rust direct; missing → Rust then Node on no_stored_pdf
+                void downloadInvoicePdf(
+                  { id: row.id, fk: user.fileKey },
                   `${row.invoiceNumber || "invoice"}.pdf`,
                 );
               }}

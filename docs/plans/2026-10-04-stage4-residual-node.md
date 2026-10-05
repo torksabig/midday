@@ -78,10 +78,20 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 
 | Capability | Now |
 |------------|-----|
-| Invoice download when UI has `file_path` | **Rust direct** — dashboard `getInvoiceDownloadApiUrl({ filePath })` skips Node; drafts/receipts/token still Node |
+| Invoice download when UI has `file_path` | **Rust direct** — dashboard `getInvoiceDownloadApiUrl({ filePath })` skips Node; drafts/receipts still Node |
 | `invoice.remind` SQL | **Rust** `PUT /api/v1/invoices/{id}` (`reminderSentAt`) — Node only Trigger `send-invoice-reminder` |
 | `invoice.cancelSchedule` / `updateSchedule` / create-schedule read+status SQL | **Rust** get-by-id + PUT (clear/set schedule fields) — Node only BullMQ job create/remove |
-| Node `/files/download/invoice` | Still React-PDF fallback + forward stored PDF for callers without `file_path` (portal/token, zip, MCP) |
+| Node `/files/download/invoice` | Still React-PDF fallback + forward stored PDF for callers without `file_path` |
+
+### Migrated (2026-10-05 blind downloads / create status SQL)
+
+| Capability | Now |
+|------------|-----|
+| Blind invoice downloads (portal token, zip, toolbar, customer/email previews) | **Rust first** via `fetchInvoicePdfBlob` / `downloadInvoicePdf`; **Node** on `no_stored_pdf` / `needs_render` / Rust down |
+| MCP `pdfUrl` when `filePath` set | **Rust**; drafts without stored PDF stay Node URL; `download=true` tries Rust bytes then React-PDF |
+| `invoice.create` status writes (`unpaid` / `scheduled`) | **Rust** `PUT` via `tryDelegateInvoiceUpdate` (already); Trigger/BullMQ/PDF job Node |
+| `invoice.createFromTracker` draft insert | **Rust** via `tryDelegateInvoiceDraft` (already); tracker aggregation Node |
+| Receipts (`type=receipt`) | **Node** React-PDF (STOP) |
 
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
@@ -95,7 +105,7 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.updateBaseCurrency` / `exportAllData` | Trigger jobs |
 | `bankConnections.delete` | Trigger provider teardown |
 | `oauthApplications.authorize` / `updateApprovalStatus` | Resend |
-| `invoice.create` / `createFromTracker` | Trigger send/schedule/PDF |
+| `invoice.create` / `createFromTracker` | Trigger send/schedule/PDF job only (status/draft SQL on Rust) |
 | `invoice.cancelSchedule` / `remind` / `updateSchedule` | Trigger/BullMQ only (SQL on Rust) |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications |
 | `customers.enrich` | Trigger enrich job only (SQL on Rust) |
@@ -121,7 +131,7 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 #### Non-tRPC `apps/api` surfaces
 
 - `POST /chat`
-- `GET /files/download/invoice` (React-PDF fallback + forward for callers without `file_path`; stored PDF + SQL on Rust)
+- `GET /files/download/invoice` (React-PDF fallback for drafts/receipts/`no_stored_pdf`; dashboard blind downloads try Rust first)
 - Gmail/Outlook OAuth redirect URIs on `:3003`
 
 #### Internal non-dashboard tRPC
@@ -140,25 +150,25 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ## Migration notes (capability status)
 
-| Capability | Status after Stage 4 stored-PDF hop / schedule-SQL slice |
+| Capability | Status after Stage 4 blind-download / create-SQL slice |
 |------------|----------------------------------------|
 | Overview / tx / inbox reads / invoices SQL / tracker / reports / tags / categories | **Rust direct** |
 | Vault proxy / vault file download | **Rust direct** |
 | Vault delete / inbox delete / document short-link | **Rust direct** |
 | Document reprocess / process SQL + signedUrls / signedUrl | **Rust direct** (job enqueue Node) |
-| Invoice PDF SQL + stored vault PDF | **Rust**; dashboard skips Node when `file_path` known |
-| `invoice.remind` / `cancelSchedule` / schedule status SQL | **Rust**; Trigger/BullMQ Node |
+| Invoice PDF SQL + stored vault PDF | **Rust**; known `file_path` skips Node; blind downloads Rust→Node fallback |
+| `invoice.remind` / `cancelSchedule` / schedule / create status SQL | **Rust**; Trigger/BullMQ Node |
 | `customers.enrich` SQL | **Rust**; Trigger job Node |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
 | Billing / Stripe invoice payments | **Node** — STOP |
 | Invoice PDF live render (draft/receipt) | **Node** — STOP / non-tRPC |
-| Invoice send / create / recurring pause-delete | **Node** — hybrid |
+| Invoice send / create Trigger / recurring pause-delete | **Node** — hybrid |
 | Team invite email / create team / delete team | **Node** — hybrid |
 
 ### Next recommended residual slice
 
-1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault so Rust can serve them too (also unblocks portal/token/zip Node hop).  
-2. Or next hybrid with a clean Rust SQL half (`invoice.create` / `createFromTracker` status writes if separable from PDF/Trigger, or `team.invite` insert vs email).  
-3. Or point remaining blind invoice downloads (portal token, zip bulk, MCP) at Rust with client-side fallback to Node on `no_stored_pdf`.
+1. **`team.invite` SQL insert vs Resend email** — if invite row write is separable from Trigger email, hybrid like remind/create.  
+2. Or **invoice recurring** pause/delete SQL half if BullMQ/notifications stay Node.  
+3. Or **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

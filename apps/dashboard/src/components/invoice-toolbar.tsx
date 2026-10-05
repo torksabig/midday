@@ -15,7 +15,10 @@ import JSZip from "jszip";
 import { useEffect, useRef, useState } from "react";
 import { MdContentCopy, MdOutlineFileDownload } from "react-icons/md";
 import { useCopyToClipboard } from "usehooks-ts";
-import { downloadFile } from "@/lib/download";
+import {
+  downloadInvoicePdf,
+  fetchInvoicePdfBlob,
+} from "@/lib/fetch-invoice-pdf";
 import { saveFile } from "@/lib/save-file";
 import { PaymentModal } from "./invoice/payment-modal";
 
@@ -81,26 +84,11 @@ export default function InvoiceToolbar({
     setIsDownloading(true);
     try {
       if (isPaid) {
-        // For paid invoices, download both invoice and receipt as a zip
+        // Invoice: Rust→Node; receipt: Node React-PDF only
         const zip = new JSZip();
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-        // Fetch both PDFs in parallel for better performance
-        const [invoiceResponse, receiptResponse] = await Promise.all([
-          fetch(`${apiUrl}/files/download/invoice?token=${token}`),
-          fetch(`${apiUrl}/files/download/invoice?token=${token}&type=receipt`),
-        ]);
-
-        if (!invoiceResponse.ok) {
-          throw new Error("Failed to fetch invoice");
-        }
-        if (!receiptResponse.ok) {
-          throw new Error("Failed to fetch receipt");
-        }
-
         const [invoiceBlob, receiptBlob] = await Promise.all([
-          invoiceResponse.blob(),
-          receiptResponse.blob(),
+          fetchInvoicePdfBlob({ token }),
+          fetchInvoicePdfBlob({ token, type: "receipt" }),
         ]);
 
         zip.file(`${invoiceNumber}.pdf`, invoiceBlob);
@@ -115,11 +103,7 @@ export default function InvoiceToolbar({
 
         await saveFile(zipBlob, `${invoiceNumber}-invoice-and-receipt.zip`);
       } else {
-        // Download invoice only
-        await downloadFile(
-          `${process.env.NEXT_PUBLIC_API_URL}/files/download/invoice?token=${token}`,
-          `${invoiceNumber}.pdf`,
-        );
+        await downloadInvoicePdf({ token }, `${invoiceNumber}.pdf`);
       }
     } catch (error) {
       toast({

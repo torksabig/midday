@@ -33,10 +33,15 @@ import { DEFAULT_TEMPLATE, PdfTemplate, renderToStream } from "@midday/invoice";
 import { calculateTotal } from "@midday/invoice/calculate";
 import { transformCustomerToContent } from "@midday/invoice/utils";
 import { triggerJob } from "@midday/job-client";
+import {
+  getReplacementApiUrl,
+  shouldDelegateToReplacementBackend,
+} from "@midday/replacement-backend";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { addDays } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
+import { fetchStoredInvoicePdfFromRust } from "../../rest/routers/files/invoice-pdf-from-rust";
 import {
   mcpInvoiceDetailSchema,
   mcpInvoiceListItemSchema,
@@ -58,6 +63,25 @@ import {
   truncateListResponse,
   withErrorHandling,
 } from "../utils";
+
+/** Prefer Rust when vault `filePath` is known; otherwise residual Node (React-PDF). */
+function mcpInvoicePdfUrl(
+  apiUrl: string,
+  invoice: { token?: string | null; filePath?: string[] | null },
+): string | null {
+  if (!invoice.token) return null;
+  const tokenQs = `token=${encodeURIComponent(invoice.token)}`;
+  const hasStored =
+    Array.isArray(invoice.filePath) &&
+    invoice.filePath.length > 0 &&
+    invoice.filePath.every((p) => typeof p === "string" && p.length > 0);
+
+  if (hasStored && shouldDelegateToReplacementBackend()) {
+    return `${getReplacementApiUrl()}/files/download/invoice?${tokenQs}`;
+  }
+
+  return `${apiUrl}/files/download/invoice?${tokenQs}`;
+}
 
 function isAllowedLogoUrl(url: string): boolean {
   return url.startsWith("https://service.midday.ai/");
@@ -162,9 +186,7 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
           mcpInvoiceListItemSchema,
           (result.data ?? []).map((invoice) => ({
             ...invoice,
-            pdfUrl: invoice.token
-              ? `${apiUrl}/files/download/invoice?token=${encodeURIComponent(invoice.token)}`
-              : null,
+            pdfUrl: mcpInvoicePdfUrl(apiUrl, invoice),
             previewUrl: invoice.token
               ? `${DASHBOARD_URL}/i/${invoice.token}`
               : null,
@@ -217,9 +239,7 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
           };
         }
 
-        const pdfUrl = result.token
-          ? `${apiUrl}/files/download/invoice?token=${encodeURIComponent(result.token)}`
-          : null;
+        const pdfUrl = mcpInvoicePdfUrl(apiUrl, result);
         const previewUrl = result.token
           ? `${DASHBOARD_URL}/i/${result.token}`
           : null;
@@ -239,15 +259,35 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
 
         if (includePdf) {
           try {
-            const stream = await renderToStream(
-              await PdfTemplate(result, { isReceipt: false }),
-            );
-            const resource = await streamToResource(
-              stream,
-              pdfUrl ?? `invoice:${id}`,
-              "application/pdf",
-            );
-            content.push(resource);
+            let attached = false;
+            if (result.token && shouldDelegateToReplacementBackend()) {
+              const stored = await fetchStoredInvoicePdfFromRust(
+                `token=${encodeURIComponent(result.token)}`,
+              );
+              if (stored.kind === "pdf") {
+                const buffer = await stored.response.arrayBuffer();
+                content.push({
+                  type: "resource" as const,
+                  resource: {
+                    uri: pdfUrl ?? `invoice:${id}`,
+                    mimeType: "application/pdf",
+                    blob: Buffer.from(buffer).toString("base64"),
+                  },
+                });
+                attached = true;
+              }
+            }
+            if (!attached) {
+              const stream = await renderToStream(
+                await PdfTemplate(result, { isReceipt: false }),
+              );
+              const resource = await streamToResource(
+                stream,
+                pdfUrl ?? `invoice:${id}`,
+                "application/pdf",
+              );
+              content.push(resource);
+            }
           } catch {
             content.push({
               type: "text" as const,
@@ -1161,9 +1201,7 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
             teamId,
           });
 
-          const pdfUrl = fresh?.token
-            ? `${apiUrl}/files/download/invoice?token=${encodeURIComponent(fresh.token)}`
-            : null;
+          const pdfUrl = fresh ? mcpInvoicePdfUrl(apiUrl, fresh) : null;
           const previewUrl = fresh?.token
             ? `${DASHBOARD_URL}/i/${fresh.token}`
             : null;
@@ -1506,9 +1544,7 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
             teamId,
           });
 
-          const pdfUrl = fresh?.token
-            ? `${apiUrl}/files/download/invoice?token=${encodeURIComponent(fresh.token)}`
-            : null;
+          const pdfUrl = fresh ? mcpInvoicePdfUrl(apiUrl, fresh) : null;
           const previewUrl = fresh?.token
             ? `${DASHBOARD_URL}/i/${fresh.token}`
             : null;
@@ -1938,9 +1974,7 @@ export const registerInvoiceTools: RegisterTools = (server, ctx) => {
 
           const fresh = await getInvoiceById(db, { id: result.id, teamId });
 
-          const pdfUrl = fresh?.token
-            ? `${apiUrl}/files/download/invoice?token=${encodeURIComponent(fresh.token)}`
-            : null;
+          const pdfUrl = fresh ? mcpInvoicePdfUrl(apiUrl, fresh) : null;
           const previewUrl = fresh?.token
             ? `${DASHBOARD_URL}/i/${fresh.token}`
             : null;
