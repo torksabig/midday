@@ -546,6 +546,9 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `POST /inbox/{id}/presigned-url` | yes | Rust signed-url |
 | `GET /inbox`, `GET /inbox/{id}`, `PATCH /inbox/{id}`, `DELETE /inbox/{id}` | yes | Rust list/get/update/delete via `replacement-rest-inbox.ts` (2026-10-05) |
 | `POST /transactions/.../presigned-url` | yes | Rust signed-url |
+| `GET /transactions`, `GET /transactions/{id}` | yes | Rust list/get via `replacement-rest-transactions.ts` (2026-10-05) |
+| `POST /transactions`, `PATCH /transactions/{id}`, `PATCH /transactions/bulk`, `DELETE /transactions/{id}`, `DELETE /transactions/bulk` | yes | Rust create/update/delete-many (2026-10-05) |
+| `POST /transactions/bulk` | no | bulk create — Drizzle only (no clone route) |
 | Other REST inbox routes | no | create/match/blocklist stay Drizzle on `:3003` |
 | Other REST routers (customers, teams, invoices, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 

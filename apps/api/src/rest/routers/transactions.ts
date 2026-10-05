@@ -17,6 +17,14 @@ import {
   updateTransactionsSchema,
 } from "@api/schemas/transactions";
 import {
+  createTransactionForRest,
+  deleteTransactionsForRest,
+  fetchTransactionByIdForRest,
+  fetchTransactionsListForRest,
+  updateTransactionForRest,
+  updateTransactionsForRest,
+} from "@api/rest/services/replacement-rest-transactions";
+import {
   extractBearerToken,
   fetchReplacementVaultPresignedUrl,
   normalizeVaultObjectPath,
@@ -36,6 +44,7 @@ import {
   updateTransactions,
 } from "@midday/db/queries";
 import { signedUrl } from "@midday/supabase/storage";
+import { HTTPException } from "hono/http-exception";
 import { withRequiredScope } from "../middleware";
 
 const app = new OpenAPIHono<Context>();
@@ -70,10 +79,35 @@ app.openapi(
     const teamId = c.get("teamId");
     const query = c.req.valid("query");
 
-    const data = await getTransactions(db, {
-      teamId,
-      ...query,
-    });
+    const data = await fetchTransactionsListForRest(
+      {
+        cursor: query.cursor,
+        pageSize: query.pageSize,
+        q: query.q,
+        sort: query.sort,
+        statuses: query.statuses,
+        start: query.start,
+        end: query.end,
+        categories: query.categories,
+        accounts: query.accounts,
+        tags: query.tags,
+        exported: query.exported,
+        fulfilled: query.fulfilled,
+        assignees: query.assignees,
+        attachments: query.attachments,
+        recurring: query.recurring,
+        amountRange: query.amountRange,
+        amount: query.amount,
+        type: query.type,
+        manual: query.manual,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getTransactions(db, {
+          teamId,
+          ...query,
+        }),
+    );
 
     return c.json(validateResponse(data, transactionsResponseSchema));
   },
@@ -108,7 +142,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await getTransactionById(db, { id, teamId });
+    const result = await fetchTransactionByIdForRest(
+      id,
+      c.req.header("Authorization"),
+      () => getTransactionById(db, { id, teamId }),
+    );
+
+    if (result == null) {
+      throw new HTTPException(404, { message: "Transaction not found" });
+    }
 
     return c.json(validateResponse(result, transactionResponseSchema));
   },
@@ -311,7 +353,21 @@ app.openapi(
     const teamId = c.get("teamId");
     const params = c.req.valid("json");
 
-    const result = await createTransaction(db, { teamId, ...params });
+    const result = await createTransactionForRest(
+      {
+        name: params.name,
+        amount: params.amount,
+        currency: params.currency,
+        date: params.date,
+        bankAccountId: params.bankAccountId,
+        assignedId: params.assignedId,
+        categorySlug: params.categorySlug,
+        note: params.note,
+        attachments: params.attachments,
+      },
+      c.req.header("Authorization"),
+      () => createTransaction(db, { teamId, ...params }),
+    );
 
     return c.json(validateResponse(result, transactionResponseSchema));
   },
@@ -355,11 +411,16 @@ app.openapi(
     const userId = c.get("session").user.id;
     const params = c.req.valid("json");
 
-    const result = await updateTransactions(db, {
-      teamId,
-      userId,
-      ...params,
-    });
+    const result = await updateTransactionsForRest(
+      { teamId, userId, ...params },
+      c.req.header("Authorization"),
+      () =>
+        updateTransactions(db, {
+          teamId,
+          userId,
+          ...params,
+        }),
+    );
 
     return c.json(
       validateResponse(
@@ -410,12 +471,17 @@ app.openapi(
     const { id } = c.req.valid("param");
     const params = c.req.valid("json");
 
-    const result = await updateTransaction(db, {
-      teamId,
-      id,
-      userId,
-      ...params,
-    });
+    const result = await updateTransactionForRest(
+      { id, userId, teamId, ...params },
+      c.req.header("Authorization"),
+      () =>
+        updateTransaction(db, {
+          teamId,
+          id,
+          userId,
+          ...params,
+        }),
+    );
 
     return c.json(validateResponse(result, transactionResponseSchema));
   },
@@ -502,10 +568,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const params = c.req.valid("json");
 
-    const result = await deleteTransactions(db, {
-      teamId,
-      ids: params,
-    });
+    const result = await deleteTransactionsForRest(
+      params,
+      c.req.header("Authorization"),
+      () => deleteTransactions(db, { teamId, ids: params }),
+    );
 
     return c.json(validateResponse(result, deleteTransactionsResponseSchema));
   },
@@ -541,7 +608,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const [result] = await deleteTransactions(db, { teamId, ids: [id] });
+    const [result] = await deleteTransactionsForRest(
+      [id],
+      c.req.header("Authorization"),
+      () => deleteTransactions(db, { teamId, ids: [id] }),
+    );
 
     return c.json(validateResponse(result, deleteTransactionResponseSchema));
   },
