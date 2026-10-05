@@ -11,6 +11,7 @@ import { memo, useEffect, useState } from "react";
 import { FilePreview } from "@/components/file-preview";
 import { VaultItemTags } from "@/components/vault/vault-item-tags";
 import { useDocumentParams } from "@/hooks/use-document-params";
+import { reprocessDocumentFromRust } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 import { isStaleProcessing } from "@/utils/document";
 import { VaultItemActions } from "./vault-item-actions";
@@ -99,23 +100,39 @@ export const VaultItem = memo(function VaultItem({ data, small }: Props) {
   const displayName =
     data?.title || data?.name?.split("/").at(-1) || "Document";
 
-  const reprocessMutation = useMutation(
-    trpc.documents.reprocessDocument.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.queryKey(),
-        });
-      },
-      onError: () => {
-        // Reset local state so user can retry
-        setIsReprocessing(false);
-      },
-    }),
+  // SQL on Rust; process-document job enqueue stays on residual Node.
+  const enqueueMutation = useMutation(
+    trpc.documents.enqueueProcessDocument.mutationOptions(),
   );
+
+  const reprocessMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      const result = await reprocessDocumentFromRust(input.id);
+      if (result.enqueue) {
+        await enqueueMutation.mutateAsync([
+          {
+            filePath: result.filePath,
+            mimetype: result.mimetype,
+            size: 0,
+          },
+        ]);
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.queryKey(),
+      });
+    },
+    onError: () => {
+      // Reset local state so user can retry
+      setIsReprocessing(false);
+    },
+  });
 
   const handleReprocess = (e: React.MouseEvent) => {
     e.stopPropagation();

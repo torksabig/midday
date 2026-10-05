@@ -9,9 +9,9 @@
 | Process | Port | Role |
 |---------|------|------|
 | Supabase (local) | `54321` | Auth + Postgres + vault storage |
-| **clone** Axum API | `8787` | Durable product logic (cut-over screens) + vault `/files/proxy|download/file` |
+| **clone** Axum API | `8787` | Durable product logic (cut-over screens) + vault `/files/*` + document process/reprocess SQL + signed-urls |
 | **apps/dashboard** | `3001` | Frozen UI — direct Rust via `NEXT_PUBLIC_RUST_API_URL` |
-| **apps/api** (minimal Node) | `3003` | Residual tRPC + invoice PDF `/files/download/invoice` + `/chat` + OAuth callbacks |
+| **apps/api** (minimal Node) | `3003` | Residual tRPC (job enqueue hybrids) + invoice PDF render `/files/download/invoice` + `/chat` + OAuth callbacks |
 
 ```bash
 # 1) Clone API
@@ -57,13 +57,22 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `inbox.delete` / `deleteMany` | **Rust direct** — SQL + vault storage remove (storage errors logged, non-fatal) |
 | `shortLinks.createForDocument` | **Rust direct** — signed URL + short_links insert |
 
+### Migrated (2026-10-04 reprocess / signedUrls / invoice-data slice)
+
+| Capability | Now |
+|------------|-----|
+| `documents.reprocessDocument` SQL | **Rust** `POST /api/v1/documents/{id}/reprocess` — dashboard → Rust; Node `enqueueProcessDocument` for job only |
+| `documents.processDocument` SQL | **Rust** `POST /api/v1/documents/process` — unsupported → completed; dashboard enqueues supported via Node |
+| `documents.signedUrls` | **Rust** `POST /api/v1/documents/signed-urls` — vault zip download |
+| Invoice PDF **SQL** | **Rust** `GET /files/invoice-data` (fk+id or token) — Node `/files/download/invoice` only React-PDF renders |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
 
 | Procedure | Why Node |
 |-----------|----------|
-| `documents.reprocessDocument` / `processDocument` | process-document jobs |
+| `documents.enqueueProcessDocument` (+ thin `reprocessDocument`/`processDocument` orchestrators) | process-document BullMQ jobs |
 | `inbox.processAttachments` / `retryMatching` | Jobs |
 | `team.invite` / `create` / `delete` | Trigger email / multi-table / delete-team job |
 | `team.updateBaseCurrency` / `exportAllData` | Trigger jobs |
@@ -88,14 +97,13 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | Composio | `connectors.*` |
 | Stripe / Polar | `billing.*`, `invoicePayments.*` |
 | Admin email | `user.delete`, `apiKeys.upsert` |
-| Storage-only | `documents.signedUrls` (batch signed URLs for zip download) |
 | Job status | `jobs.getStatus` |
-| Invoice PDF bytes | `GET /files/download/invoice` (React PDF render) |
+| Invoice PDF **bytes** | `GET /files/download/invoice` (React PDF render — `@midday/invoice`) |
 
 #### Non-tRPC `apps/api` surfaces
 
 - `POST /chat`
-- `GET /files/download/invoice` (PDF) — vault proxy/file download owned by Rust; Node forwards if hit
+- `GET /files/download/invoice` (PDF **render** only; SQL via Rust `/files/invoice-data`)
 - Gmail/Outlook OAuth redirect URIs on `:3003`
 
 #### Internal non-dashboard tRPC
@@ -107,28 +115,30 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 Full deletion of `apps/api`, `packages/replacement-backend`, `packages/db` waits until:
 
 1. Every §KEEP hybrid/STOP procedure is Rust-owned **or** explicitly retired with a migration note in product UX.
-2. Invoice PDF `/files/download/invoice` + `/chat` + OAuth callbacks moved or replaced.
+2. Invoice PDF **render** (`/files/download/invoice`) + `/chat` + OAuth callbacks moved or replaced.
 3. Jobs/worker no longer call Node tRPC banking.
 
 Until then, `@midday/replacement-backend` remains for residual hybrid SQL delegation only.
 
 ## Migration notes (capability status)
 
-| Capability | Status after Stage 4 files/hybrid slice |
+| Capability | Status after Stage 4 reprocess/signedUrls slice |
 |------------|----------------------------------------|
 | Overview / tx / inbox reads / invoices SQL / tracker / reports / tags / categories | **Rust direct** |
 | Vault proxy / vault file download | **Rust direct** |
 | Vault delete / inbox delete / document short-link | **Rust direct** |
+| Document reprocess / process SQL + signedUrls | **Rust direct** (job enqueue Node) |
+| Invoice PDF SQL | **Rust** (`/files/invoice-data`); render Node |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
 | Billing / Stripe invoice payments | **Node** — STOP |
-| Invoice PDF download (render) | **Node** — STOP / non-tRPC |
-| Document reprocess / invoice send / remind / recurring pause-delete | **Node** — hybrid |
+| Invoice PDF download (React PDF render) | **Node** — STOP / non-tRPC |
+| Invoice send / remind / recurring pause-delete | **Node** — hybrid |
 | Team invite email / create team / delete team | **Node** — hybrid |
 
 ### Next recommended residual slice
 
-1. **`documents.reprocessDocument` / `processDocument`** — already have Rust worker SQL; wire dashboard → Rust + keep job enqueue in Node *or* move enqueue if a clean path exists.  
-2. Or **invoice PDF** (`/files/download/invoice`) — largest remaining non-tRPC file surface (React PDF); requires porting `@midday/invoice` render or a new Rust PDF path.  
-3. Or **`documents.signedUrls`** — storage-only STOP; can move to Rust with service role once zip download callers cut over.
+1. **Invoice PDF render** — port `@midday/invoice` React-PDF off Node, or serve stored vault PDFs from Rust when `file_path` exists (draft/preview/receipt still need live render).  
+2. Or **`documents.signedUrl`** (single) if any callers remain — batch `signedUrls` already on Rust.  
+3. Or next hybrid job orchestrator with a clean Rust SQL half (`customers.enrich` SQL already exists; job stays Node).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

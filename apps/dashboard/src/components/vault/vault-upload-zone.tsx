@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type FileRejection, useDropzone } from "react-dropzone";
 import { useUserQuery } from "@/hooks/use-user";
+import { processDocumentsFromRust } from "@/lib/rust-api/documents-client";
 import { useTRPC } from "@/trpc/client";
 import { resumableUpload } from "@/utils/upload";
 
@@ -39,9 +40,22 @@ export function VaultUploadZone({ onUpload, children }: Props) {
   const uploadProgress = useRef<number[]>([]);
   const { toast, dismiss, update } = useToast();
 
-  const processDocumentMutation = useMutation(
-    trpc.documents.processDocument.mutationOptions(),
+  // SQL (unsupported → completed) on Rust; process-document jobs on residual Node.
+  const enqueueMutation = useMutation(
+    trpc.documents.enqueueProcessDocument.mutationOptions(),
   );
+
+  const processDocumentMutation = useMutation({
+    mutationFn: async (
+      items: Array<{ filePath: string[]; mimetype: string; size: number }>,
+    ) => {
+      const result = await processDocumentsFromRust(items);
+      if (result.toEnqueue.length > 0) {
+        await enqueueMutation.mutateAsync(result.toEnqueue);
+      }
+      return result;
+    },
+  });
 
   useEffect(() => {
     if (!toastId && showProgress) {

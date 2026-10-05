@@ -4292,6 +4292,104 @@ export async function fetchReplacementDocumentsProcessingStatus(
   return payload.map((row) => deepCamelCaseKeys(row));
 }
 
+/** Midday `documents.reprocessDocument` SQL half (status + enqueue hint). */
+export async function fetchReplacementDocumentReprocess(
+  baseUrl: string,
+  token: string,
+  id: string,
+): Promise<{
+  success: boolean;
+  skipped: boolean;
+  enqueue: boolean;
+  filePath: string[];
+  mimetype: string;
+  document: { id: string; processingStatus: string };
+}> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/documents/${encodeURIComponent(id)}/reprocess`,
+    token,
+    {},
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    success?: boolean;
+    skipped?: boolean;
+    enqueue?: boolean;
+    filePath?: string[];
+    mimetype?: string;
+    document?: { id?: string; processingStatus?: string };
+  };
+  if (typeof row.document?.id !== "string") {
+    throw new Error("document reprocess payload missing document.id");
+  }
+  return {
+    success: row.success !== false,
+    skipped: Boolean(row.skipped),
+    enqueue: Boolean(row.enqueue),
+    filePath: Array.isArray(row.filePath) ? row.filePath : [],
+    mimetype: typeof row.mimetype === "string" ? row.mimetype : "application/octet-stream",
+    document: {
+      id: row.document.id,
+      processingStatus: row.document.processingStatus ?? "pending",
+    },
+  };
+}
+
+/** Midday `documents.processDocument` SQL half — unsupported status + enqueue list. */
+export async function fetchReplacementDocumentsProcess(
+  baseUrl: string,
+  token: string,
+  items: Array<{ filePath: string[]; mimetype: string; size?: number }>,
+): Promise<{
+  toEnqueue: Array<{ filePath: string[]; mimetype: string; size: number }>;
+  unsupportedCompleted: number;
+}> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/documents/process`,
+    token,
+    items,
+  );
+  const row = deepCamelCaseKeys(payload) as {
+    toEnqueue?: Array<{ filePath?: string[]; mimetype?: string; size?: number }>;
+    unsupportedCompleted?: number;
+  };
+  const toEnqueue = (row.toEnqueue ?? []).flatMap((item) => {
+    if (!Array.isArray(item.filePath) || typeof item.mimetype !== "string") {
+      return [];
+    }
+    return [
+      {
+        filePath: item.filePath,
+        mimetype: item.mimetype,
+        size: typeof item.size === "number" ? item.size : 0,
+      },
+    ];
+  });
+  return {
+    toEnqueue,
+    unsupportedCompleted: row.unsupportedCompleted ?? 0,
+  };
+}
+
+/** Midday `documents.signedUrls` — batch vault signed URLs. */
+export async function fetchReplacementDocumentsSignedUrls(
+  baseUrl: string,
+  token: string,
+  paths: string[],
+): Promise<string[]> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/documents/signed-urls`,
+    token,
+    paths,
+  );
+  if (!Array.isArray(payload)) {
+    throw new Error("documents signed-urls expected array");
+  }
+  return payload.filter((u): u is string => typeof u === "string");
+}
+
 /** Midday `getAppByAppId` — used by accounting.export before jobs. */
 export async function fetchReplacementAppByAppId(
   baseUrl: string,

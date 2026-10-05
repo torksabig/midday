@@ -5,12 +5,14 @@ import { getInvoiceById } from "@midday/db/queries";
 import { verifyFileKey } from "@midday/encryption";
 import { PdfTemplate, renderToStream } from "@midday/invoice";
 import { verify } from "@midday/invoice/token";
+import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
 import { HTTPException } from "hono/http-exception";
 import { publicMiddleware } from "../../middleware";
 import { withDatabase } from "../../middleware/db";
 import { withFileAuth } from "../../middleware/file-auth";
 import { withClientIp } from "../../middleware/ip";
 import { forwardVaultFileToRust } from "./forward-to-rust";
+import { fetchInvoiceDataFromRust } from "./invoice-data-from-rust";
 
 const app = new OpenAPIHono<Context>();
 
@@ -194,10 +196,34 @@ downloadInvoiceApp.openapi(
       });
     }
 
-    let invoiceData = null;
+    let invoiceData: Awaited<ReturnType<typeof getInvoiceById>> | null = null;
 
-    if (id) {
-      // Require authentication for ID-based access
+    // Prefer Rust SQL (`/files/invoice-data`); Node keeps React-PDF render only.
+    if (shouldDelegateToReplacementBackend()) {
+      try {
+        const fk = id ? c.req.query("fk") : undefined;
+        if (id && !fk) {
+          throw new HTTPException(401, {
+            message:
+              "File key (fk) query parameter is required when using invoice ID.",
+          });
+        }
+        const fromRust = await fetchInvoiceDataFromRust({
+          id: id || undefined,
+          token: token || undefined,
+          fk: fk || undefined,
+        });
+        invoiceData = fromRust as typeof invoiceData;
+      } catch (error) {
+        if (error instanceof HTTPException) throw error;
+        // Fail closed in replacement mode — no Drizzle invoice SQL.
+        throw new HTTPException(502, {
+          message: `Failed to load invoice data from Rust: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        });
+      }
+    } else if (id) {
       const teamId = c.get("teamId");
       if (!teamId) {
         throw new HTTPException(401, {
@@ -210,7 +236,6 @@ downloadInvoiceApp.openapi(
         teamId,
       });
     } else if (token) {
-      // Public access with token - verify token and get invoice
       try {
         const { id: invoiceId } = (await verify(decodeURIComponent(token))) as {
           id: string;
@@ -224,11 +249,9 @@ downloadInvoiceApp.openapi(
           id: invoiceId,
         });
       } catch (error) {
-        // Re-throw HTTPException as-is (e.g., "Invoice not found" from line 253)
         if (error instanceof HTTPException) {
           throw error;
         }
-        // Only replace error message for actual verification failures
         throw new HTTPException(404, { message: "Invalid token" });
       }
     }

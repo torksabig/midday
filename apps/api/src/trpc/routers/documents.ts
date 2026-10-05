@@ -15,8 +15,9 @@ import {
   tryDelegateDocumentsGetRelated,
   tryDelegateDocumentsCheckAttachments,
   tryDelegateDocumentsDelete,
-  tryDelegateDocumentProcessingStatus,
-  tryDelegateDocumentsProcessingStatus,
+  tryDelegateDocumentReprocess,
+  tryDelegateDocumentsProcess,
+  tryDelegateDocumentsSignedUrls,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -33,6 +34,33 @@ import { isMimeTypeSupportedForProcessing } from "@midday/documents/utils";
 import { triggerJob } from "@midday/job-client";
 import { remove, signedUrl } from "@midday/supabase/storage";
 import { TRPCError } from "@trpc/server";
+
+async function enqueueProcessDocumentJobs(
+  teamId: string,
+  items: Array<{ filePath: string[]; mimetype: string }>,
+  jobIdPrefix: "process-doc" | "reprocess-doc",
+) {
+  const jobResults = await Promise.all(
+    items.map((item) =>
+      triggerJob(
+        "process-document",
+        {
+          filePath: item.filePath,
+          mimetype: item.mimetype,
+          teamId,
+        },
+        "documents",
+        {
+          jobId:
+            jobIdPrefix === "reprocess-doc"
+              ? `${jobIdPrefix}_${teamId}_${item.filePath.join("/")}_${Date.now()}`
+              : `${jobIdPrefix}_${teamId}_${item.filePath.join("/")}`,
+        },
+      ),
+    ),
+  );
+  return jobResults.map((result) => ({ id: result.id }));
+}
 
 export const documentsRouter = createTRPCRouter({
   get: protectedProcedure
@@ -170,37 +198,39 @@ export const documentsRouter = createTRPCRouter({
       return document;
     }),
 
+  /**
+   * Hybrid: SQL (unsupported → completed) on Rust; process-document jobs on Node.
+   * Dashboard prefers Rust `POST /documents/process` + `enqueueProcessDocument`.
+   */
   processDocument: protectedProcedure
     .input(processDocumentSchema)
     .mutation(async ({ ctx: { teamId, db, accessToken }, input }) => {
-      const supportedDocuments = input.filter((item) =>
+      let toEnqueue = input.filter((item) =>
         isMimeTypeSupportedForProcessing(item.mimetype),
       );
 
-      const unsupportedDocuments = input.filter(
-        (item) => !isMimeTypeSupportedForProcessing(item.mimetype),
-      );
-
-      if (unsupportedDocuments.length > 0) {
-        const unsupportedNames = unsupportedDocuments.map((doc) =>
-          doc.filePath.join("/"),
-        );
-
-        if (shouldDelegateToReplacementBackend()) {
-          const delegated = await tryDelegateDocumentsProcessingStatus(
-            unsupportedNames,
-            "completed",
-            accessToken,
-          );
-          if (!delegated.delegated) {
-            assertLegacyIdentityFallbackAllowed();
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsProcess(input, accessToken);
+        if (delegated.delegated) {
+          toEnqueue = delegated.result.toEnqueue;
+        } else {
+          assertLegacyIdentityFallbackAllowed();
+          const unsupportedNames = input
+            .filter((item) => !isMimeTypeSupportedForProcessing(item.mimetype))
+            .map((doc) => doc.filePath.join("/"));
+          if (unsupportedNames.length > 0) {
             await updateDocuments(db, {
               ids: unsupportedNames,
               teamId: teamId!,
               processingStatus: "completed",
             });
           }
-        } else {
+        }
+      } else {
+        const unsupportedNames = input
+          .filter((item) => !isMimeTypeSupportedForProcessing(item.mimetype))
+          .map((doc) => doc.filePath.join("/"));
+        if (unsupportedNames.length > 0) {
           await updateDocuments(db, {
             ids: unsupportedNames,
             teamId: teamId!,
@@ -209,59 +239,86 @@ export const documentsRouter = createTRPCRouter({
         }
       }
 
-      if (supportedDocuments.length === 0) {
+      if (toEnqueue.length === 0) {
         return;
       }
 
-      // Trigger BullMQ jobs for each supported document
-      // Use deterministic jobId based on teamId:filePath for deduplication
-      const jobResults = await Promise.all(
-        supportedDocuments.map((item) =>
-          triggerJob(
-            "process-document",
-            {
-              filePath: item.filePath,
-              mimetype: item.mimetype,
-              teamId: teamId!,
-            },
-            "documents",
-            { jobId: `process-doc_${teamId}_${item.filePath.join("/")}` },
-          ),
-        ),
-      );
-
       return {
-        jobs: jobResults.map((result) => ({ id: result.id })),
+        jobs: await enqueueProcessDocumentJobs(
+          teamId!,
+          toEnqueue,
+          "process-doc",
+        ),
       };
     }),
 
+  /** Job-only enqueue after dashboard/Rust SQL half for process/reprocess. */
+  enqueueProcessDocument: protectedProcedure
+    .input(processDocumentSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      const supported = input.filter((item) =>
+        isMimeTypeSupportedForProcessing(item.mimetype),
+      );
+      if (supported.length === 0) {
+        return { jobs: [] as Array<{ id: string }> };
+      }
+      return {
+        jobs: await enqueueProcessDocumentJobs(
+          teamId!,
+          supported,
+          "process-doc",
+        ),
+      };
+    }),
+
+  /**
+   * Hybrid: SQL (get + status) on Rust; process-document job on Node.
+   * Dashboard prefers Rust `POST /documents/{id}/reprocess` + enqueue.
+   */
   reprocessDocument: protectedProcedure
     .input(reprocessDocumentSchema)
     .mutation(async ({ ctx: { teamId, db, accessToken }, input }) => {
-      type DocRow = Awaited<ReturnType<typeof getDocumentById>>;
-      let document: DocRow | null | undefined;
-
       if (shouldDelegateToReplacementBackend()) {
-        const delegated = await tryDelegateDocumentsGetById(
+        const delegated = await tryDelegateDocumentReprocess(
           input.id,
-          undefined,
           accessToken,
         );
         if (delegated.delegated) {
-          document = delegated.document as DocRow;
-        } else {
-          assertLegacyIdentityFallbackAllowed();
-          document = await getDocumentById(db, {
-            id: input.id,
-            teamId: teamId!,
-          });
+          const { result } = delegated;
+          if (result.skipped || !result.enqueue) {
+            return {
+              success: true,
+              skipped: true as const,
+              document: {
+                id: result.document.id,
+                processingStatus: "completed" as const,
+              },
+            };
+          }
+
+          const jobs = await enqueueProcessDocumentJobs(
+            teamId!,
+            [{ filePath: result.filePath, mimetype: result.mimetype }],
+            "reprocess-doc",
+          );
+
+          return {
+            success: true,
+            jobId: jobs[0]?.id,
+            document: {
+              id: result.document.id,
+              processingStatus: "pending" as const,
+            },
+          };
         }
-      } else {
-        document = await getDocumentById(db, {
-          id: input.id,
-          teamId: teamId!,
-        });
+        assertLegacyIdentityFallbackAllowed();
       }
+
+      type DocRow = Awaited<ReturnType<typeof getDocumentById>>;
+      const document: DocRow | null | undefined = await getDocumentById(db, {
+        id: input.id,
+        teamId: teamId!,
+      });
 
       if (!document) {
         throw new TRPCError({
@@ -281,26 +338,11 @@ export const documentsRouter = createTRPCRouter({
         });
       }
 
-      const setStatus = async (processingStatus: "completed" | "pending") => {
-        if (shouldDelegateToReplacementBackend()) {
-          const delegated = await tryDelegateDocumentProcessingStatus(
-            input.id,
-            processingStatus,
-            accessToken,
-          );
-          if (delegated.delegated) {
-            return;
-          }
-          assertLegacyIdentityFallbackAllowed();
-        }
+      if (!isMimeTypeSupportedForProcessing(mimetype)) {
         await updateDocumentProcessingStatus(db, {
           id: input.id,
-          processingStatus,
+          processingStatus: "completed",
         });
-      };
-
-      if (!isMimeTypeSupportedForProcessing(mimetype)) {
-        await setStatus("completed");
         return {
           success: true,
           skipped: true,
@@ -308,24 +350,20 @@ export const documentsRouter = createTRPCRouter({
         };
       }
 
-      await setStatus("pending");
+      await updateDocumentProcessingStatus(db, {
+        id: input.id,
+        processingStatus: "pending",
+      });
 
-      const jobResult = await triggerJob(
-        "process-document",
-        {
-          filePath: document.pathTokens,
-          mimetype,
-          teamId: teamId!,
-        },
-        "documents",
-        {
-          jobId: `reprocess-doc_${teamId}_${document.pathTokens.join("/")}_${Date.now()}`,
-        },
+      const jobs = await enqueueProcessDocumentJobs(
+        teamId!,
+        [{ filePath: document.pathTokens, mimetype }],
+        "reprocess-doc",
       );
 
       return {
         success: true,
-        jobId: jobResult.id,
+        jobId: jobs[0]?.id,
         document: { id: input.id, processingStatus: "pending" as const },
       };
     }),
@@ -344,7 +382,18 @@ export const documentsRouter = createTRPCRouter({
 
   signedUrls: protectedProcedure
     .input(signedUrlsSchema)
-    .mutation(async ({ input, ctx: { supabase } }) => {
+    .mutation(async ({ input, ctx: { supabase, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentsSignedUrls(
+          input,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.urls;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const results = await Promise.all(
         input.map((filePath) =>
           signedUrl(supabase, {

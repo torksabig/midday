@@ -29,6 +29,7 @@ import { useUserQuery } from "@/hooks/use-user";
 import {
   deleteDocumentFromRust,
   documentsInfiniteQueryOptions,
+  reprocessDocumentFromRust,
 } from "@/lib/rust-api/documents-client";
 import { createShortLinkForDocumentFromRust } from "@/lib/rust-api/short-links-client";
 import { useDocumentsStore } from "@/store/vault";
@@ -155,19 +156,35 @@ export function DataTable({ initialSettings }: Props) {
 
   const documents = baseDocuments;
 
-  const reprocessMutation = useMutation(
-    trpc.documents.reprocessDocument.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.infiniteQueryKey(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: trpc.documents.get.queryKey(),
-        });
-      },
-    }),
+  // SQL on Rust; process-document job enqueue stays on residual Node.
+  const enqueueMutation = useMutation(
+    trpc.documents.enqueueProcessDocument.mutationOptions(),
   );
+
+  const reprocessMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      const result = await reprocessDocumentFromRust(input.id);
+      if (result.enqueue) {
+        await enqueueMutation.mutateAsync([
+          {
+            filePath: result.filePath,
+            mimetype: result.mimetype,
+            size: 0,
+          },
+        ]);
+      }
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.infiniteQueryKey(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: trpc.documents.get.queryKey(),
+      });
+    },
+  });
 
   const handleDelete = useCallback(
     (id: string) => {

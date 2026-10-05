@@ -350,3 +350,154 @@ export async function deleteDocument(
       : null,
   };
 }
+
+export type ReprocessDocumentResult = {
+  success: boolean;
+  skipped: boolean;
+  enqueue: boolean;
+  filePath: string[];
+  mimetype: string;
+  document: { id: string; processingStatus: string };
+};
+
+export async function reprocessDocument(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<ReprocessDocumentResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/documents/${encodeURIComponent(id)}/reprocess`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const row = deepCamelCaseKeys(await response.json()) as Record<
+    string,
+    unknown
+  >;
+  const document = (row.document ?? {}) as Record<string, unknown>;
+  return {
+    success: row.success !== false,
+    skipped: Boolean(row.skipped),
+    enqueue: Boolean(row.enqueue),
+    filePath: Array.isArray(row.filePath) ? (row.filePath as string[]) : [],
+    mimetype:
+      typeof row.mimetype === "string"
+        ? row.mimetype
+        : "application/octet-stream",
+    document: {
+      id: String(document.id ?? id),
+      processingStatus: String(document.processingStatus ?? "pending"),
+    },
+  };
+}
+
+export type ProcessDocumentItem = {
+  filePath: string[];
+  mimetype: string;
+  size: number;
+};
+
+export type ProcessDocumentsResult = {
+  toEnqueue: ProcessDocumentItem[];
+  unsupportedCompleted: number;
+};
+
+export async function processDocuments(
+  baseUrl: string,
+  accessToken: string | null,
+  items: ProcessDocumentItem[],
+): Promise<ProcessDocumentsResult> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/documents/process`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(items),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const row = deepCamelCaseKeys(await response.json()) as Record<
+    string,
+    unknown
+  >;
+  const toEnqueue = Array.isArray(row.toEnqueue)
+    ? (row.toEnqueue as Array<Record<string, unknown>>).flatMap((item) => {
+        if (!Array.isArray(item.filePath) || typeof item.mimetype !== "string") {
+          return [];
+        }
+        return [
+          {
+            filePath: item.filePath as string[],
+            mimetype: item.mimetype,
+            size: typeof item.size === "number" ? item.size : 0,
+          },
+        ];
+      })
+    : [];
+
+  return {
+    toEnqueue,
+    unsupportedCompleted:
+      typeof row.unsupportedCompleted === "number"
+        ? row.unsupportedCompleted
+        : 0,
+  };
+}
+
+export async function createDocumentsSignedUrls(
+  baseUrl: string,
+  accessToken: string | null,
+  paths: string[],
+): Promise<string[]> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(`${baseUrl}/api/v1/documents/signed-urls`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(paths),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new RustApiError(500, "signed-urls response was not an array");
+  }
+  return payload.filter((u): u is string => typeof u === "string");
+}

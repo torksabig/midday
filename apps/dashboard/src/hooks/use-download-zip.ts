@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import JSZip from "jszip";
+import { createDocumentsSignedUrlsFromRust } from "@/lib/rust-api/documents-client";
 import { saveFile } from "@/lib/save-file";
-import { useTRPC } from "@/trpc/client";
 
 function getFilenameFromPath(path: string): string {
   return path.split("/").at(-1) || path;
@@ -84,11 +84,10 @@ async function zipAndDownloadFiles(
 }
 
 export function useDownloadZip() {
-  const trpc = useTRPC();
-
-  const { mutateAsync, isPending, error } = useMutation(
-    trpc.documents.signedUrls.mutationOptions(),
-  );
+  const { mutateAsync, isPending, error } = useMutation({
+    mutationFn: (filePaths: string[]) =>
+      createDocumentsSignedUrlsFromRust(filePaths),
+  });
 
   const handleDownloadZip = async (filePaths: string[]) => {
     const data = await mutateAsync(filePaths);

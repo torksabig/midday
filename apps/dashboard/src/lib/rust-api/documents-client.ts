@@ -10,6 +10,7 @@ import {
   type DeletedDocument,
   type DocumentCheckAttachments,
   type DocumentDetail,
+  createDocumentsSignedUrls,
   deleteDocument,
   type DocumentsList,
   type DocumentsListParams,
@@ -17,7 +18,12 @@ import {
   fetchDocumentCheckAttachments,
   fetchDocumentsList,
   fetchRelatedDocuments,
+  processDocuments,
+  type ProcessDocumentItem,
+  type ProcessDocumentsResult,
   type RelatedDocument,
+  reprocessDocument,
+  type ReprocessDocumentResult,
 } from "./documents";
 
 function getRustApiUrl() {
@@ -31,6 +37,30 @@ function getRustApiUrl() {
 
 export async function deleteDocumentFromRust(id: string): Promise<DeletedDocument> {
   return deleteDocument(getRustApiUrl(), await getAccessToken(), id);
+}
+
+/** SQL half on Rust. Caller should enqueue Node jobs when `enqueue` is true. */
+export async function reprocessDocumentFromRust(
+  id: string,
+): Promise<ReprocessDocumentResult> {
+  return reprocessDocument(getRustApiUrl(), await getAccessToken(), id);
+}
+
+/** SQL half on Rust. Caller should enqueue Node jobs for `toEnqueue`. */
+export async function processDocumentsFromRust(
+  items: ProcessDocumentItem[],
+): Promise<ProcessDocumentsResult> {
+  return processDocuments(getRustApiUrl(), await getAccessToken(), items);
+}
+
+export async function createDocumentsSignedUrlsFromRust(
+  paths: string[],
+): Promise<string[]> {
+  return createDocumentsSignedUrls(
+    getRustApiUrl(),
+    await getAccessToken(),
+    paths,
+  );
 }
 
 export function documentsInfiniteQueryOptions(
