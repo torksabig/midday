@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `eabe3fb23` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `d747d9665` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `ebfd0e72a` (REST inbox list/get/update/delete).
