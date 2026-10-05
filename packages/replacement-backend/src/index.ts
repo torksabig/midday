@@ -123,6 +123,7 @@ export {
   fetchReplacementDocumentReprocess,
   fetchReplacementDocumentsProcess,
   fetchReplacementDocumentsSignedUrls,
+  fetchReplacementDocumentSignedUrl,
   fetchReplacementAppByAppId,
   fetchReplacementTeamCreateInvites,
   type ReplacementCreateTeamInvitesInput,

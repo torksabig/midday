@@ -4390,6 +4390,26 @@ export async function fetchReplacementDocumentsSignedUrls(
   return payload.filter((u): u is string => typeof u === "string");
 }
 
+/** Midday `documents.signedUrl` — single vault signed URL. */
+export async function fetchReplacementDocumentSignedUrl(
+  baseUrl: string,
+  token: string,
+  filePath: string,
+  expireIn: number,
+): Promise<{ signedUrl: string }> {
+  const root = trimBase(baseUrl);
+  const payload = await replacementPost<unknown>(
+    `${root}/api/v1/documents/signed-url`,
+    token,
+    { filePath, expireIn },
+  );
+  const row = deepCamelCaseKeys(payload) as { signedUrl?: string };
+  if (typeof row.signedUrl !== "string" || !row.signedUrl) {
+    throw new Error("documents signed-url payload missing signedUrl");
+  }
+  return { signedUrl: row.signedUrl };
+}
+
 /** Midday `getAppByAppId` — used by accounting.export before jobs. */
 export async function fetchReplacementAppByAppId(
   baseUrl: string,

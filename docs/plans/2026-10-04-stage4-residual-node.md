@@ -9,9 +9,9 @@
 | Process | Port | Role |
 |---------|------|------|
 | Supabase (local) | `54321` | Auth + Postgres + vault storage |
-| **clone** Axum API | `8787` | Durable product logic (cut-over screens) + vault `/files/*` + document process/reprocess SQL + signed-urls |
+| **clone** Axum API | `8787` | Durable product logic (cut-over screens) + vault `/files/*` + invoice stored PDF + document process/reprocess SQL + signed-url(s) |
 | **apps/dashboard** | `3001` | Frozen UI — direct Rust via `NEXT_PUBLIC_RUST_API_URL` |
-| **apps/api** (minimal Node) | `3003` | Residual tRPC (job enqueue hybrids) + invoice PDF render `/files/download/invoice` + `/chat` + OAuth callbacks |
+| **apps/api** (minimal Node) | `3003` | Residual tRPC (job enqueue hybrids) + invoice PDF entry `/files/download/invoice` (stored PDF→Rust; React-PDF drafts/receipts) + `/chat` + OAuth callbacks |
 
 ```bash
 # 1) Clone API
@@ -66,6 +66,14 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `documents.signedUrls` | **Rust** `POST /api/v1/documents/signed-urls` — vault zip download |
 | Invoice PDF **SQL** | **Rust** `GET /files/invoice-data` (fk+id or token) — Node `/files/download/invoice` only React-PDF renders |
 
+### Migrated (2026-10-05 invoice stored PDF / signedUrl / enrich SQL)
+
+| Capability | Now |
+|------------|-----|
+| Invoice PDF **stored vault bytes** | **Rust** `GET /files/download/invoice` when `file_path` set — Node entry still used by dashboard; forwards stored PDF, React-PDF only for drafts / receipts / missing vault object |
+| `documents.signedUrl` | **Rust** `POST /api/v1/documents/signed-url` — single vault signed URL (batch already on Rust) |
+| `customers.enrich` SQL | **Rust** `POST /api/v1/customers/{id}/start-enrichment` — Node only enqueues Trigger `enrich-customer` |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
@@ -80,7 +88,7 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `oauthApplications.authorize` / `updateApprovalStatus` | Resend |
 | `invoice.create` / `createFromTracker` / `cancelSchedule` / `remind` | Trigger send/schedule/PDF |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications |
-| `customers.enrich` | Trigger enrich job |
+| `customers.enrich` | Trigger enrich job only (SQL on Rust) |
 | `inboxAccounts.sync` / `delete` | Trigger schedules |
 | `transactionAttachments.processAttachment` | Jobs |
 | `accounting.export` | Export job (+ provider HTTP gated) |
@@ -98,12 +106,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | Stripe / Polar | `billing.*`, `invoicePayments.*` |
 | Admin email | `user.delete`, `apiKeys.upsert` |
 | Job status | `jobs.getStatus` |
-| Invoice PDF **bytes** | `GET /files/download/invoice` (React PDF render — `@midday/invoice`) |
+| Invoice PDF **live render** | Node React-PDF for drafts / receipts / no `file_path` (`@midday/invoice`) |
 
 #### Non-tRPC `apps/api` surfaces
 
 - `POST /chat`
-- `GET /files/download/invoice` (PDF **render** only; SQL via Rust `/files/invoice-data`)
+- `GET /files/download/invoice` (entry + React-PDF fallback; stored PDF + SQL on Rust)
 - Gmail/Outlook OAuth redirect URIs on `:3003`
 
 #### Internal non-dashboard tRPC
@@ -115,30 +123,31 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 Full deletion of `apps/api`, `packages/replacement-backend`, `packages/db` waits until:
 
 1. Every §KEEP hybrid/STOP procedure is Rust-owned **or** explicitly retired with a migration note in product UX.
-2. Invoice PDF **render** (`/files/download/invoice`) + `/chat` + OAuth callbacks moved or replaced.
+2. Invoice PDF **live render** (drafts/receipts React-PDF) + `/chat` + OAuth callbacks moved or replaced.
 3. Jobs/worker no longer call Node tRPC banking.
 
 Until then, `@midday/replacement-backend` remains for residual hybrid SQL delegation only.
 
 ## Migration notes (capability status)
 
-| Capability | Status after Stage 4 reprocess/signedUrls slice |
+| Capability | Status after Stage 4 invoice-stored-PDF slice |
 |------------|----------------------------------------|
 | Overview / tx / inbox reads / invoices SQL / tracker / reports / tags / categories | **Rust direct** |
 | Vault proxy / vault file download | **Rust direct** |
 | Vault delete / inbox delete / document short-link | **Rust direct** |
-| Document reprocess / process SQL + signedUrls | **Rust direct** (job enqueue Node) |
-| Invoice PDF SQL | **Rust** (`/files/invoice-data`); render Node |
+| Document reprocess / process SQL + signedUrls / signedUrl | **Rust direct** (job enqueue Node) |
+| Invoice PDF SQL + stored vault PDF | **Rust**; Node React-PDF for drafts/receipts |
+| `customers.enrich` SQL | **Rust**; Trigger job Node |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
 | Billing / Stripe invoice payments | **Node** — STOP |
-| Invoice PDF download (React PDF render) | **Node** — STOP / non-tRPC |
+| Invoice PDF live render (draft/receipt) | **Node** — STOP / non-tRPC |
 | Invoice send / remind / recurring pause-delete | **Node** — hybrid |
 | Team invite email / create team / delete team | **Node** — hybrid |
 
 ### Next recommended residual slice
 
-1. **Invoice PDF render** — port `@midday/invoice` React-PDF off Node, or serve stored vault PDFs from Rust when `file_path` exists (draft/preview/receipt still need live render).  
-2. Or **`documents.signedUrl`** (single) if any callers remain — batch `signedUrls` already on Rust.  
-3. Or next hybrid job orchestrator with a clean Rust SQL half (`customers.enrich` SQL already exists; job stays Node).
+1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault so Rust can serve them too.  
+2. Or next hybrid job orchestrator with a clean Rust SQL half (`invoice.remind` / `invoice.cancelSchedule` status SQL if separable).  
+3. Or point dashboard invoice download URL at Rust when UI already knows `file_path` (skip Node hop for stored PDFs).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

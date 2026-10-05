@@ -13,6 +13,7 @@ import { withFileAuth } from "../../middleware/file-auth";
 import { withClientIp } from "../../middleware/ip";
 import { forwardVaultFileToRust } from "./forward-to-rust";
 import { fetchInvoiceDataFromRust } from "./invoice-data-from-rust";
+import { fetchStoredInvoicePdfFromRust } from "./invoice-pdf-from-rust";
 
 const app = new OpenAPIHono<Context>();
 
@@ -194,6 +195,33 @@ downloadInvoiceApp.openapi(
       throw new HTTPException(400, {
         message: "Either id or token must be provided",
       });
+    }
+
+    // Prefer stored vault PDF from Rust when `file_path` exists.
+    // Receipts + drafts without stored PDF fall through to React-PDF.
+    if (shouldDelegateToReplacementBackend() && !isReceipt) {
+      try {
+        const stored = await fetchStoredInvoicePdfFromRust(
+          new URL(c.req.url).search,
+        );
+        if (stored.kind === "pdf") {
+          return stored.response;
+        }
+        if (stored.kind === "auth") {
+          throw new HTTPException(stored.status, { message: stored.message });
+        }
+        if (stored.kind === "not_found") {
+          throw new HTTPException(404, { message: "Invoice not found" });
+        }
+        if (stored.kind === "error") {
+          // Storage/upstream blip — try live render rather than hard-fail.
+          // Auth/not-found already handled above.
+        }
+        // needs_render → React-PDF below
+      } catch (error) {
+        if (error instanceof HTTPException) throw error;
+        // Rust unreachable — fall through to invoice-data + render.
+      }
     }
 
     let invoiceData: Awaited<ReturnType<typeof getInvoiceById>> | null = null;

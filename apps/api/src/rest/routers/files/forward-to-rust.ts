@@ -3,7 +3,7 @@ import type { Context } from "hono";
 
 /**
  * Thin residual Node `/files/proxy` + `/files/download/file` by streaming from Rust.
- * Invoice PDF bytes stay local (React PDF); invoice SQL via `/files/invoice-data`.
+ * Invoice stored PDFs: Rust `/files/download/invoice`; drafts/receipts render on Node.
  */
 export async function forwardVaultFileToRust(c: Context): Promise<Response> {
   const base = getReplacementApiUrl();

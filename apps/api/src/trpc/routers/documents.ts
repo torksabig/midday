@@ -18,6 +18,7 @@ import {
   tryDelegateDocumentReprocess,
   tryDelegateDocumentsProcess,
   tryDelegateDocumentsSignedUrls,
+  tryDelegateDocumentSignedUrl,
 } from "@api/services/replacement-delegation";
 import { createTRPCRouter, protectedProcedure } from "@api/trpc/init";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
@@ -370,7 +371,19 @@ export const documentsRouter = createTRPCRouter({
 
   signedUrl: protectedProcedure
     .input(signedUrlSchema)
-    .mutation(async ({ input, ctx: { supabase } }) => {
+    .mutation(async ({ input, ctx: { supabase, accessToken } }) => {
+      if (shouldDelegateToReplacementBackend()) {
+        const delegated = await tryDelegateDocumentSignedUrl(
+          input.filePath,
+          input.expireIn,
+          accessToken,
+        );
+        if (delegated.delegated) {
+          return delegated.data;
+        }
+        assertLegacyIdentityFallbackAllowed();
+      }
+
       const { data } = await signedUrl(supabase, {
         bucket: "vault",
         path: input.filePath,

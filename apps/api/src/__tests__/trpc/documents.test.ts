@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createCallerFactory } from "../../trpc/init";
 import { documentsRouter } from "../../trpc/routers/documents";
 import { createTestContext } from "../helpers/test-context";
 import { mocks } from "../setup";
 
 const createCaller = createCallerFactory(documentsRouter);
+const envSnapshot = { ...process.env };
 
 const DOC_ID = "b3b7c8e2-1f2a-4c3d-9e4f-5a6b7c8d9e0f";
 
@@ -264,7 +265,12 @@ describe("tRPC: documents.signedUrl", () => {
     );
   });
 
-  test("returns signed URL payload for vault path", async () => {
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("returns signed URL payload for vault path (legacy)", async () => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     const caller = createCaller(createTestContext());
     const result = await caller.signedUrl({
       filePath: "test/doc.pdf",
@@ -281,6 +287,19 @@ describe("tRPC: documents.signedUrl", () => {
       }),
     );
   });
+
+  test("fail-closed in replacement mode when Rust is down", async () => {
+    process.env.MIDDAY_BACKEND_MODE = "replacement";
+    process.env.REPLACEMENT_API_URL = "http://127.0.0.1:1";
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+    const caller = createCaller(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await expect(
+      caller.signedUrl({ filePath: "test/doc.pdf", expireIn: 3600 }),
+    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
+    expect(mocks.signedUrl).not.toHaveBeenCalled();
+  });
 });
 
 describe("tRPC: documents.signedUrls", () => {
@@ -294,7 +313,12 @@ describe("tRPC: documents.signedUrls", () => {
     );
   });
 
-  test("returns list of signed URL strings for paths", async () => {
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("returns list of signed URL strings for paths (legacy)", async () => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     const caller = createCaller(createTestContext());
     const result = await caller.signedUrls(["test/doc.pdf"]);
 
