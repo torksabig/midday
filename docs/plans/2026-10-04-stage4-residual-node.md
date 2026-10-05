@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see commit after push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `e4dfbaffb` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
