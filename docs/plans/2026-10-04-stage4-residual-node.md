@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(this slice)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `3d0c4a74f` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `acc56b78c` (REST presigned-url vault paths).
