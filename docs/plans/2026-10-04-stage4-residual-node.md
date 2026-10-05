@@ -271,6 +271,6 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 ### Next recommended residual slice
 
 1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).  
-2. **OpenAPI** — document `GET /api/v1/apps/{app_id}` (runtime exists; used by accounting export prep + Node delegation).
+2. **OpenAPI schema depth** — `getAppById` is documented (utoipa + checked-in `openapi.json` + dashboard `generate:rust-api`); optional follow-up: typed `App` schema instead of generic `Object` for stronger TS clients.
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

@@ -75,7 +75,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getAppById"];
         put?: never;
         post?: never;
         delete: operations["disconnectApp"];
@@ -4049,6 +4049,50 @@ export interface operations {
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAppById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description App id */
+                app_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team-scoped app row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Apps require Midday Postgres */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing, invalid, or expired Supabase session JWT */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description App not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
