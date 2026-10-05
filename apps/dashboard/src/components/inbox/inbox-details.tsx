@@ -86,7 +86,7 @@ export function InboxDetails() {
   });
 
   const retryMatchingMutation = useMutation(
-    trpc.inbox.retryMatching.mutationOptions(),
+    trpc.inbox.enqueueRetryMatching.mutationOptions(),
   );
 
   const blockSenderMutation = useMutation({

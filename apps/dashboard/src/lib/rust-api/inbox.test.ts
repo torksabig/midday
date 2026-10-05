@@ -269,7 +269,7 @@ test("normalizes blocklist entries from camelCase payload", () => {
   });
 });
 
-test("normalizes created inbox item payload", () => {
+test("normalizes created inbox item payload for upload hybrid", () => {
   expect(
     normalizeCreatedInboxItem({
       id: "inbox-1",

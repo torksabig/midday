@@ -1,6 +1,7 @@
 import {
   createAttachmentsSchema,
   deleteAttachmentSchema,
+  enqueueProcessTransactionAttachmentsSchema,
   processTransactionAttachmentSchema,
 } from "@api/schemas/transaction-attachments";
 import {
@@ -13,6 +14,43 @@ import { createAttachments, deleteAttachment } from "@midday/db/queries";
 import { allowedMimeTypes } from "@midday/documents/utils";
 import { triggerJob } from "@midday/job-client";
 import { shouldDelegateToReplacementBackend } from "@midday/replacement-backend";
+import type { z } from "zod";
+
+type ProcessTransactionAttachmentsInput = z.infer<
+  typeof processTransactionAttachmentSchema
+>;
+
+async function enqueueTransactionAttachmentJobs(
+  teamId: string,
+  input: ProcessTransactionAttachmentsInput,
+) {
+  const allowedAttachments = input.filter((item) =>
+    allowedMimeTypes.includes(item.mimetype),
+  );
+
+  if (allowedAttachments.length === 0) {
+    return;
+  }
+
+  const jobResults = await Promise.all(
+    allowedAttachments.map((item) =>
+      triggerJob(
+        "process-transaction-attachment",
+        {
+          filePath: item.filePath,
+          mimetype: item.mimetype,
+          teamId,
+          transactionId: item.transactionId,
+        },
+        "transactions",
+      ),
+    ),
+  );
+
+  return {
+    jobs: jobResults.map((result) => ({ id: result.id })),
+  };
+}
 
 export const transactionAttachmentsRouter = createTRPCRouter({
   createMany: protectedProcedure
@@ -62,35 +100,17 @@ export const transactionAttachmentsRouter = createTRPCRouter({
       });
     }),
 
+  /** Job-only half after dashboard Rust `POST /api/v1/transaction-attachments`. */
+  enqueueProcessTransactionAttachments: protectedProcedure
+    .input(enqueueProcessTransactionAttachmentsSchema)
+    .mutation(async ({ input, ctx: { teamId } }) => {
+      return enqueueTransactionAttachmentJobs(teamId!, input);
+    }),
+
+  /** Non-dashboard callers; dashboard uses Rust createMany + `enqueueProcessTransactionAttachments`. */
   processAttachment: protectedProcedure
     .input(processTransactionAttachmentSchema)
     .mutation(async ({ input, ctx: { teamId } }) => {
-      const allowedAttachments = input.filter((item) =>
-        allowedMimeTypes.includes(item.mimetype),
-      );
-
-      if (allowedAttachments.length === 0) {
-        return;
-      }
-
-      // Trigger BullMQ jobs for each attachment
-      const jobResults = await Promise.all(
-        allowedAttachments.map((item) =>
-          triggerJob(
-            "process-transaction-attachment",
-            {
-              filePath: item.filePath,
-              mimetype: item.mimetype,
-              teamId: teamId!,
-              transactionId: item.transactionId,
-            },
-            "transactions",
-          ),
-        ),
-      );
-
-      return {
-        jobs: jobResults.map((result) => ({ id: result.id })),
-      };
+      return enqueueTransactionAttachmentJobs(teamId!, input);
     }),
 });

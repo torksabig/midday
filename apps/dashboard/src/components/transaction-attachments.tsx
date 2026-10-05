@@ -58,7 +58,7 @@ export function TransactionAttachments({
   const [pollingForTax, setPollingForTax] = useState(false);
 
   const processTransactionAttachmentMutation = useMutation(
-    trpc.transactionAttachments.processAttachment.mutationOptions(),
+    trpc.transactionAttachments.enqueueProcessTransactionAttachments.mutationOptions(),
   );
 
   const createAttachmentsMutation = useMutation({

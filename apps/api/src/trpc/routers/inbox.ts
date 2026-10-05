@@ -11,6 +11,8 @@ import {
   getInboxByStatusSchema,
   getInboxSchema,
   matchTransactionSchema,
+  enqueueProcessAttachmentsSchema,
+  enqueueRetryMatchingSchema,
   processAttachmentsSchema,
   retryMatchingSchema,
   searchInboxSchema,
@@ -59,6 +61,70 @@ import {
 import { triggerJob } from "@midday/job-client";
 import { logger } from "@midday/logger";
 import { remove } from "@midday/supabase/storage";
+import type { z } from "zod";
+
+type ProcessAttachmentsInput = z.infer<typeof processAttachmentsSchema>;
+
+async function enqueueInboxProcessAttachmentJobs(
+  teamId: string,
+  input: ProcessAttachmentsInput,
+) {
+  const jobResults = await Promise.all(
+    input.map((item) =>
+      triggerJob(
+        "process-attachment",
+        {
+          filePath: item.filePath,
+          mimetype: item.mimetype,
+          size: item.size,
+          teamId,
+          referenceId: item.referenceId,
+          website: item.website,
+          senderEmail: item.senderEmail,
+          inboxAccountId: item.inboxAccountId,
+        },
+        "inbox",
+      ),
+    ),
+  );
+
+  if (input.length > 0) {
+    try {
+      await triggerJob(
+        "notification",
+        {
+          type: "inbox_new",
+          teamId,
+          totalCount: input.length,
+          inboxType: "upload",
+        },
+        "notifications",
+      );
+    } catch (error) {
+      logger.warn("Failed to trigger inbox_new notification", {
+        teamId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return {
+    jobs: jobResults.map((result) => ({ id: result.id })),
+  };
+}
+
+async function enqueueInboxRetryMatchingJob(teamId: string, inboxId: string) {
+  const result = await triggerJob(
+    "batch-process-matching",
+    {
+      teamId,
+      inboxIds: [inboxId],
+    },
+    "inbox",
+  );
+
+  return { jobId: result.id };
+}
 
 export const inboxRouter = createTRPCRouter({
   get: protectedProcedure
@@ -239,54 +305,18 @@ export const inboxRouter = createTRPCRouter({
       });
     }),
 
+  /** Job-only half after dashboard Rust `POST /api/v1/inbox` (create item). */
+  enqueueProcessAttachments: protectedProcedure
+    .input(enqueueProcessAttachmentsSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      return enqueueInboxProcessAttachmentJobs(teamId!, input);
+    }),
+
+  /** Non-dashboard callers; dashboard uses Rust create + `enqueueProcessAttachments`. */
   processAttachments: protectedProcedure
     .input(processAttachmentsSchema)
     .mutation(async ({ ctx: { teamId }, input }) => {
-      const jobResults = await Promise.all(
-        input.map((item) =>
-          triggerJob(
-            "process-attachment",
-            {
-              filePath: item.filePath,
-              mimetype: item.mimetype,
-              size: item.size,
-              teamId: teamId!,
-              referenceId: item.referenceId,
-              website: item.website,
-              senderEmail: item.senderEmail,
-              inboxAccountId: item.inboxAccountId,
-            },
-            "inbox",
-          ),
-        ),
-      );
-
-      // Send notification for user uploads
-      // This is a non-critical operation, so we don't await it
-      if (input.length > 0) {
-        try {
-          await triggerJob(
-            "notification",
-            {
-              type: "inbox_new",
-              teamId: teamId!,
-              totalCount: input.length,
-              inboxType: "upload",
-            },
-            "notifications",
-          );
-        } catch (error) {
-          // Don't fail the entire process if notification fails
-          logger.warn("Failed to trigger inbox_new notification", {
-            teamId: teamId!,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
-      }
-
-      return {
-        jobs: jobResults.map((result) => ({ id: result.id })),
-      };
+      return enqueueInboxProcessAttachmentJobs(teamId!, input);
     }),
 
   search: protectedProcedure
@@ -439,20 +469,18 @@ export const inboxRouter = createTRPCRouter({
       });
     }),
 
-  // Retry matching for an inbox item
+  /** Job-only half for dashboard retry-matching (no inbox SQL on Node). */
+  enqueueRetryMatching: protectedProcedure
+    .input(enqueueRetryMatchingSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      return enqueueInboxRetryMatchingJob(teamId!, input.id);
+    }),
+
+  /** Non-dashboard callers; dashboard uses `enqueueRetryMatching`. */
   retryMatching: protectedProcedure
     .input(retryMatchingSchema)
     .mutation(async ({ ctx: { teamId }, input }) => {
-      const result = await triggerJob(
-        "batch-process-matching",
-        {
-          teamId: teamId!,
-          inboxIds: [input.id],
-        },
-        "inbox",
-      );
-
-      return { jobId: result.id };
+      return enqueueInboxRetryMatchingJob(teamId!, input.id);
     }),
 
   // Blocklist management

@@ -30,7 +30,7 @@ export function useInboxUpload() {
     mutationFn: createInboxItemFromRust,
   });
   const { mutate: processAttachments } = useMutation(
-    trpc.inbox.processAttachments.mutationOptions(),
+    trpc.inbox.enqueueProcessAttachments.mutationOptions(),
   );
 
   const uploadFiles = useCallback(

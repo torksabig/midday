@@ -19,3 +19,7 @@ export const processTransactionAttachmentSchema = z.array(
     filePath: z.array(z.string()),
   }),
 );
+
+/** Dashboard hybrid: BullMQ `process-transaction-attachment` only (rows on Rust). */
+export const enqueueProcessTransactionAttachmentsSchema =
+  processTransactionAttachmentSchema;

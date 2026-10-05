@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
+import { inboxRouter } from "../../trpc/routers/inbox";
 import { oauthApplicationsRouter } from "../../trpc/routers/oauth-applications";
 import { teamRouter } from "../../trpc/routers/team";
+import { transactionAttachmentsRouter } from "../../trpc/routers/transaction-attachments";
 import { createTestContext } from "../helpers/test-context";
 
 const envSnapshot = { ...process.env };
@@ -289,6 +291,136 @@ describe("tRPC: AP-63 team.enqueueDeleteTeamJob (job-only hybrid)", () => {
         ],
       },
       "teams",
+    );
+  });
+});
+
+describe("tRPC: AP-66 inbox.enqueueProcessAttachments (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-inbox-attach" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueProcessAttachments triggers process-attachment + inbox_new without Drizzle", async () => {
+    const caller = createCallerFactory(inboxRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueProcessAttachments([
+      {
+        filePath: ["team-1", "inbox", "receipt.pdf"],
+        mimetype: "application/pdf",
+        size: 1024,
+      },
+    ]);
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "process-attachment",
+      {
+        filePath: ["team-1", "inbox", "receipt.pdf"],
+        mimetype: "application/pdf",
+        size: 1024,
+        teamId: "test-team-id",
+        referenceId: undefined,
+        website: undefined,
+        senderEmail: undefined,
+        inboxAccountId: undefined,
+      },
+      "inbox",
+    );
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "notification",
+      {
+        type: "inbox_new",
+        teamId: "test-team-id",
+        totalCount: 1,
+        inboxType: "upload",
+      },
+      "notifications",
+    );
+  });
+});
+
+describe("tRPC: AP-66 inbox.enqueueRetryMatching (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-retry-match" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueRetryMatching triggers batch-process-matching without Drizzle", async () => {
+    const caller = createCallerFactory(inboxRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.enqueueRetryMatching({ id: ID });
+    expect(result.jobId).toBe("job-retry-match");
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "batch-process-matching",
+      {
+        teamId: "test-team-id",
+        inboxIds: [ID],
+      },
+      "inbox",
+    );
+  });
+});
+
+describe("tRPC: AP-66 transactionAttachments.enqueueProcessTransactionAttachments (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-tx-attach" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueProcessTransactionAttachments triggers process-transaction-attachment without Drizzle", async () => {
+    const caller = createCallerFactory(transactionAttachmentsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueProcessTransactionAttachments([
+      {
+        transactionId: ID,
+        mimetype: "application/pdf",
+        filePath: ["team-1", "transactions", "receipt.pdf"],
+      },
+    ]);
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "process-transaction-attachment",
+      {
+        filePath: ["team-1", "transactions", "receipt.pdf"],
+        mimetype: "application/pdf",
+        teamId: "test-team-id",
+        transactionId: ID,
+      },
+      "transactions",
     );
   });
 });

@@ -210,6 +210,9 @@ export const processAttachmentsSchema = z.array(
   }),
 );
 
+/** Dashboard hybrid: BullMQ `process-attachment` only (inbox row already on Rust). */
+export const enqueueProcessAttachmentsSchema = processAttachmentsSchema;
+
 export const searchInboxSchema = z.object({
   q: z.string().optional(), // Search query (text or amount)
   transactionId: z.string().optional(), // For AI suggestions
@@ -256,6 +259,9 @@ export const retryMatchingSchema = z.object({
     example: "b3b7c1e2-4c2a-4e7a-9c1a-2b7c1e24c2a4",
   }),
 });
+
+/** Dashboard hybrid: BullMQ `batch-process-matching` only. */
+export const enqueueRetryMatchingSchema = retryMatchingSchema;
 
 export const getInboxByStatusSchema = z.object({
   status: z

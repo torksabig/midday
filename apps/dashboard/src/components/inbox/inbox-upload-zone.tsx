@@ -39,7 +39,7 @@ export function UploadZone({ children, onUploadComplete }: Props) {
   const uploadProgress = useRef<number[]>([]);
   const { toast, dismiss, update } = useToast();
   const processAttachmentsMutation = useMutation(
-    trpc.inbox.processAttachments.mutationOptions(),
+    trpc.inbox.enqueueProcessAttachments.mutationOptions(),
   );
   const createInboxItemMutation = useMutation({
     mutationFn: createInboxItemFromRust,
