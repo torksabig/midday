@@ -559,8 +559,13 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | `GET /tags/{id}` | yes | Rust list scan via `tryDelegateTagsGet` (no clone `GET /tags/{id}`) |
 | `GET /search` | yes | Rust global via `tryDelegateSearchGlobal` + `replacement-rest-search.ts` (2026-10-05) |
 | `GET /reports/revenue`, `/profit`, `/burn-rate`, `/runway`, `/expenses`, `/spending` | yes | Rust chart reads via `replacement-rest-reports.ts` + `tryDelegateReports*` (2026-10-05) |
+| `GET /notifications` | yes | Rust list via `replacement-rest-notifications.ts` + `tryDelegateNotificationsList` (2026-10-05) |
+| `PATCH /notifications/{notificationId}/status` | yes | Rust status via `tryDelegateNotificationUpdateStatus` (2026-10-05) |
+| `POST /notifications/update-all-status` | yes | Rust bulk status via `tryDelegateNotificationsUpdateAll` (2026-10-05) |
+| `GET /bank-accounts`, `GET /bank-accounts/{id}` | yes | Rust list/get via `replacement-rest-bank-accounts.ts` + `tryDelegateBankAccountsGet` / `tryDelegateBankAccountGetById` (2026-10-05) |
+| `POST /bank-accounts`, `PATCH /bank-accounts/{id}`, `DELETE /bank-accounts/{id}` | yes | Rust create/update/delete via `tryDelegateBankAccount*` (2026-10-05) |
 | Other REST inbox routes | no | create/match/blocklist stay Drizzle on `:3003` |
-| Other REST routers (tracker, notifications, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
+| Other REST routers (tracker, users, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 
 **Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 

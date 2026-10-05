@@ -1,3 +1,10 @@
+import {
+  createBankAccountForRest,
+  deleteBankAccountForRest,
+  fetchBankAccountByIdForRest,
+  fetchBankAccountsListForRest,
+  updateBankAccountForRest,
+} from "@api/rest/services/replacement-rest-bank-accounts";
 import type { Context } from "@api/rest/types";
 import {
   bankAccountResponseSchema,
@@ -51,19 +58,20 @@ app.openapi(
     const teamId = c.get("teamId");
     const params = c.req.valid("query");
 
-    const data = await getBankAccounts(db, {
-      teamId,
-      ...params,
-    });
-
-    return c.json(
-      validateResponse(
-        {
-          data,
-        },
-        bankAccountsResponseSchema,
-      ),
+    const result = await fetchBankAccountsListForRest(
+      {
+        enabled: params.enabled,
+        manual: params.manual,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getBankAccounts(db, {
+          teamId,
+          ...params,
+        }),
     );
+
+    return c.json(validateResponse(result, bankAccountsResponseSchema));
   },
 );
 
@@ -96,10 +104,15 @@ app.openapi(
     const id = c.req.valid("param").id;
     const teamId = c.get("teamId");
 
-    const result = await getBankAccountById(db, {
+    const result = await fetchBankAccountByIdForRest(
       id,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () =>
+        getBankAccountById(db, {
+          id,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, bankAccountResponseSchema));
   },
@@ -142,11 +155,20 @@ app.openapi(
     const session = c.get("session");
     const body = c.req.valid("json");
 
-    const result = await createBankAccount(db, {
-      ...body,
-      teamId,
-      userId: session.user.id,
-    });
+    const result = await createBankAccountForRest(
+      {
+        name: body.name,
+        currency: body.currency,
+        manual: body.manual,
+      },
+      c.req.header("Authorization"),
+      () =>
+        createBankAccount(db, {
+          ...body,
+          teamId,
+          userId: session.user.id,
+        }),
+    );
 
     return c.json(validateResponse(result, bankAccountResponseSchema));
   },
@@ -190,11 +212,18 @@ app.openapi(
     const body = c.req.valid("json");
     const id = c.req.valid("param").id;
 
-    const result = await updateBankAccount(db, {
-      ...body,
+    const { id: _optionalBodyId, ...updateFields } = body;
+    const result = await updateBankAccountForRest(
       id,
-      teamId,
-    });
+      updateFields,
+      c.req.header("Authorization"),
+      () =>
+        updateBankAccount(db, {
+          ...body,
+          id,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, bankAccountResponseSchema));
   },
@@ -229,10 +258,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const id = c.req.valid("param").id;
 
-    const result = await deleteBankAccount(db, {
+    const result = await deleteBankAccountForRest(
       id,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () =>
+        deleteBankAccount(db, {
+          id,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, bankAccountResponseSchema));
   },

@@ -1,4 +1,9 @@
 import { withRequiredScope } from "@api/rest/middleware";
+import {
+  fetchNotificationsListForRest,
+  updateAllNotificationsStatusForRest,
+  updateNotificationStatusForRest,
+} from "@api/rest/services/replacement-rest-notifications";
 import type { Context } from "@api/rest/types";
 import {
   getNotificationsSchema,
@@ -45,12 +50,25 @@ app.openapi(
   async (c) => {
     const db = c.get("db");
     const teamId = c.get("teamId");
+    const session = c.get("session");
     const query = c.req.valid("query");
 
-    const result = await getActivities(db, {
-      teamId,
-      ...query,
-    });
+    const result = await fetchNotificationsListForRest(
+      {
+        cursor: query.cursor,
+        pageSize: query.pageSize,
+        status: query.status,
+        userId: session.user.id,
+        priority: query.priority,
+        maxPriority: query.maxPriority,
+      },
+      c.req.header("Authorization"),
+      () =>
+        getActivities(db, {
+          teamId,
+          ...query,
+        }),
+    );
 
     return c.json(validateResponse(result, notificationsResponseSchema));
   },
@@ -110,11 +128,11 @@ app.openapi(
     const { notificationId } = c.req.valid("param");
     const { status } = c.req.valid("json");
 
-    const result = await updateActivityStatus(
-      db,
+    const result = await updateNotificationStatusForRest(
       notificationId,
       status,
-      teamId,
+      c.req.header("Authorization"),
+      () => updateActivityStatus(db, notificationId, status, teamId),
     );
 
     return c.json(
@@ -161,9 +179,14 @@ app.openapi(
     const session = c.get("session");
     const body = c.req.valid("json");
 
-    const result = await updateAllActivitiesStatus(db, teamId, body.status, {
-      userId: session.user.id,
-    });
+    const result = await updateAllNotificationsStatusForRest(
+      body.status,
+      c.req.header("Authorization"),
+      () =>
+        updateAllActivitiesStatus(db, teamId, body.status, {
+          userId: session.user.id,
+        }),
+    );
 
     return c.json(
       validateResponse(
