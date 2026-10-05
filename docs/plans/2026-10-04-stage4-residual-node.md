@@ -4,11 +4,11 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 post–createFromTracker inventory)
+## Tip SHAs (2026-10-05 post–bankConnections.delete dashboard hybrid)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `2f481b323` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `712a39078` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
@@ -64,8 +64,8 @@ These surfaces stay on minimal Node until an explicit product/engineering replac
 
 | Block | Dashboard / caller touchpoints | Why Node stays |
 |-------|----------------------------------|----------------|
-| **`POST /chat`** | `chat-context`, `store/chat.ts` → `NEXT_PUBLIC_API_URL/chat` | Agent stream + tools; **no Rust port in Stage 4** |
-| **Worker `trpc.banking.*`** | `packages/jobs`, `apps/worker` (not dashboard HTTP) | Provider HTTP, decrypt, schedules; SQL half on Rust only |
+| **`POST /chat`** | `chat-context`, `store/chat.ts` → `NEXT_PUBLIC_API_URL/chat` | Agent stream + tools; **no Rust port in Stage 4** — see **Chat co-host** below |
+| **Worker `trpc.banking.*`** | `packages/jobs`, `apps/worker` (not dashboard HTTP) | Provider HTTP, decrypt, schedules; SQL half on Rust only — see **Worker banking tRPC** below |
 | **Bank OAuth callbacks** | Plaid/GC/EB connect components; `app/api/enablebanking/session` → `banking.enablebankingExchange` | Live token exchange + redirect URIs on `:3003` |
 | **Invoice PDF live render** | Draft/receipt downloads; Node `GET /files/download/invoice` when Rust returns `needs_render` / `no_stored_pdf` | React-PDF (`@midday/invoice`); stored bytes on Rust |
 | **`jobs.getStatus`** | `hooks/use-job-status.ts` | BullMQ job polling; no Rust equivalent |
@@ -78,6 +78,51 @@ These surfaces stay on minimal Node until an explicit product/engineering replac
 | **Admin side effects** | `user.delete`, `apiKeys.upsert` | Resend / admin email |
 
 Hybrid **enqueue-only** tRPC (SQL on Rust, Node triggers BullMQ/Trigger/Resend) is intentional residual surface—not listed as permanent blocks, but required until each enqueue is callable without full-stack tRPC from the dashboard.
+
+### Chat co-host (`POST /chat` on minimal Node)
+
+**Long-term model (Stage 4 default):** Product reads/writes go **dashboard → Rust (`NEXT_PUBLIC_RUST_API_URL`, `:8787`)**. Chat is the main exception: the frozen UI streams agent turns via **`POST ${NEXT_PUBLIC_API_URL}/chat`** on minimal Node (`apps/api`, `:3003`). That is an intentional **co-host**, not a regression to full-stack Node for product SQL.
+
+| Piece | Location / env |
+|-------|----------------|
+| Transport | `@ai-sdk/react` `DefaultChatTransport` in `apps/dashboard/src/store/chat.ts` and `chat-context.tsx` |
+| API base | `NEXT_PUBLIC_API_URL` (local default `http://localhost:3003`) — must stay reachable while chat is enabled |
+| Rust (everything else) | `NEXT_PUBLIC_RUST_API_URL` — independent of chat |
+| Auth | Supabase session JWT in `Authorization` + `x-user-timezone` on chat requests |
+| Server | `apps/api` chat route (agent stream, tool calls into existing Node/MCP surfaces) |
+
+**Out of scope for autopilot / Stage 4 automation:** porting chat to Rust, rewriting tool routing, or deleting `apps/api` because chat moved. No “Rust chat port” slice unless product explicitly scopes it.
+
+**To decommission Node for chat (future gate, not current work):**
+
+1. Replace `POST /chat` with an equivalent host (new BFF or Rust SSE/WebSocket) and point `DefaultChatTransport` `api` at it.
+2. Re-home or retire every chat tool that still assumes Node tRPC, Trigger, decrypt, or provider HTTP on `:3003`.
+3. Update rate limits, observability, and deployment so `:3003` is not required for dashboard chat.
+4. Mark the **Chat** row in the decommission checklist below **done** and re-run AP-63 + manual chat QA.
+
+Until then, local/prod runbooks keep **clone + minimal Node + dashboard** even when Rust owns all non-chat product paths.
+
+### Worker banking tRPC (`apps/worker` + `packages/jobs`)
+
+Background runtimes still call Node **`trpc.banking.*`** for provider HTTP and decrypt—not the dashboard HTTP surface, but they **pin `apps/api` alive** for full Node teardown.
+
+**`apps/worker` (BullMQ processors on `:3003` tRPC client):**
+
+| Call site | Procedure | Role |
+|-----------|-----------|------|
+| `processors/rates/rates-scheduler.ts` | `banking.rates` (query) | FX / rate feed for scheduled jobs |
+| `processors/teams/delete-team.ts` | `banking.deleteConnection` (mutate) | Provider teardown while deleting a team (after dashboard/Rust SQL prep) |
+
+**`packages/jobs` (Trigger.dev tasks; same Node tRPC endpoint):**
+
+| Task area | Procedures | Role |
+|-----------|------------|------|
+| `tasks/bank/delete/delete-connection.ts` | `banking.deleteConnection` (mutate) | Provider delete after SQL row removed (pairs with dashboard `enqueueDeleteConnection` / Rust DELETE) |
+| `tasks/bank/sync/connection.ts` | `banking.connectionStatus` (query) | Sync gate / status |
+| `tasks/bank/sync/account.ts` | `banking.getBalance`, `getProviderTransactions` (query) | Account sync |
+| `tasks/reconnect/connection.ts` | `banking.connectionByReference`, `getProviderAccounts` (query) | Reconnect flows |
+
+**Exit criteria (worker row in checklist):** Move provider HTTP + vault decrypt for these jobs onto Rust (or a dedicated banking micro-BFF), then delete worker/Trigger imports of `@midday/trpc` banking procedures. Dashboard bank OAuth STOP gates can remain on Node longer, but **worker banking** is the hard dependency for deleting the whole `apps/api` package.
 
 ### Safe to decommission `apps/api`?
 
@@ -97,7 +142,8 @@ Use this as a gate for the user one-shot **`decommission`** ([autopilot direct c
 - [ ] **Billing:** Stripe/Polar flows not on Node tRPC (or billing product sunset complete).
 - [ ] **Connectors / inbox OAuth:** Composio + Gmail/Outlook connect not on Node tRPC.
 - [ ] **Admin:** `user.delete` / `apiKeys.upsert` side effects moved or retired.
-- [ ] **Hybrid enqueue:** Every dashboard path uses Rust SQL + thin enqueue (or jobs retired)—no full-stack tRPC mutations for product writes (`bankConnections.delete` dashboard split **done** 2026-10-05).
+- [ ] **Hybrid enqueue:** Every dashboard path uses Rust SQL + thin enqueue (or jobs retired)—no full-stack tRPC mutations for product writes.
+- [x] **`bankConnections.delete` (dashboard hybrid):** Rust `DELETE /api/v1/bank-connections/{id}` then Node `bankConnections.enqueueDeleteConnection` only; no dashboard `trpc.bankConnections.delete` caller (2026-10-05).
 - [ ] **SSR/public tRPC proxy:** Portal token invoice, reports link, short links—migrated or documented co-host.
 - [ ] **Tests/docs:** AP-63 delegation suite green; this doc updated with final SHA and “DECOMMISSIONED” status.
 
@@ -348,7 +394,7 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 
 #### Internal non-dashboard tRPC
 
-- `packages/jobs` / `apps/worker` → `trpc.banking.*` (sync/delete/reconnect/rates)
+- `packages/jobs` / `apps/worker` → `trpc.banking.*` — inventory in **Worker banking tRPC** above (`rates`, `deleteConnection`, sync/reconnect queries)
 
 ## Deferred full delete
 
