@@ -4,6 +4,59 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
+## Tip SHAs (2026-10-05 residual inventory pass)
+
+| Repo | Branch | SHA | Remote |
+|------|--------|-----|--------|
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `f43bc85ae` | torksabig |
+| **clone** (origin) | (default) | `c218548` | origin |
+
+Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
+
+### Remaining dashboard tRPC (live `:3003/trpc` HTTP)
+
+Excludes procedures used **only** as React Query `queryKey` / `mutationKey` while `queryFn` / `mutationFn` calls Rust (`*FromRust`, `*ServerQueryOptions`, `*Client`). Those are typed against `AppRouter` but do not execute SQL on Node.
+
+| Procedure | Node role today | Class |
+|-----------|-----------------|-------|
+| `documents.enqueueProcessDocument` | BullMQ `process-document` only | Hybrid job-only |
+| `inbox.enqueueProcessAttachments` / `enqueueRetryMatching` | BullMQ attachment / matching jobs | Hybrid job-only |
+| `transactionAttachments.enqueueProcessTransactionAttachments` | BullMQ `process-transaction-attachment` | Hybrid job-only |
+| `transactions.enqueueExportTransactions` / `enqueueImportTransactions` | BullMQ export / import | Hybrid job-only |
+| `accounting.enqueueExportToAccounting` | BullMQ `export-to-accounting` (Rust `GET /api/v1/apps/{id}` prep in UI) | Hybrid job-only |
+| `team.enqueueInviteTeamEmails` / `enqueueDeleteTeamJob` / `enqueueUpdateBaseCurrency` / `enqueueExportAllData` | Trigger / BullMQ only | Hybrid job-only |
+| `inboxAccounts.enqueueSyncInboxAccount` / `enqueueDeleteInboxAccountSchedule` | Trigger sync / schedule del | Hybrid job-only |
+| `oauthApplications.enqueueOAuthAppInstalledEmail` / `enqueueOAuthApprovalReviewEmail` | Resend only | Hybrid job-only |
+| `invoice.create` / `createFromTracker` / `cancelSchedule` / `remind` | Trigger / BullMQ / PDF job (SQL on Rust) | Hybrid |
+| `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications (SQL on Rust; `resume` dashboard → Rust) | Hybrid |
+| `customers.enrich` | Trigger `enrich-customer` (SQL on Rust via Node delegate) | Hybrid — **split candidate** (Rust `start-enrichment` + job-only enqueue) |
+| `bankConnections.create` / `addAccounts` / `delete` | Encrypt + Trigger delete-connection | STOP |
+| `banking.plaid*` / `gocardless*` / `enablebanking*` (+ `getProviderAccounts`) | Live bank OAuth / token exchange | STOP |
+| `bankAccounts.getDetails` / `getWithPaymentInfo` | Decrypt | STOP |
+| `inboxAccounts.connect` | Inbox OAuth | STOP |
+| `connectors.*` | Composio | STOP |
+| `billing.*` / `invoicePayments.*` | Stripe / Polar | STOP |
+| `user.delete` / `apiKeys.upsert` | Admin email side effects | STOP |
+| `jobs.getStatus` | Job polling | STOP |
+| `transactions.generateCsvMapping` | Claude Haiku (no Rust) | Node AI |
+
+**Non-tRPC `apps/api` (dashboard):** `POST /chat`; `GET /files/download/invoice` (React-PDF fallback — **STOP**); Gmail/Outlook OAuth redirects on `:3003`.
+
+**SSR / public routes still on tRPC proxy:** `invoice.getInvoiceByToken`, portal `customers.*`, `reports.getByLinkId`, `shortLinks.get`, `app/api/enablebanking/session` → `banking.enablebankingExchange` (delegates where configured; still Node hop).
+
+### Prioritized next slices (no invoice PDF live render)
+
+1. **`customers.enrich`** — dashboard Rust `POST …/start-enrichment` + Node job-only enqueue (mirror `team.invite` / `inboxAccounts.sync`).
+2. **Invoice send / schedule / recurring** — finish splitting any remaining full-stack `invoice.*` / `invoiceRecurring.*` tRPC calls into Rust SQL + `enqueue*` (form, actions-menu, submit-button already partial).
+3. **`POST /chat`** — move off Node or document long-term co-host.
+4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*`.
+5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
+6. **Invoice PDF live render** — **STOP** (drafts/receipts `@midday/invoice` React-PDF); do not cut over in Stage 4 automation.
+
+### Safe to decommission `apps/api`?
+
+**NO.** Minimal Node remains required for: STOP surfaces (banking decrypt/encrypt/OAuth, billing, connectors, inbox connect, admin delete, job status, CSV AI mapping), hybrid job enqueue, invoice PDF **live render**, `/chat`, and OAuth callbacks. Worker banking tRPC is an additional blocker.
+
 ## How to run now (local)
 
 | Process | Port | Role |
@@ -270,7 +323,6 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).  
-2. **OpenAPI schema depth** — `getAppById` is documented (utoipa + checked-in `openapi.json` + dashboard `generate:rust-api`); optional follow-up: typed `App` schema instead of generic `Object` for stronger TS clients.
+See **Prioritized next slices** above. OpenAPI: `getAppById` now returns typed **`InstalledAppResponse`** (not generic `Object`).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

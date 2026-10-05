@@ -3040,6 +3040,16 @@ export interface components {
             id: string;
             name?: string | null;
         };
+        /** @description Midday installed app row (`apps.get` / `getAppById` JSON shape). */
+        InstalledAppResponse: {
+            appId: string;
+            config: Record<string, never>;
+            createdAt: string;
+            createdBy?: string | null;
+            id: string;
+            settings: Record<string, never>;
+            teamId: string;
+        };
         InvoiceDefaultSettingsData: {
             nextInvoiceNumber: string;
             team: components["schemas"]["InvoiceDefaultSettingsTeam"];
@@ -4013,7 +4023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["InstalledAppResponse"][];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
@@ -4074,7 +4084,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["InstalledAppResponse"];
                 };
             };
             /** @description Apps require Midday Postgres */
@@ -4118,7 +4128,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["InstalledAppResponse"];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
@@ -4159,7 +4169,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["InstalledAppResponse"];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
@@ -4200,7 +4210,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["InstalledAppResponse"];
                 };
             };
             /** @description Missing, invalid, or expired Supabase session JWT */
