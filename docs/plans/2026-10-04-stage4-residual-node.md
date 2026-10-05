@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(updated on push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `3bcc3cf06` | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Prior tip: `eaa378d7d` (REST documents list/get/delete).
