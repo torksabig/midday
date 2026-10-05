@@ -576,7 +576,9 @@ Agent: pick the **first `PENDING` row**, implement, mark `DONE` (or `BLOCKED` + 
 | Other REST inbox routes | yes | create/match/unmatch/confirm/decline/blocklist/search/by-status/bulk-delete delegate on `:3003` (2026-10-05) |
 | Other REST routers (oauth, mcp, files, …) | no | See [stage4 REST inventory](./2026-10-04-stage4-residual-node.md) |
 
-**Next:** Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
+**REST OAuth/MCP on `:3003` (2026-10-05 inventory — no delegation shipped):** `GET/POST /oauth/authorization`, `POST /oauth/token`, `POST /oauth/register`, `POST /oauth/revoke`, `/.well-known/oauth-*`, `POST /mcp` — all Node; tRPC `oauthApplications.*` Rust helpers are **not** wired into public REST OAuth server (provider-flow boundary). Do not port callbacks/webhooks in REST phase.
+
+**Next:** REST OpenAPI **product** migration **closed** except bulk-create blockers. Residual hybrids/STOP stay on Node (`apps/api` `:3003`). Full `apps/api` + `replacement-backend` delete deferred until those migrate or retire. Run path: dashboard + clone + minimal Node — see [2026-10-04-stage4-residual-node.md](./2026-10-04-stage4-residual-node.md). AP-15 remains BLOCKED.
 
 **Blocked leftovers (crypto / admin / email):**
 - AP-15 `bankAccounts.getDetails` / `getWithPaymentInfo` — blocked · needs safe decrypt path

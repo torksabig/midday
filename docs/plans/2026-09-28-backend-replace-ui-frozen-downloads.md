@@ -120,9 +120,20 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 - [x] REST OpenAPI `:3003` — bank-accounts list/get/create/update/delete delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — tracker-projects + tracker-entries (except bulk create) + timer routes delegate to Rust in `replacement` mode (2026-10-05)
 - [x] REST OpenAPI `:3003` — users `GET/PATCH /me` delegate to Rust in `replacement` mode (2026-10-05)
+- [x] REST OpenAPI phase closure — bulk-route clone audit + oauth/mcp inventory + `replacement-rest-*.test.ts` green (2026-10-05)
 - [ ] Legal review (below)
 
-**Remaining Drizzle REST in `replacement` mode (2026-10-05):** `POST /transactions/bulk` (bulk create); `POST /tracker-entries/bulk` (bulk create); oauth/mcp, invoice PDF download fallback. Inbox OpenAPI CRUD/match/blocklist/search routes delegate to Rust (clone `9bf4592`+ inbox API; no new Rust in this slice).
+### REST OpenAPI product migration status (2026-10-05)
+
+| Status | Routes / areas |
+|--------|----------------|
+| **Rust in `replacement` mode** | documents, inbox (full OpenAPI), transactions (single CRUD + update/delete-many), customers, invoices (SQL + hybrid create jobs), teams, tags, search, reports (×6), notifications, bank-accounts, tracker-projects, tracker-entries + timer, users `/me`, presigned-url helpers |
+| **Drizzle blockers (need clone)** | `POST /transactions/bulk`, `POST /tracker-entries/bulk` — no matching routes on clone **`9bf4592`** |
+| **Permanent Node / STOP** | `/oauth/*`, `/.well-known/*`, `/mcp`, app OAuth callbacks, `GET /files/download/invoice` (React-PDF), REST auth/db middleware |
+
+**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` → **79 pass**, 14 files.
+
+**Remaining Drizzle REST in `replacement` mode:** bulk create pair above; oauth/mcp/PDF/middleware as listed. No new clone Rust in this slice.
 
 ## Env reference
 
