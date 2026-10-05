@@ -1,5 +1,11 @@
 import type { Context } from "@api/rest/types";
 import {
+  fetchTeamByIdForRest,
+  fetchTeamMembersForRest,
+  fetchTeamsListForRest,
+  updateTeamByIdForRest,
+} from "@api/rest/services/replacement-rest-teams";
+import {
   getTeamByIdSchema,
   teamMembersResponseSchema,
   teamResponseSchema,
@@ -45,9 +51,15 @@ app.openapi(
     const db = c.get("db");
     const session = c.get("session");
 
-    const result = await getTeamsByUserId(db, session.user.id);
+    const result = await fetchTeamsListForRest(
+      c.req.header("Authorization"),
+      async () => {
+        const rows = await getTeamsByUserId(db, session.user.id);
+        return { data: rows };
+      },
+    );
 
-    return c.json(validateResponse({ data: result }, teamsResponseSchema));
+    return c.json(validateResponse(result, teamsResponseSchema));
   },
 );
 
@@ -86,12 +98,16 @@ app.openapi(
       });
     }
 
-    const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
-    if (!hasAccess) {
-      throw new Error("Team not found or access denied");
-    }
-
-    const result = await getTeamById(db, teamId);
+    const result = await fetchTeamByIdForRest(
+      c.req.header("Authorization"),
+      async () => {
+        const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
+        if (!hasAccess) {
+          throw new Error("Team not found or access denied");
+        }
+        return getTeamById(db, teamId);
+      },
+    );
 
     return c.json(validateResponse(result, teamResponseSchema));
   },
@@ -142,15 +158,20 @@ app.openapi(
       });
     }
 
-    const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
-    if (!hasAccess) {
-      throw new Error("Team not found or access denied");
-    }
-
-    const result = await updateTeamById(db, {
-      id: teamId,
-      data: params,
-    });
+    const result = await updateTeamByIdForRest(
+      params,
+      c.req.header("Authorization"),
+      async () => {
+        const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
+        if (!hasAccess) {
+          throw new Error("Team not found or access denied");
+        }
+        return updateTeamById(db, {
+          id: teamId,
+          data: params,
+        });
+      },
+    );
 
     return c.json(validateResponse(result, teamResponseSchema));
   },
@@ -191,16 +212,19 @@ app.openapi(
       });
     }
 
-    const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
-    if (!hasAccess) {
-      throw new Error("Team not found or access denied");
-    }
-
-    const result = await getTeamMembers(db, teamId);
-
-    return c.json(
-      validateResponse({ data: result }, teamMembersResponseSchema),
+    const result = await fetchTeamMembersForRest(
+      c.req.header("Authorization"),
+      async () => {
+        const hasAccess = await hasTeamAccess(db, teamId, session.user.id);
+        if (!hasAccess) {
+          throw new Error("Team not found or access denied");
+        }
+        const rows = await getTeamMembers(db, teamId);
+        return { data: rows };
+      },
     );
+
+    return c.json(validateResponse(result, teamMembersResponseSchema));
   },
 );
 
