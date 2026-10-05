@@ -383,6 +383,9 @@ export const enrichCustomerResponseSchema = z.object({
   }),
 });
 
+/** Trigger-only half after dashboard Rust `POST …/start-enrichment`. */
+export const enqueueEnrichCustomerSchema = enrichCustomerSchema;
+
 export const upsertCustomerSchema = z.object({
   id: z.string().uuid().optional().openapi({
     description:

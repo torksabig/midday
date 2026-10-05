@@ -15,6 +15,7 @@ import {
   type PortalInvoicesParams,
   cancelCustomerEnrichment,
   clearCustomerEnrichment,
+  startCustomerEnrichment,
   deleteCustomer,
   fetchCustomerById,
   fetchCustomerByPortalId,
@@ -103,6 +104,13 @@ export async function toggleCustomerPortalFromRust(
   input: ToggleCustomerPortalInput,
 ) {
   return toggleCustomerPortal(getRustApiUrl(), await getAccessToken(), input);
+}
+
+export async function startCustomerEnrichmentFromRust(
+  input: { id: string } | string,
+) {
+  const id = typeof input === "string" ? input : input.id;
+  return startCustomerEnrichment(getRustApiUrl(), await getAccessToken(), id);
 }
 
 export async function cancelCustomerEnrichmentFromRust(

@@ -1,5 +1,6 @@
 import {
   deleteCustomerSchema,
+  enqueueEnrichCustomerSchema,
   enrichCustomerSchema,
   getCustomerByIdSchema,
   getCustomerByPortalIdSchema,
@@ -283,6 +284,23 @@ export const customersRouter = createTRPCRouter({
       );
 
       return { queued: true };
+    }),
+
+  /** Trigger-only half after dashboard Rust `POST /api/v1/customers/{id}/start-enrichment`. */
+  enqueueEnrichCustomer: protectedProcedure
+    .input(enqueueEnrichCustomerSchema)
+    .mutation(async ({ ctx: { teamId }, input }) => {
+      await triggerJob(
+        "enrich-customer",
+        {
+          customerId: input.id,
+          teamId: teamId!,
+        },
+        "customers",
+        { attempts: 1 },
+      );
+
+      return { queued: true as const };
     }),
 
   cancelEnrichment: protectedProcedure

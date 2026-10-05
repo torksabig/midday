@@ -8,8 +8,8 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `f43bc85ae` | torksabig |
-| **clone** (origin) | (default) | `c218548` | origin |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `96a8c1eb6` | torksabig |
+| **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
 
@@ -29,7 +29,8 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 | `oauthApplications.enqueueOAuthAppInstalledEmail` / `enqueueOAuthApprovalReviewEmail` | Resend only | Hybrid job-only |
 | `invoice.create` / `createFromTracker` / `cancelSchedule` / `remind` | Trigger / BullMQ / PDF job (SQL on Rust) | Hybrid |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications (SQL on Rust; `resume` dashboard → Rust) | Hybrid |
-| `customers.enrich` | Trigger `enrich-customer` (SQL on Rust via Node delegate) | Hybrid — **split candidate** (Rust `start-enrichment` + job-only enqueue) |
+| `customers.enqueueEnrichCustomer` | Trigger `enrich-customer` only (SQL on Rust) | Hybrid job-only |
+| `customers.enrich` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue | Hybrid fallback |
 | `bankConnections.create` / `addAccounts` / `delete` | Encrypt + Trigger delete-connection | STOP |
 | `banking.plaid*` / `gocardless*` / `enablebanking*` (+ `getProviderAccounts`) | Live bank OAuth / token exchange | STOP |
 | `bankAccounts.getDetails` / `getWithPaymentInfo` | Decrypt | STOP |
@@ -46,8 +47,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 
 ### Prioritized next slices (no invoice PDF live render)
 
-1. **`customers.enrich`** — dashboard Rust `POST …/start-enrichment` + Node job-only enqueue (mirror `team.invite` / `inboxAccounts.sync`).
-2. **Invoice send / schedule / recurring** — finish splitting any remaining full-stack `invoice.*` / `invoiceRecurring.*` tRPC calls into Rust SQL + `enqueue*` (form, actions-menu, submit-button already partial).
+1. **Invoice send / schedule / recurring** — finish splitting any remaining full-stack `invoice.*` / `invoiceRecurring.*` tRPC calls into Rust SQL + `enqueue*` (form, actions-menu, submit-button already partial).
 3. **`POST /chat`** — move off Node or document long-term co-host.
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*`.
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -191,6 +191,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `oauthApplications.authorize` SQL | **Rust direct** — dashboard `POST /api/v1/oauth-applications/authorize` → Node `oauthApplications.enqueueOAuthAppInstalledEmail` (Resend only); full `oauthApplications.authorize` tRPC retained for non-dashboard callers |
 | `oauthApplications.updateApprovalStatus` SQL | **Rust direct** — dashboard `POST /api/v1/oauth-applications/{id}/approval-status` → Node `oauthApplications.enqueueOAuthApprovalReviewEmail` when status is `pending` (Resend only); full tRPC retained for non-dashboard callers |
 
+### Migrated (2026-10-05 customers.enrich dashboard hybrid)
+
+| Capability | Now |
+|------------|-----|
+| `customers.enrich` SQL | **Rust direct** — dashboard `POST /api/v1/customers/{id}/start-enrichment` → Node `customers.enqueueEnrichCustomer` (Trigger `enrich-customer` only); full `customers.enrich` tRPC retained for non-dashboard callers |
+
 ### Migrated (2026-10-05 inbox / transaction attachment job hybrids)
 
 | Capability | Now |
@@ -237,7 +243,8 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `invoice.create` / `createFromTracker` | Trigger send/schedule/PDF job only (status/draft SQL on Rust) |
 | `invoice.cancelSchedule` / `remind` / `updateSchedule` | Trigger/BullMQ only (SQL on Rust) |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications only (SQL on Rust; resume direct) |
-| `customers.enrich` | Trigger enrich job only (SQL on Rust) |
+| `customers.enqueueEnrichCustomer` | Trigger `enrich-customer` only (SQL on Rust) |
+| `customers.enrich` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue |
 | `inboxAccounts.sync` / `delete` (tRPC) | Non-dashboard callers; dashboard uses enqueue* |
 | `transactionAttachments.enqueueProcessTransactionAttachments` | BullMQ `process-transaction-attachment` only (rows on Rust) |
 | `transactionAttachments.processAttachment` (tRPC) | Non-dashboard callers; dashboard uses enqueue* |
@@ -309,7 +316,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | `documents.processDocument` / reprocess SQL | **Rust direct** — dashboard `processDocumentsFromRust` / `reprocessDocumentFromRust` → `documents.enqueueProcessDocument`; tRPC orchestrators for non-dashboard |
 | `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
-| `customers.enrich` SQL | **Rust**; Trigger job Node |
+| `customers.enrich` SQL | **Rust direct** (dashboard); `enqueueEnrichCustomer` / tRPC `enrich` fallback Node |
 | Bank connect (Plaid/GC/EB) / decrypt account details | **Node** — STOP |
 | Billing / Stripe invoice payments | **Node** — STOP |
 | Invoice PDF live render (draft/receipt) | **Node** — STOP / non-tRPC |

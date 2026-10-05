@@ -50,6 +50,7 @@ import { downloadInvoicePdf } from "@/lib/fetch-invoice-pdf";
 import {
   cancelCustomerEnrichmentFromRust,
   clearCustomerEnrichmentFromRust,
+  startCustomerEnrichmentFromRust,
   customerByIdQueryOptions,
   customerInvoiceSummaryQueryOptions,
   toggleCustomerPortalFromRust,
@@ -149,36 +150,42 @@ export function CustomerDetails() {
     placeholderData: keepPreviousData,
   });
 
-  // Mutation for re-enriching customer
-  const enrichMutation = useMutation(
-    trpc.customers.enrich.mutationOptions({
-      onMutate: async () => {
-        // Cancel outgoing refetches
-        await queryClient.cancelQueries({
-          queryKey: trpc.customers.getById.queryKey({ id: customerId! }),
-        });
-
-        // Optimistically update to pending status
-        queryClient.setQueryData(
-          trpc.customers.getById.queryKey({ id: customerId! }),
-          (old: typeof customer) =>
-            old ? { ...old, enrichmentStatus: "pending" as const } : old,
-        );
-      },
-      onError: (error) => {
-        toast({
-          duration: 3000,
-          variant: "destructive",
-          title: "Enrichment failed",
-          description: error.message,
-        });
-      },
-      onSettled: () => {
-        // Refetch after mutation settles
-        refetch();
-      },
-    }),
+  const enqueueEnrichCustomerMutation = useMutation(
+    trpc.customers.enqueueEnrichCustomer.mutationOptions(),
   );
+
+  // Mutation for re-enriching customer
+  const enrichMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      await startCustomerEnrichmentFromRust(input);
+      return enqueueEnrichCustomerMutation.mutateAsync(input);
+    },
+    onMutate: async () => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: trpc.customers.getById.queryKey({ id: customerId! }),
+      });
+
+      // Optimistically update to pending status
+      queryClient.setQueryData(
+        trpc.customers.getById.queryKey({ id: customerId! }),
+        (old: typeof customer) =>
+          old ? { ...old, enrichmentStatus: "pending" as const } : old,
+      );
+    },
+    onError: (error) => {
+      toast({
+        duration: 3000,
+        variant: "destructive",
+        title: "Enrichment failed",
+        description: error.message,
+      });
+    },
+    onSettled: () => {
+      // Refetch after mutation settles
+      refetch();
+    },
+  });
 
   // Mutation for cancelling enrichment
   const cancelEnrichmentMutation = useMutation({

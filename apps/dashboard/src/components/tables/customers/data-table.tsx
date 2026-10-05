@@ -26,7 +26,11 @@ import { useTableDnd } from "@/hooks/use-table-dnd";
 import { useTableScroll } from "@/hooks/use-table-scroll";
 import { useTableSettings } from "@/hooks/use-table-settings";
 import { useUserQuery } from "@/hooks/use-user";
-import { customersInfiniteQueryOptions, deleteCustomerFromRust } from "@/lib/rust-api/customers-client";
+import {
+  customersInfiniteQueryOptions,
+  deleteCustomerFromRust,
+  startCustomerEnrichmentFromRust,
+} from "@/lib/rust-api/customers-client";
 import { useCustomersStore } from "@/store/customers";
 import { useTRPC } from "@/trpc/client";
 import { STICKY_COLUMNS, SUMMARY_GRID_HEIGHTS } from "@/utils/table-configs";
@@ -95,14 +99,20 @@ export function DataTable({ initialSettings }: Props) {
     },
   });
 
-  const enrichCustomerMutation = useMutation(
-    trpc.customers.enrich.mutationOptions({
-      onSuccess: () => {
-        track(LogEvents.CustomerEnriched.name);
-        refetch();
-      },
-    }),
+  const enqueueEnrichCustomerMutation = useMutation(
+    trpc.customers.enqueueEnrichCustomer.mutationOptions(),
   );
+
+  const enrichCustomerMutation = useMutation({
+    mutationFn: async (input: { id: string }) => {
+      await startCustomerEnrichmentFromRust(input);
+      return enqueueEnrichCustomerMutation.mutateAsync(input);
+    },
+    onSuccess: () => {
+      track(LogEvents.CustomerEnriched.name);
+      refetch();
+    },
+  });
 
   const handleDeleteCustomer = useCallback(
     (id: string) => {

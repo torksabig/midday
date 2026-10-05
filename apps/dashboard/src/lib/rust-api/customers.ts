@@ -414,6 +414,37 @@ export async function toggleCustomerPortal(
   return deepCamelCaseKeys(await response.json()) as Record<string, unknown>;
 }
 
+export async function startCustomerEnrichment(
+  baseUrl: string,
+  accessToken: string | null,
+  id: string,
+): Promise<{ queued: boolean }> {
+  if (!accessToken) throw new RustApiError(401, "Missing authorization token");
+
+  const response = await fetch(
+    `${baseUrl}/api/v1/customers/${encodeURIComponent(id)}/start-enrichment`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(8_000),
+    },
+  );
+
+  if (!response.ok) {
+    throw new RustApiError(
+      response.status,
+      `Rust API request failed with HTTP ${response.status}`,
+    );
+  }
+
+  const payload = (await response.json()) as { queued?: boolean };
+  return { queued: payload.queued ?? true };
+}
+
 export async function cancelCustomerEnrichment(
   baseUrl: string,
   accessToken: string | null,

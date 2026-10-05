@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
 import { accountingRouter } from "../../trpc/routers/accounting";
+import { customersRouter } from "../../trpc/routers/customers";
 import { documentsRouter } from "../../trpc/routers/documents";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
 import { inboxRouter } from "../../trpc/routers/inbox";
@@ -599,6 +600,44 @@ describe("tRPC: AP-66 transactionAttachments.enqueueProcessTransactionAttachment
         transactionId: ID,
       },
       "transactions",
+    );
+  });
+});
+
+describe("tRPC: AP-65 customers.enqueueEnrichCustomer (trigger-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.getCustomerById?.mockReset?.();
+    mocks.updateCustomerEnrichmentStatus?.mockReset?.();
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-1" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueEnrichCustomer triggers enrich-customer without Drizzle", async () => {
+    const caller = createCallerFactory(customersRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    await caller.enqueueEnrichCustomer({ id: ID });
+    expect(mocks.getCustomerById).not.toHaveBeenCalled();
+    expect(mocks.updateCustomerEnrichmentStatus).not.toHaveBeenCalled();
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "enrich-customer",
+      {
+        customerId: ID,
+        teamId: "test-team-id",
+      },
+      "customers",
+      { attempts: 1 },
     );
   });
 });
