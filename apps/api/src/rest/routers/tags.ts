@@ -1,5 +1,12 @@
 import type { Context } from "@api/rest/types";
 import {
+  createTagForRest,
+  deleteTagForRest,
+  fetchTagByIdForRest,
+  fetchTagsListForRest,
+  updateTagForRest,
+} from "@api/rest/services/replacement-rest-tags";
+import {
   createTagSchema,
   deleteTagSchema,
   tagResponseSchema,
@@ -15,6 +22,7 @@ import {
   getTags,
   updateTag,
 } from "@midday/db/queries";
+import { HTTPException } from "hono/http-exception";
 import { withRequiredScope } from "../middleware";
 
 const app = new OpenAPIHono<Context>();
@@ -44,15 +52,16 @@ app.openapi(
     const db = c.get("db");
     const teamId = c.get("teamId");
 
-    const result = await getTags(db, { teamId });
+    const result = await fetchTagsListForRest(
+      c.req.header("Authorization"),
+      () =>
+        getTags(db, { teamId }).then((rows) => ({
+          data: rows,
+        })),
+    );
 
     return c.json(
-      validateResponse(
-        {
-          data: result,
-        },
-        tagsResponseSchema,
-      ),
+      validateResponse(result, tagsResponseSchema),
     );
   },
 );
@@ -86,7 +95,15 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await getTagById(db, { id, teamId });
+    const result = await fetchTagByIdForRest(
+      id,
+      c.req.header("Authorization"),
+      () => getTagById(db, { id, teamId }),
+    );
+
+    if (!result) {
+      throw new HTTPException(404, { message: "Tag not found" });
+    }
 
     return c.json(validateResponse(result, tagResponseSchema));
   },
@@ -128,7 +145,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const body = c.req.valid("json");
 
-    const result = await createTag(db, { teamId, ...body });
+    const result = await createTagForRest(
+      body.name,
+      c.req.header("Authorization"),
+      () => createTag(db, { teamId, ...body }),
+    );
 
     return c.json(validateResponse(result, tagResponseSchema), 201);
   },
@@ -172,11 +193,17 @@ app.openapi(
     const { id } = c.req.valid("param");
     const { name } = c.req.valid("json");
 
-    const result = await updateTag(db, {
+    const result = await updateTagForRest(
       id,
       name,
-      teamId,
-    });
+      c.req.header("Authorization"),
+      () =>
+        updateTag(db, {
+          id,
+          name,
+          teamId,
+        }),
+    );
 
     return c.json(validateResponse(result, tagResponseSchema));
   },
@@ -206,7 +233,11 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
 
-    const result = await deleteTag(db, { id, teamId });
+    const result = await deleteTagForRest(
+      id,
+      c.req.header("Authorization"),
+      () => deleteTag(db, { id, teamId }),
+    );
 
     return c.json(validateResponse(result, tagResponseSchema));
   },
