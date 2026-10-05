@@ -3,7 +3,10 @@
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
 import {
+  type DeleteInboxAccountResult,
   type InboxAccount,
+  deleteInboxAccount,
+  fetchInboxAccountById,
   fetchInboxAccounts,
 } from "./inbox-accounts";
 
@@ -22,4 +25,27 @@ export function inboxAccountsQueryOptions(queryKey: QueryKey) {
     queryFn: async () =>
       fetchInboxAccounts(getRustApiUrl(), await getAccessToken()),
   });
+}
+
+export async function deleteInboxAccountFromRust(
+  id: string,
+): Promise<DeleteInboxAccountResult | null> {
+  return deleteInboxAccount(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function fetchInboxAccountByIdFromRust(
+  id: string,
+): Promise<InboxAccount | null> {
+  return fetchInboxAccountById(getRustApiUrl(), await getAccessToken(), id);
+}
+
+export async function deleteInboxAccountWithScheduleCleanup(
+  input: { id: string },
+  enqueueSchedule: (scheduleId: string) => Promise<unknown>,
+): Promise<DeleteInboxAccountResult | null> {
+  const data = await deleteInboxAccountFromRust(input.id);
+  if (data?.scheduleId) {
+    await enqueueSchedule(data.scheduleId);
+  }
+  return data;
 }

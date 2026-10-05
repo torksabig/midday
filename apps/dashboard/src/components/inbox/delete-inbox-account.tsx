@@ -24,6 +24,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { deleteInboxAccountWithScheduleCleanup } from "@/lib/rust-api/inbox-accounts-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -36,18 +37,24 @@ export function DeleteInboxAccount({ accountId }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
 
-  const deleteInboxAccountMutation = useMutation(
-    trpc.inboxAccounts.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inboxAccounts.get.queryKey(),
-        });
-
-        setOpen(false);
-        setValue("");
-      },
-    }),
+  const enqueueDeleteScheduleMutation = useMutation(
+    trpc.inboxAccounts.enqueueDeleteInboxAccountSchedule.mutationOptions(),
   );
+
+  const deleteInboxAccountMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      deleteInboxAccountWithScheduleCleanup({ id }, (scheduleId) =>
+        enqueueDeleteScheduleMutation.mutateAsync({ scheduleId }),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inboxAccounts.get.queryKey(),
+      });
+
+      setOpen(false);
+      setValue("");
+    },
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>

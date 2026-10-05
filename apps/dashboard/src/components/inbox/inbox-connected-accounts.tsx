@@ -28,7 +28,10 @@ import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useSyncStatus } from "@/hooks/use-sync-status";
-import { inboxAccountsQueryOptions } from "@/lib/rust-api/inbox-accounts-client";
+import {
+  fetchInboxAccountByIdFromRust,
+  inboxAccountsQueryOptions,
+} from "@/lib/rust-api/inbox-accounts-client";
 import { useTRPC } from "@/trpc/client";
 import { ConnectEmailModal } from "./connect-email-modal";
 import { ConnectGmail } from "./connect-gmail";
@@ -50,30 +53,39 @@ function InboxAccountItem({ account }: { account: InboxAccount }) {
 
   const { status, setStatus, result } = useSyncStatus({ runId, accessToken });
 
-  const syncInboxAccountMutation = useMutation(
-    trpc.inboxAccounts.sync.mutationOptions({
-      onMutate: () => {
-        setSyncing(true);
-      },
-      onSuccess: (data) => {
-        if (data) {
-          setRunId(data.id);
-          setAccessToken(data.publicAccessToken);
-        }
-      },
-      onError: () => {
-        setSyncing(false);
-        setRunId(undefined);
-        setStatus("FAILED");
-
-        toast({
-          duration: 3500,
-          variant: "error",
-          title: "Something went wrong please try again.",
-        });
-      },
-    }),
+  const enqueueSyncInboxAccountMutation = useMutation(
+    trpc.inboxAccounts.enqueueSyncInboxAccount.mutationOptions(),
   );
+
+  const syncInboxAccountMutation = useMutation({
+    mutationFn: async (input: { id: string; manualSync?: boolean }) => {
+      const account = await fetchInboxAccountByIdFromRust(input.id);
+      if (!account) {
+        throw new Error("Inbox account not found");
+      }
+      return enqueueSyncInboxAccountMutation.mutateAsync(input);
+    },
+    onMutate: () => {
+      setSyncing(true);
+    },
+    onSuccess: (data) => {
+      if (data) {
+        setRunId(data.id);
+        setAccessToken(data.publicAccessToken);
+      }
+    },
+    onError: () => {
+      setSyncing(false);
+      setRunId(undefined);
+      setStatus("FAILED");
+
+      toast({
+        duration: 3500,
+        variant: "error",
+        title: "Something went wrong please try again.",
+      });
+    },
+  });
 
   useEffect(() => {
     if (isSyncing) {

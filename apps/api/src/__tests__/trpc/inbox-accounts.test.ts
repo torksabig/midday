@@ -1,15 +1,17 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createCallerFactory } from "../../trpc/init";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
 import { createTestContext } from "../helpers/test-context";
 import { mocks } from "../setup";
 
 const ACCOUNT_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const envSnapshot = { ...process.env };
 
 const createCaller = createCallerFactory(inboxAccountsRouter);
 
 describe("tRPC: inboxAccounts.get", () => {
   beforeEach(() => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     mocks.getInboxAccounts.mockReset();
     mocks.getInboxAccounts.mockImplementation(() => Promise.resolve([]));
   });
@@ -38,6 +40,7 @@ describe("tRPC: inboxAccounts.get", () => {
 
 describe("tRPC: inboxAccounts.delete", () => {
   beforeEach(() => {
+    process.env.MIDDAY_BACKEND_MODE = "legacy";
     mocks.deleteInboxAccount.mockReset();
     mocks.deleteInboxAccount.mockImplementation(() =>
       Promise.resolve({ id: ACCOUNT_ID, scheduleId: null }),
@@ -61,4 +64,8 @@ describe("tRPC: inboxAccounts.delete", () => {
     const caller = createCaller(createTestContext());
     expect(await caller.delete({ id: ACCOUNT_ID })).toBeNull();
   });
+});
+
+afterEach(() => {
+  process.env = { ...envSnapshot };
 });

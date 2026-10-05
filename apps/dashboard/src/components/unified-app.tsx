@@ -22,6 +22,7 @@ import { parseAsBoolean, parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { useAppOAuth } from "@/hooks/use-app-oauth";
 import { disconnectAppFromRust } from "@/lib/rust-api/apps-client";
+import { deleteInboxAccountWithScheduleCleanup } from "@/lib/rust-api/inbox-accounts-client";
 import { revokeOAuthApplicationAccessFromRust } from "@/lib/rust-api/oauth-applications-client";
 import { useTRPC } from "@/trpc/client";
 import { getScopeDescription } from "@/utils/scopes";
@@ -267,16 +268,22 @@ export function UnifiedAppComponent({ app }: UnifiedAppProps) {
     },
   });
 
-  // Mutation to disconnect inbox accounts (Gmail/Outlook)
-  const disconnectInboxAccountMutation = useMutation(
-    trpc.inboxAccounts.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.inboxAccounts.get.queryKey(),
-        });
-      },
-    }),
+  const enqueueDeleteInboxScheduleMutation = useMutation(
+    trpc.inboxAccounts.enqueueDeleteInboxAccountSchedule.mutationOptions(),
   );
+
+  // Mutation to disconnect inbox accounts (Gmail/Outlook)
+  const disconnectInboxAccountMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      deleteInboxAccountWithScheduleCleanup({ id }, (scheduleId) =>
+        enqueueDeleteInboxScheduleMutation.mutateAsync({ scheduleId }),
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.inboxAccounts.get.queryKey(),
+      });
+    },
+  });
 
   const connectorAuthorizeMutation = useMutation(
     trpc.connectors.authorize.mutationOptions(),

@@ -17,6 +17,11 @@ export const syncInboxAccountSchema = z.object({
   manualSync: z.boolean().optional(),
 });
 
+/** Trigger.dev schedule teardown after dashboard Rust inbox account delete. */
+export const enqueueDeleteInboxAccountScheduleSchema = z.object({
+  scheduleId: z.string(),
+});
+
 export const initialSetupInboxAccountSchema = z.object({
   inboxAccountId: z.string().uuid(),
 });

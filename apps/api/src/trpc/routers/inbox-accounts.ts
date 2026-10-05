@@ -1,6 +1,7 @@
 import {
   connectInboxAccountSchema,
   deleteInboxAccountSchema,
+  enqueueDeleteInboxAccountScheduleSchema,
   exchangeCodeForAccountSchema,
   // initialSetupInboxAccountSchema,
   syncInboxAccountSchema,
@@ -94,6 +95,25 @@ export const inboxAccountsRouter = createTRPCRouter({
       }
     }),
 
+  /** Schedule-only half after dashboard Rust `DELETE /api/v1/inbox-accounts/{id}`. */
+  enqueueDeleteInboxAccountSchedule: protectedProcedure
+    .input(enqueueDeleteInboxAccountScheduleSchema)
+    .mutation(async ({ input }) => {
+      await schedules.del(input.scheduleId);
+      return { deleted: true as const };
+    }),
+
+  /** Trigger-only half after dashboard Rust `GET /api/v1/inbox-accounts/{id}`. */
+  enqueueSyncInboxAccount: protectedProcedure
+    .input(syncInboxAccountSchema)
+    .mutation(async ({ input }) => {
+      return tasks.trigger("sync-inbox-account", {
+        id: input.id,
+        manualSync: input.manualSync || false,
+      });
+    }),
+
+  /** Full path for non-dashboard callers; dashboard uses Rust delete + enqueue schedule. */
   delete: protectedProcedure
     .input(deleteInboxAccountSchema)
     .mutation(async ({ ctx: { db, teamId, accessToken }, input }) => {
@@ -127,6 +147,7 @@ export const inboxAccountsRouter = createTRPCRouter({
       return data;
     }),
 
+  /** Full path for non-dashboard callers; dashboard uses Rust GET + enqueue sync. */
   sync: protectedProcedure
     .input(syncInboxAccountSchema)
     .mutation(async ({ input, ctx: { db, teamId, accessToken } }) => {

@@ -124,6 +124,13 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.updateBaseCurrency` team row SQL | **Rust direct** — dashboard `PUT /api/v1/team` (`baseCurrency` via `useTeamMutation`) before recalc; Node `team.enqueueUpdateBaseCurrency` (BullMQ `update-base-currency` only); full `team.updateBaseCurrency` tRPC retained for non-dashboard callers |
 | `team.exportAllData` | **Node job-only** — dashboard `team.enqueueExportAllData` (BullMQ `export-team-data`); no team SQL on Node; full `team.exportAllData` tRPC retained for non-dashboard callers |
 
+### Migrated (2026-10-05 inbox account sync/delete hybrids)
+
+| Capability | Now |
+|------------|-----|
+| `inboxAccounts.delete` SQL | **Rust direct** — dashboard `DELETE /api/v1/inbox-accounts/{id}` → Node `inboxAccounts.enqueueDeleteInboxAccountSchedule` (Trigger `schedules.del` only); full `inboxAccounts.delete` tRPC retained for non-dashboard callers |
+| `inboxAccounts.sync` row read SQL | **Rust direct** — dashboard `GET /api/v1/inbox-accounts/{id}` → Node `inboxAccounts.enqueueSyncInboxAccount` (Trigger `sync-inbox-account` only); full `inboxAccounts.sync` tRPC retained for non-dashboard callers |
+
 ### Kept — residual Node (live dashboard tRPC or non-tRPC API)
 
 #### Hybrid (Rust SQL may exist; Node owns side effects)
@@ -136,6 +143,8 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `team.enqueueDeleteTeamJob` | BullMQ `delete-team` provider teardown only (SQL on Rust) |
 | `team.enqueueUpdateBaseCurrency` | BullMQ `update-base-currency` only (team row SQL on Rust) |
 | `team.enqueueExportAllData` | BullMQ `export-team-data` only (no team SQL) |
+| `inboxAccounts.enqueueDeleteInboxAccountSchedule` | Trigger `schedules.del` only (SQL on Rust) |
+| `inboxAccounts.enqueueSyncInboxAccount` | Trigger `sync-inbox-account` only (row read on Rust) |
 | `team.invite` / `team.create` / `team.delete` (tRPC) | Non-dashboard callers; dashboard skips SQL hop |
 | `team.updateBaseCurrency` / `exportAllData` (tRPC) | Non-dashboard callers; dashboard uses enqueue* |
 | `bankConnections.delete` | Trigger `delete-connection` only (SQL on Rust) |
@@ -144,7 +153,7 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `invoice.cancelSchedule` / `remind` / `updateSchedule` | Trigger/BullMQ only (SQL on Rust) |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` | BullMQ + notifications only (SQL on Rust; resume direct) |
 | `customers.enrich` | Trigger enrich job only (SQL on Rust) |
-| `inboxAccounts.sync` / `delete` | Trigger schedules |
+| `inboxAccounts.sync` / `delete` (tRPC) | Non-dashboard callers; dashboard uses enqueue* |
 | `transactionAttachments.processAttachment` | Jobs |
 | `accounting.export` | Export job (+ provider HTTP gated) |
 | `transactions.import` / `export` / `generateCsvMapping` | Jobs / AI |
@@ -197,6 +206,8 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | `team.create` / delete prep+delete SQL | **Rust direct** (dashboard); `enqueueDeleteTeamJob` / tRPC fallback Node |
 | `team.updateBaseCurrency` | **Rust** team row (dashboard `team.update`); BullMQ recalc via `enqueueUpdateBaseCurrency` / tRPC fallback Node |
 | `team.exportAllData` | **BullMQ only** — dashboard `enqueueExportAllData` / tRPC fallback Node |
+| `inboxAccounts.delete` SQL | **Rust direct** (dashboard); `enqueueDeleteInboxAccountSchedule` / tRPC fallback Node |
+| `inboxAccounts.sync` row read | **Rust direct** (dashboard); `enqueueSyncInboxAccount` / tRPC fallback Node |
 | `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
 | `customers.enrich` SQL | **Rust**; Trigger job Node |
@@ -207,8 +218,8 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-1. **`inboxAccounts.sync` / `delete`** — Rust SQL already delegated; dashboard direct + job-only tRPC like team hybrids.  
-2. **`oauthApplications.authorize` / `updateApprovalStatus`** — Resend-only enqueue split (SQL on Rust).  
+1. **`oauthApplications.authorize` / `updateApprovalStatus`** — Resend-only enqueue split (SQL on Rust).  
+2. **`inbox.processAttachments` / `retryMatching`** — job-only enqueue after Rust paths if any SQL remains on Node.  
 3. Or **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

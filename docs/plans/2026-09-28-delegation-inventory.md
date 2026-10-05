@@ -84,8 +84,10 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `oauthApplications.authorize` | yes | **write** · auth-code SQL; install email stays Node (AP-62) |
 | `oauthApplications.*` (other) | no | — |
 | `inboxAccounts.get` | direct Rust | read · connected inboxes (AP-16); dashboard calls `GET /api/v1/inbox-accounts` directly |
-| `inboxAccounts.delete` | yes | **write** · DB delete; Trigger `schedules.del` stays Node (AP-58) |
-| `inboxAccounts.sync` | yes | **write** · account row read SQL; Trigger sync stays Node (AP-60) |
+| `inboxAccounts.delete` | yes | **write** · DB delete; Trigger `schedules.del` stays Node (AP-58) — dashboard Rust delete + `enqueueDeleteInboxAccountSchedule`; full tRPC for non-dashboard |
+| `inboxAccounts.sync` | yes | **write** · account row read SQL; Trigger sync stays Node (AP-60) — dashboard Rust GET + `enqueueSyncInboxAccount`; full tRPC for non-dashboard |
+| `inboxAccounts.enqueueDeleteInboxAccountSchedule` | no | **write** · Trigger `schedules.del` only (dashboard hybrid) |
+| `inboxAccounts.enqueueSyncInboxAccount` | no | **write** · Trigger `sync-inbox-account` only (dashboard hybrid) |
 | `inboxAccounts.*` (other) | no | connect, OAuth exchange |
 | `transactionCategories.get` | direct Rust | read · parent/child category tree (AP-30); dashboard calls `GET /api/v1/categories` directly and preserves the old React Query cache key |
 | `transactionCategories.getById` | direct Rust | read · detail + children (AP-24); dashboard calls `GET /api/v1/categories/:id` directly |
