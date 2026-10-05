@@ -1,6 +1,8 @@
+// Mocks for @trigger.dev/sdk and @midday/job-client are registered via bunfig preload (setup.ts).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mocks } from "../setup";
 import { createCallerFactory } from "../../trpc/init";
+import { documentsRouter } from "../../trpc/routers/documents";
 import { inboxAccountsRouter } from "../../trpc/routers/inbox-accounts";
 import { inboxRouter } from "../../trpc/routers/inbox";
 import { oauthApplicationsRouter } from "../../trpc/routers/oauth-applications";
@@ -380,6 +382,50 @@ describe("tRPC: AP-66 inbox.enqueueRetryMatching (job-only hybrid)", () => {
         inboxIds: [ID],
       },
       "inbox",
+    );
+  });
+});
+
+describe("tRPC: documents.enqueueProcessDocument (job-only hybrid)", () => {
+  beforeEach(() => {
+    mocks.triggerJob?.mockReset?.();
+    mocks.triggerJob?.mockImplementation?.(() => ({ id: "job-process-doc" }));
+    process.env = {
+      ...envSnapshot,
+      SUPABASE_URL: envSnapshot.SUPABASE_URL ?? "https://test.supabase.co",
+      MIDDAY_BACKEND_MODE: "replacement",
+      REPLACEMENT_API_URL: "http://127.0.0.1:1",
+    };
+    delete process.env.REPLACEMENT_DELEGATION_USE_DEMO;
+  });
+
+  afterEach(() => {
+    process.env = { ...envSnapshot };
+  });
+
+  test("enqueueProcessDocument triggers process-document without Drizzle", async () => {
+    const caller = createCallerFactory(documentsRouter)(
+      createTestContext({ accessToken: "fake-session-jwt" }),
+    );
+    const result = await caller.enqueueProcessDocument([
+      {
+        filePath: ["team-1", "vault", "invoice.pdf"],
+        mimetype: "application/pdf",
+        size: 2048,
+      },
+    ]);
+    expect(result.jobs).toEqual([{ id: "job-process-doc" }]);
+    expect(mocks.triggerJob).toHaveBeenCalledWith(
+      "process-document",
+      {
+        filePath: ["team-1", "vault", "invoice.pdf"],
+        mimetype: "application/pdf",
+        teamId: "test-team-id",
+      },
+      "documents",
+      {
+        jobId: "process-doc_test-team-id_team-1/vault/invoice.pdf",
+      },
     );
   });
 });

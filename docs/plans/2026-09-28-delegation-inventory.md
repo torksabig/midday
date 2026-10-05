@@ -138,6 +138,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `documents.delete` | direct Rust | **write** · DB + attachment cleanup + vault storage remove (2026-10-04); dashboard calls `DELETE /api/v1/documents/{id}` |
 | `documents.reprocessDocument` | yes | **write** · get + processing-status SQL; process-document job stays Node (AP-59) — **hybrid, keep on tRPC** |
 | `documents.processDocument` | yes | **write** · unsupported bulk status SQL; process-document jobs stay Node (AP-60) |
+| `documents.enqueueProcessDocument` | no | **write** · BullMQ `process-document` only (dashboard hybrid after Rust `POST /documents/process` or reprocess) |
 | `documents.*` (other) | no | signed URLs (storage only, no SQL) |
 | `documentTags.get` | direct Rust | read · vault tag list (Phase 10); dashboard calls `GET /api/v1/document-tags` directly |
 | `documentTags.create` | direct Rust | **write** · insert tag (AP-23); dashboard calls `POST /api/v1/document-tags` directly; embedding side-effect deferred (was Node) |

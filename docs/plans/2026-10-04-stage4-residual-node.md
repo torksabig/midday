@@ -231,6 +231,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | `oauthApplications.updateApprovalStatus` SQL | **Rust direct** (dashboard); `enqueueOAuthApprovalReviewEmail` / tRPC fallback Node |
 | `inbox.processAttachments` / `retryMatching` | **BullMQ only** — dashboard Rust create + `enqueueProcessAttachments` / `enqueueRetryMatching`; tRPC fallback Node |
 | `transactionAttachments.processAttachment` | **BullMQ only** — dashboard Rust createMany + `enqueueProcessTransactionAttachments`; tRPC fallback Node |
+| `documents.processDocument` / reprocess SQL | **Rust direct** — dashboard `processDocumentsFromRust` / `reprocessDocumentFromRust` → `documents.enqueueProcessDocument`; tRPC orchestrators for non-dashboard |
 | `bankConnections.delete` SQL | **Rust**; Trigger `delete-connection` Node |
 | `invoiceRecurring` create/update/pause/delete SQL | **Rust**; BullMQ + notifications Node; resume direct |
 | `customers.enrich` SQL | **Rust**; Trigger job Node |
@@ -239,10 +240,15 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 | Invoice PDF live render (draft/receipt) | **Node** — STOP / non-tRPC |
 | Invoice send / create Trigger | **Node** — hybrid |
 
+### Test harness (AP-63 delegation suite)
+
+`apps/api/bunfig.toml` preloads `src/__tests__/setup.ts` so `@trigger.dev/sdk` (`tasks.trigger`, `schedules.del`) and `@midday/job-client` mocks apply before router imports. `TRIGGER_SECRET_KEY` is set in setup as a fallback env. Run:
+
+`cd apps/api && bun test src/__tests__/trpc/ap63-replacement-delegation.test.ts`
+
 ### Next recommended residual slice
 
 1. **Invoice PDF live render** — port `@midday/invoice` React-PDF off Node (drafts/receipts), or generate receipts into vault (larger STOP gate).  
-2. **`documents.reprocessDocument` / `processDocument`** — further thin enqueue-only naming for dashboard (SQL already Rust).  
-3. **`transactions.import` / `export` / `generateCsvMapping`** — jobs / AI hybrids when import SQL fully on Rust.
+2. **`transactions.import` / `export` / `generateCsvMapping`** — jobs / AI hybrids when import SQL fully on Rust.
 
 Do **not** silently remove STOP/hybrid without a replacement plan.

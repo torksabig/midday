@@ -45,6 +45,8 @@ process.env.STRIPE_CONNECT_CLIENT_ID =
   process.env.STRIPE_CONNECT_CLIENT_ID || "ca_test_connect_client";
 process.env.STRIPE_SECRET_KEY =
   process.env.STRIPE_SECRET_KEY || "sk_test_mock_secret";
+process.env.TRIGGER_SECRET_KEY =
+  process.env.TRIGGER_SECRET_KEY || "tr_test_mock_secret";
 
 // Create a mock db object for tRPC tests that simulates Drizzle's query interface
 const createMockDb = () => ({
