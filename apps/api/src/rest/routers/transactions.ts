@@ -16,6 +16,12 @@ import {
   updateTransactionSchema,
   updateTransactionsSchema,
 } from "@api/schemas/transactions";
+import {
+  extractBearerToken,
+  fetchReplacementVaultPresignedUrl,
+  normalizeVaultObjectPath,
+} from "@api/rest/services/vault-presigned-url";
+import { tryDelegateTransactionsGetById } from "@api/services/replacement-delegation";
 import { createAdminClient } from "@api/services/supabase";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -175,8 +181,61 @@ app.openapi(
     const teamId = c.get("teamId");
     const { transactionId, attachmentId } = c.req.valid("param");
     const { download = true } = c.req.valid("query");
+    const sessionAccessToken = extractBearerToken(c.req.header("Authorization"));
+    const expireIn = 60;
 
-    // First, verify the attachment exists and belongs to the team/transaction
+    const delegatedTx = await tryDelegateTransactionsGetById(
+      transactionId,
+      sessionAccessToken,
+    );
+
+    if (delegatedTx.delegated) {
+      const transaction = delegatedTx.transaction;
+
+      if (!transaction) {
+        return c.json({ error: "Transaction attachment not found" }, 404);
+      }
+
+      const attachment = transaction.attachments?.find(
+        (row) => row.id === attachmentId,
+      );
+
+      if (!attachment) {
+        return c.json({ error: "Transaction attachment not found" }, 404);
+      }
+
+      const filePath = normalizeVaultObjectPath(attachment.path);
+      if (!filePath) {
+        return c.json({ error: "Attachment file path not available" }, 400);
+      }
+
+      const fileName =
+        attachment.filename ||
+        (Array.isArray(attachment.path)
+          ? attachment.path.at(-1)
+          : typeof attachment.path === "string"
+            ? attachment.path.split("/").at(-1)
+            : null) ||
+        null;
+
+      const presigned = await fetchReplacementVaultPresignedUrl(
+        filePath,
+        expireIn,
+        fileName,
+        sessionAccessToken,
+      );
+
+      if (presigned !== "legacy") {
+        return c.json(
+          validateResponse(
+            presigned,
+            transactionAttachmentPreSignedUrlResponseSchema,
+          ),
+          200,
+        );
+      }
+    }
+
     const attachment = await getTransactionAttachment(db, {
       transactionId,
       attachmentId,
@@ -187,16 +246,12 @@ app.openapi(
       return c.json({ error: "Transaction attachment not found" }, 404);
     }
 
-    if (!attachment.path || attachment.path.length === 0) {
+    const filePath = normalizeVaultObjectPath(attachment.path);
+    if (!filePath) {
       return c.json({ error: "Attachment file path not available" }, 400);
     }
 
-    // Create admin supabase client
     const supabase = await createAdminClient();
-
-    // Generate the pre-signed URL with 60-second expiration
-    const filePath = attachment.path.join("/");
-    const expireIn = 60; // 60 seconds
 
     const { data, error } = await signedUrl(supabase, {
       bucket: "vault",
@@ -211,12 +266,9 @@ app.openapi(
       return c.json({ error: "Failed to generate pre-signed URL" }, 500);
     }
 
-    // Calculate expiration timestamp
-    const expiresAt = new Date(Date.now() + expireIn * 1000).toISOString();
-
     const result = {
       url: data.signedUrl,
-      expiresAt,
+      expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
       fileName: attachment.name || attachment.path.at(-1) || null,
     };
 

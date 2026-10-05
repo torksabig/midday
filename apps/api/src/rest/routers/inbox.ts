@@ -10,6 +10,12 @@ import {
   inboxResponseSchema,
   updateInboxSchema,
 } from "@api/schemas/inbox";
+import {
+  extractBearerToken,
+  fetchReplacementVaultPresignedUrl,
+  normalizeVaultObjectPath,
+} from "@api/rest/services/vault-presigned-url";
+import { tryDelegateInboxGetById } from "@api/services/replacement-delegation";
 import { createAdminClient } from "@api/services/supabase";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -168,8 +174,45 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
     const { download = true } = c.req.valid("query");
+    const sessionAccessToken = extractBearerToken(c.req.header("Authorization"));
+    const expireIn = 60;
 
-    // First, verify the inbox item exists and belongs to the team
+    const delegatedInbox = await tryDelegateInboxGetById(id, sessionAccessToken);
+
+    if (delegatedInbox.delegated) {
+      const inboxItem = delegatedInbox.item;
+
+      if (!inboxItem) {
+        return c.json({ error: "Inbox item not found" }, 404);
+      }
+
+      const filePath = normalizeVaultObjectPath(inboxItem.filePath);
+      if (!filePath) {
+        return c.json({ error: "Attachment file path not available" }, 400);
+      }
+
+      const fileName =
+        inboxItem.fileName ||
+        (Array.isArray(inboxItem.filePath)
+          ? inboxItem.filePath.at(-1)
+          : null) ||
+        null;
+
+      const presigned = await fetchReplacementVaultPresignedUrl(
+        filePath,
+        expireIn,
+        fileName,
+        sessionAccessToken,
+      );
+
+      if (presigned !== "legacy") {
+        return c.json(
+          validateResponse(presigned, inboxPreSignedUrlResponseSchema),
+          200,
+        );
+      }
+    }
+
     const inboxItem = await getInboxById(db, {
       id,
       teamId,
@@ -179,16 +222,12 @@ app.openapi(
       return c.json({ error: "Inbox item not found" }, 404);
     }
 
-    if (!inboxItem.filePath || inboxItem.filePath.length === 0) {
+    const filePath = normalizeVaultObjectPath(inboxItem.filePath);
+    if (!filePath) {
       return c.json({ error: "Attachment file path not available" }, 400);
     }
 
-    // Create admin supabase client
     const supabase = await createAdminClient();
-
-    // Generate the pre-signed URL with 60-second expiration
-    const filePath = inboxItem.filePath.join("/");
-    const expireIn = 60; // 60 seconds
 
     const { data, error } = await signedUrl(supabase, {
       bucket: "vault",
@@ -203,12 +242,9 @@ app.openapi(
       return c.json({ error: "Failed to generate pre-signed URL" }, 500);
     }
 
-    // Calculate expiration timestamp
-    const expiresAt = new Date(Date.now() + expireIn * 1000).toISOString();
-
     const result = {
       url: data.signedUrl,
-      expiresAt,
+      expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
       fileName: inboxItem.fileName || inboxItem.filePath.at(-1) || null,
     };
 

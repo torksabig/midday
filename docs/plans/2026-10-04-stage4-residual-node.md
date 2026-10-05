@@ -4,11 +4,11 @@
 > **Gate:** User one-shot **`decommission`** from [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md).  
 > **Policy:** Incremental safe teardown — do **not** delete all of `apps/api` while hybrids / STOP gates still have live dashboard callers.
 
-## Tip SHAs (2026-10-05 post–bankConnections.delete dashboard hybrid)
+## Tip SHAs (2026-10-05 post–REST presigned-url Rust delegation)
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `712a39078` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see commit)_ | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
@@ -53,6 +53,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 ### Prioritized next slices (no invoice PDF live render)
 
 1. **`invoice.updateSchedule`** — **no dashboard tRPC callers** (2026-10-05 grep); defer until reschedule UI calls tRPC or add Rust+enqueue when product ships it.
+2. **REST OpenAPI list/get/delete** on `:3003` — still Drizzle for several resources; presigned-url paths now Rust in replacement mode (see migrated slice below).
 3. **`POST /chat`** — move off Node or document long-term co-host (**permanent block** until ported).
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*` (**permanent block** for full Node teardown).
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -319,6 +320,16 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `inbox.retryMatching` | **Node job-only** — dashboard `inbox.enqueueRetryMatching` (BullMQ `batch-process-matching`); full `retryMatching` tRPC retained for non-dashboard callers |
 | `transactionAttachments.processAttachment` | **Node job-only** — dashboard Rust `POST /api/v1/transaction-attachments` → Node `transactionAttachments.enqueueProcessTransactionAttachments` (BullMQ `process-transaction-attachment`); full `processAttachment` tRPC retained for non-dashboard callers |
 
+### Migrated (2026-10-05 REST presigned-url → Rust vault signed-url)
+
+| Capability | Now |
+|------------|-----|
+| `POST /documents/{id}/presigned-url` | **Rust** — row read via delegated `GET /api/v1/documents/{id}` + `POST /api/v1/documents/signed-url` (replacement mode); legacy dual still uses Drizzle + Supabase on Node |
+| `POST /inbox/{id}/presigned-url` | **Rust** — delegated inbox get + Rust signed-url |
+| `POST /transactions/{transactionId}/attachments/{attachmentId}/presigned-url` | **Rust** — delegated transaction get + Rust signed-url |
+
+Public REST / MCP clients on `:3003` no longer require Drizzle for presigned vault URLs when `MIDDAY_BACKEND_MODE=replacement` (Bearer or `REPLACEMENT_DELEGATION_TOKEN`).
+
 ### Migrated (2026-10-05 transactions import / export hybrids)
 
 | Capability | Now |
@@ -447,7 +458,7 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. Then **`POST /chat`** port or co-host documentation.
+**`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. Then remaining **REST OpenAPI** Drizzle reads/writes (non-presigned) or **`POST /chat`** co-host only (documented).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 

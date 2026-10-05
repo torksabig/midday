@@ -103,9 +103,9 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 ## Phase 0 checklist (minimal)
 
-- [ ] Add to dashboard `.env-example`: `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`
-- [ ] Port `packages/replacement-backend` + `/api/replacement/status` from workspace (no UI changes)
-- [ ] CI/script: `diff` dashboard+ui against Downloads path
+- [x] Add to dashboard `.env-example`: `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`
+- [x] Port `packages/replacement-backend` + `/api/replacement/status` from workspace (no UI changes)
+- [x] CI/script: `scripts/diff-ui-baseline.sh` — `diff` dashboard+ui against Downloads (`MIDDAY_UI_BASELINE` override)
 - [ ] Legal review (below)
 
 ## Env reference

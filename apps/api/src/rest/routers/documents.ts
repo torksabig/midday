@@ -9,6 +9,14 @@ import {
   getDocumentsSchema,
   preSignedUrlResponseSchema,
 } from "@api/schemas/documents";
+import {
+  extractBearerToken,
+  fetchReplacementVaultPresignedUrl,
+  normalizeVaultObjectPath,
+} from "@api/rest/services/vault-presigned-url";
+import {
+  tryDelegateDocumentsGetById,
+} from "@api/services/replacement-delegation";
 import { createAdminClient } from "@api/services/supabase";
 import { validateResponse } from "@api/utils/validate-response";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
@@ -163,9 +171,51 @@ app.openapi(
     const teamId = c.get("teamId");
     const { id } = c.req.valid("param");
     const { download = true } = c.req.valid("query");
+    const sessionAccessToken = extractBearerToken(c.req.header("Authorization"));
+    const expireIn = 60;
 
     try {
-      // First, verify the document exists and belongs to the team
+      const delegatedDoc = await tryDelegateDocumentsGetById(
+        id,
+        null,
+        sessionAccessToken,
+      );
+
+      if (delegatedDoc.delegated) {
+        const document = delegatedDoc.document as {
+          pathTokens?: string[] | null;
+          name?: string | null;
+        } | null;
+
+        if (!document) {
+          return c.json({ error: "Document not found" }, 404);
+        }
+
+        const filePath = normalizeVaultObjectPath(document.pathTokens);
+        if (!filePath) {
+          return c.json({ error: "Document file path not available" }, 400);
+        }
+
+        const fileName =
+          document.pathTokens?.at(-1) ||
+          document.name?.split("/").at(-1) ||
+          null;
+
+        const presigned = await fetchReplacementVaultPresignedUrl(
+          filePath,
+          expireIn,
+          fileName,
+          sessionAccessToken,
+        );
+
+        if (presigned !== "legacy") {
+          return c.json(
+            validateResponse(presigned, preSignedUrlResponseSchema),
+            200,
+          );
+        }
+      }
+
       const document = await getDocumentById(db, {
         id,
         teamId,
@@ -175,16 +225,12 @@ app.openapi(
         return c.json({ error: "Document not found" }, 404);
       }
 
-      if (!document.pathTokens || document.pathTokens.length === 0) {
+      const filePath = normalizeVaultObjectPath(document.pathTokens);
+      if (!filePath) {
         return c.json({ error: "Document file path not available" }, 400);
       }
 
-      // Create admin supabase client
       const supabase = await createAdminClient();
-
-      // Generate the pre-signed URL with 60-second expiration
-      const filePath = document.pathTokens.join("/");
-      const expireIn = 60; // 60 seconds
 
       const { data, error } = await signedUrl(supabase, {
         bucket: "vault",
@@ -199,12 +245,9 @@ app.openapi(
         return c.json({ error: "Failed to generate pre-signed URL" }, 500);
       }
 
-      // Calculate expiration timestamp
-      const expiresAt = new Date(Date.now() + expireIn * 1000).toISOString();
-
       const result = {
         url: data.signedUrl,
-        expiresAt,
+        expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
         fileName:
           document.pathTokens?.at(-1) ||
           document.name?.split("/").at(-1) ||
