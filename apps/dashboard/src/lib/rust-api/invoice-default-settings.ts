@@ -138,10 +138,10 @@ export function normalizeInvoiceDefaultSettings(
   };
 }
 
-export async function fetchInvoiceDefaultSettings(
+export async function fetchInvoiceDefaultSettingsData(
   baseUrl: string,
   accessToken: string | null,
-): Promise<InvoiceDefaultSettings> {
+): Promise<InvoiceDefaultSettingsData> {
   if (!accessToken) throw new RustApiError(401, "Missing authorization token");
 
   const response = await fetch(
@@ -159,7 +159,13 @@ export async function fetchInvoiceDefaultSettings(
     );
   }
 
-  return normalizeInvoiceDefaultSettings(
-    (await response.json()) as InvoiceDefaultSettingsData,
-  );
+  return (await response.json()) as InvoiceDefaultSettingsData;
+}
+
+export async function fetchInvoiceDefaultSettings(
+  baseUrl: string,
+  accessToken: string | null,
+): Promise<InvoiceDefaultSettings> {
+  const payload = await fetchInvoiceDefaultSettingsData(baseUrl, accessToken);
+  return normalizeInvoiceDefaultSettings(payload);
 }

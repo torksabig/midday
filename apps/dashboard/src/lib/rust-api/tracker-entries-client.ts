@@ -143,3 +143,13 @@ export async function upsertTrackerEntriesFromRust(
 export async function deleteTrackerEntryFromRust(input: DeleteTrackerEntryInput) {
   return deleteTrackerEntry(getRustApiUrl(), await getAccessToken(), input);
 }
+
+export async function fetchTrackerEntriesByRangeFromRust(
+  params: TrackerEntriesByRangeParams,
+) {
+  return fetchTrackerEntriesByRange(
+    getRustApiUrl(),
+    await getAccessToken(),
+    params,
+  );
+}

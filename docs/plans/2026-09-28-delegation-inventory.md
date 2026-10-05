@@ -182,7 +182,7 @@ Branch: `cursor/backend-replace-ui-frozen-plans` · Glue: `@midday/replacement-b
 | `invoice.enqueueScheduleInvoice` | no | **write** · BullMQ `schedule-invoice` only (dashboard hybrid) |
 | `invoice.enqueueInvoiceScheduledNotification` | no | **write** · Trigger notification only (dashboard hybrid) |
 | `invoice.create` | yes | **write** · full path for non-dashboard; dashboard Rust status + enqueue* jobs (AP-55) |
-| `invoice.createFromTracker` | yes | **write** · tracker compose Node + draft insert (AP-55) — **dashboard still tRPC** |
+| `invoice.createFromTracker` | yes | **write** · full path for non-dashboard (MCP/chat); dashboard Rust tracker reads + compose + `POST /invoices/draft` (AP-55) |
 | `invoice.defaultSettings` | direct Rust | read · Postgres bundle via `GET /api/v1/invoices/default-settings-data`; dashboard compose (geo/uuid/date) in `invoice-default-settings.ts` (AP-58) |
 | `invoice.remind` | yes | **write** · full path for non-dashboard; dashboard Rust PUT + `enqueueSendInvoiceReminder` (AP-59) |
 | `invoice.*` (other) | no | send (email delivery) |

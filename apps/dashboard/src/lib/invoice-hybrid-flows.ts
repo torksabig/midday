@@ -6,9 +6,19 @@ import {
   pauseInvoiceRecurringFromRust,
 } from "@/lib/rust-api/invoice-recurring-client";
 import {
+  composeInvoiceDraftFromTracker,
+  type CreateFromTrackerInput,
+} from "@/lib/invoice-create-from-tracker-compose";
+import { fetchCustomerByIdFromRust } from "@/lib/rust-api/customers-client";
+import { fetchInvoiceDefaultSettingsDataFromRust } from "@/lib/rust-api/invoice-default-settings-client";
+import {
+  draftInvoiceFromRust,
   fetchInvoiceByIdFromRust,
   updateInvoiceFromRust,
 } from "@/lib/rust-api/invoices-client";
+import { fetchTrackerEntriesByRangeFromRust } from "@/lib/rust-api/tracker-entries-client";
+import { fetchTrackerProjectByIdFromRust } from "@/lib/rust-api/tracker-projects-client";
+import { fetchViewerFromRust } from "@/lib/rust-api/viewer-client";
 
 type CreateInvoiceInput = RouterInputs["invoice"]["create"];
 
@@ -164,4 +174,47 @@ export async function deleteInvoiceRecurringHybrid(
     await enqueueRemoveInvoiceScheduledJobs({ jobIds });
   }
   return { id: recurring?.id ?? input.id };
+}
+
+export async function createInvoiceFromTrackerHybrid(
+  input: CreateFromTrackerInput,
+) {
+  const viewer = await fetchViewerFromRust();
+  const teamId = viewer.teamId ?? viewer.team?.id;
+  const userId = viewer.user?.id ?? viewer.id;
+
+  if (!teamId || !userId) {
+    throw hybridTrpcError(
+      "UNAUTHORIZED",
+      "Missing team or user context for invoice draft",
+    );
+  }
+
+  const [project, trackerData, settings] = await Promise.all([
+    fetchTrackerProjectByIdFromRust(input.projectId),
+    fetchTrackerEntriesByRangeFromRust({
+      from: input.dateFrom,
+      to: input.dateTo,
+      projectId: input.projectId,
+    }),
+    fetchInvoiceDefaultSettingsDataFromRust(),
+  ]);
+
+  const customerId = project?.customerId;
+  const customer =
+    customerId != null
+      ? await fetchCustomerByIdFromRust(customerId)
+      : null;
+
+  const draftPayload = composeInvoiceDraftFromTracker({
+    input,
+    project,
+    trackerData,
+    settings,
+    teamId,
+    userId,
+    customer,
+  });
+
+  return draftInvoiceFromRust(draftPayload);
 }

@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `5090a56ca` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see commit after push)_ | torksabig |
 | **clone** (origin) | (default) | `9bf4592` | origin |
 
 Post–OpenAPI `getAppById` slice: clone adds typed `InstalledAppResponse` in utoipa; dashboard `generate:rust-api` picks up `components["schemas"]["InstalledAppResponse"]` for `getAppById` / `getApps` / app settings mutations.
@@ -29,7 +29,8 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 | `oauthApplications.enqueueOAuthAppInstalledEmail` / `enqueueOAuthApprovalReviewEmail` | Resend only | Hybrid job-only |
 | `invoice.enqueueSendInvoiceReminder` / `enqueueRemoveScheduledInvoiceJob` / `enqueueGenerateInvoice` / `enqueueScheduleInvoice` / `enqueueInvoiceScheduledNotification` | Trigger / BullMQ only (SQL on Rust) | Hybrid job-only |
 | `invoiceRecurring.enqueueRemoveInvoiceScheduledJobs` / `enqueueRecurringSeriesStartedNotification` | BullMQ / notification only (SQL on Rust) | Hybrid job-only |
-| `invoice.create` / `createFromTracker` / `cancelSchedule` / `remind` / `updateSchedule` (tRPC) | Non-dashboard; dashboard uses Rust + enqueue* | Hybrid fallback |
+| `invoice.create` / `cancelSchedule` / `remind` / `updateSchedule` (tRPC) | Non-dashboard; dashboard uses Rust + enqueue* | Hybrid fallback |
+| `invoice.createFromTracker` (tRPC) | Non-dashboard (MCP/chat); dashboard Rust tracker + draft | Hybrid fallback |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` (tRPC) | Non-dashboard; dashboard uses Rust + enqueue* (`resume` direct) | Hybrid fallback |
 | `customers.enqueueEnrichCustomer` | Trigger `enrich-customer` only (SQL on Rust) | Hybrid job-only |
 | `customers.enrich` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue | Hybrid fallback |
@@ -49,8 +50,7 @@ Excludes procedures used **only** as React Query `queryKey` / `mutationKey` whil
 
 ### Prioritized next slices (no invoice PDF live render)
 
-1. **`invoice.createFromTracker`** — tracker aggregation stays Node; split dashboard to Rust draft + enqueue send when feasible.
-2. **`invoice.updateSchedule`** — reschedule BullMQ hop if dashboard gains UI for it.
+1. **`invoice.updateSchedule`** — reschedule BullMQ hop if dashboard gains UI for it.
 3. **`POST /chat`** — move off Node or document long-term co-host.
 4. **Worker / `packages/jobs`** — stop calling Node `trpc.banking.*`.
 5. **OAuth redirect URIs** — keep on minimal Node until product accepts new redirect hosts.
@@ -146,7 +146,8 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | Blind invoice downloads (portal token, zip, toolbar, customer/email previews) | **Rust first** via `fetchInvoicePdfBlob` / `downloadInvoicePdf`; **Node** on `no_stored_pdf` / `needs_render` / Rust down |
 | MCP `pdfUrl` when `filePath` set | **Rust**; drafts without stored PDF stay Node URL; `download=true` tries Rust bytes then React-PDF |
 | `invoice.create` status writes (`unpaid` / `scheduled`) | **Rust** `PUT` via `tryDelegateInvoiceUpdate` (already); Trigger/BullMQ/PDF job Node |
-| `invoice.createFromTracker` draft insert | **Rust** via `tryDelegateInvoiceDraft` (already); tracker aggregation Node |
+| `invoice.createFromTracker` (non-dashboard tRPC) | **Rust** draft via `tryDelegateInvoiceDraft`; tracker aggregation Node |
+| `invoice.createFromTracker` (dashboard) | **Rust** tracker reads + browser compose + `POST /invoices/draft` |
 | Receipts (`type=receipt`) | **Node** React-PDF (STOP) |
 
 ### Migrated (2026-10-05 invite + recurring SQL hybrid harden)
@@ -193,6 +194,12 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 |------------|-----|
 | `oauthApplications.authorize` SQL | **Rust direct** — dashboard `POST /api/v1/oauth-applications/authorize` → Node `oauthApplications.enqueueOAuthAppInstalledEmail` (Resend only); full `oauthApplications.authorize` tRPC retained for non-dashboard callers |
 | `oauthApplications.updateApprovalStatus` SQL | **Rust direct** — dashboard `POST /api/v1/oauth-applications/{id}/approval-status` → Node `oauthApplications.enqueueOAuthApprovalReviewEmail` when status is `pending` (Resend only); full tRPC retained for non-dashboard callers |
+
+### Migrated (2026-10-05 invoice createFromTracker dashboard hybrid)
+
+| Capability | Now |
+|------------|-----|
+| `invoice.createFromTracker` | **Rust direct** — dashboard reads tracker project + entries by range + default-settings-data (+ customer when linked), composes draft payload in browser, `POST /api/v1/invoices/draft`; full tRPC retained for MCP/chat/non-dashboard |
 
 ### Migrated (2026-10-05 invoice send/schedule/recurring dashboard hybrid)
 
@@ -255,7 +262,8 @@ Cut-over screens hit Rust. Residual screens (billing, bank connect OAuth, invoic
 | `bankConnections.delete` | Trigger `delete-connection` only (SQL on Rust) |
 | `oauthApplications.authorize` / `updateApprovalStatus` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
 | `invoice.enqueueSendInvoiceReminder` / `enqueueRemoveScheduledInvoiceJob` / `enqueueGenerateInvoice` / `enqueueScheduleInvoice` / `enqueueInvoiceScheduledNotification` | Trigger/BullMQ/notification only (SQL on Rust) |
-| `invoice.create` / `createFromTracker` / `cancelSchedule` / `remind` / `updateSchedule` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
+| `invoice.create` / `cancelSchedule` / `remind` / `updateSchedule` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
+| `invoice.createFromTracker` (tRPC) | Non-dashboard (MCP/chat); dashboard Rust tracker + draft |
 | `invoiceRecurring.enqueueRemoveInvoiceScheduledJobs` / `enqueueRecurringSeriesStartedNotification` | BullMQ/notification only (SQL on Rust) |
 | `invoiceRecurring.create` / `update` / `pause` / `delete` (tRPC) | Non-dashboard callers; dashboard uses Rust + enqueue* |
 | `customers.enqueueEnrichCustomer` | Trigger `enrich-customer` only (SQL on Rust) |

@@ -34,6 +34,7 @@ import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useUserQuery } from "@/hooks/use-user";
+import { createInvoiceFromTrackerHybrid } from "@/lib/invoice-hybrid-flows";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
@@ -107,9 +108,9 @@ export function TrackerCreateInvoice({ projectId }: Props) {
     defaultPresetOption?.dateRange,
   );
 
-  const createInvoiceFromTrackerMutation = useMutation(
-    trpc.invoice.createFromTracker.mutationOptions({
-      onSuccess: (data) => {
+  const createInvoiceFromTrackerMutation = useMutation({
+    mutationFn: createInvoiceFromTrackerHybrid,
+    onSuccess: (data) => {
         track(LogEvents.TrackerInvoiceCreated.name);
 
         queryClient.invalidateQueries({
@@ -159,8 +160,7 @@ export function TrackerCreateInvoice({ projectId }: Props) {
           description,
         });
       },
-    }),
-  );
+  });
 
   const handlePresetSelect = (presetValue: string) => {
     const preset = presetOptions.find((option) => option.value === presetValue);

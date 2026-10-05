@@ -79,6 +79,10 @@ export async function upsertTrackerProjectFromRust(
   return upsertTrackerProject(getRustApiUrl(), await getAccessToken(), input);
 }
 
+export async function fetchTrackerProjectByIdFromRust(id: string) {
+  return fetchTrackerProjectById(getRustApiUrl(), await getAccessToken(), id);
+}
+
 export async function deleteTrackerProjectFromRust(
   input: DeleteTrackerProjectInput,
 ) {

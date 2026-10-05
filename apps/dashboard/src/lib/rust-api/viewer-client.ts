@@ -25,3 +25,7 @@ export function viewerQueryOptions() {
     staleTime: 6 * 60 * 60 * 1000,
   });
 }
+
+export async function fetchViewerFromRust() {
+  return fetchBrowserViewer();
+}

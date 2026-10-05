@@ -91,6 +91,10 @@ export function customerInvoiceSummaryQueryOptions(
   });
 }
 
+export async function fetchCustomerByIdFromRust(id: string) {
+  return fetchCustomerById(getRustApiUrl(), await getAccessToken(), id);
+}
+
 export async function upsertCustomerFromRust(input: UpsertCustomerInput) {
   return upsertCustomer(getRustApiUrl(), await getAccessToken(), input);
 }

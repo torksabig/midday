@@ -3,6 +3,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
   fetchInvoiceDefaultSettings,
+  fetchInvoiceDefaultSettingsData,
   invoiceDefaultSettingsQueryKey,
 } from "@/lib/rust-api/invoice-default-settings";
 import { getAccessToken } from "@/utils/session";
@@ -24,4 +25,11 @@ export function invoiceDefaultSettingsQueryOptions() {
       return fetchInvoiceDefaultSettings(getRustApiUrl(), accessToken);
     },
   });
+}
+
+export async function fetchInvoiceDefaultSettingsDataFromRust() {
+  return fetchInvoiceDefaultSettingsData(
+    getRustApiUrl(),
+    await getAccessToken(),
+  );
 }
