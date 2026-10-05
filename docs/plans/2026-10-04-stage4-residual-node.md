@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | _(see latest push)_ | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `c8a605c5f` | torksabig |
 | **clone** (origin) | `cursor/backend-replace-ui-frozen-plans` | `2247011` | origin |
 
 Prior midday tip: `9644b9098` (REST OpenAPI phase closure docs).
