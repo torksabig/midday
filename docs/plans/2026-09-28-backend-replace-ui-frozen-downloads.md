@@ -101,6 +101,79 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 **Action:** Before backend work, `rsync` or merge Downloads → workspace for `apps/dashboard` and `packages/ui` only; keep replacement wiring in workspace.
 
+## Frontend status (2026-10-06)
+
+**Parity check:** `bash scripts/diff-ui-baseline.sh` (baseline: `~/Downloads/midday-main-main`, override via `MIDDAY_UI_BASELINE`).
+
+| Tree | Differ | Only in workspace | Only in baseline |
+|------|--------|-------------------|----------------|
+| `apps/dashboard` | **229** files | `.env`, `next-env.d.ts`, `src/app/api/replacement/**`, `src/lib/rust-api/**` (~110 files), hybrid helpers (`fetch-invoice-pdf.ts`, `files-api-url.ts`, `invoice-hybrid-flows.ts`, `invoice-create-from-tracker-compose.ts`, `team-category-seed.ts` + tests), `src/utils/new-user-gate.test.ts` | — |
+| `packages/ui` | **1** file (`multiple-selector.tsx`) | — | — |
+
+**Only in baseline (workspace missing — restore if parity required):**
+
+- `(sidebar)/upgrade/page.tsx`
+- `components/password-sign-in.tsx`, `app-sunset-banner.tsx`, `sunset-banner.tsx`
+
+### Intentional vs drift
+
+| Category | Approx. count | Examples | Verdict |
+|----------|---------------|----------|---------|
+| **Direct Rust cutover wiring** | ~211 differing files | `layout.tsx` prefetches `lib/rust-api/*-server`; pages/components/hooks swap `trpc.*` → `*-client` / server query options; preserve React Query keys | **Intentional** — required for [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md); **do not** blind `rsync` from Downloads |
+| **Replacement / env / tooling** | handful | `.env-example` (`NEXT_PUBLIC_RUST_API_URL`, `MIDDAY_BACKEND_MODE=replacement`), `package.json` (`generate:rust-api`, `@midday/replacement-backend`), `app/api/replacement/status` | **Keep** |
+| **Hybrid / BFF helpers** | ~10 new files under `src/lib/` | invoice PDF, files URL, tracker→invoice compose, hybrid flows | **Keep** |
+| **Auth / login IA drift** | 1 page + related | `login/page.tsx` — workspace is OTP-only; baseline has OAuth accordion, password sign-in, preferred-provider cookies | **Unintentional UX drift** — restore from baseline (keep `new-user-gate` behavior if still needed) |
+| **Upstream-only UI** | 3 components + 1 route | sunset banners, `upgrade` route, `password-sign-in.tsx` | **Drift (missing)** — copy from baseline unless product explicitly dropped them |
+| **packages/ui** | 1 | `multiple-selector.tsx` — keeps creatable list open while typing in sheets | **Behavior fix** — accept in workspace or cherry-pick into baseline copy later; not a visual redesign |
+| **Misc non–rust-api diffs** | ~14 | `otp-sign-in.tsx`, `new-user-gate.ts`, `upload.ts`, `use-realtime.ts`, export/invoice hybrid UI | Review per file — mostly cutover/hybrid, not styling |
+
+**Heuristic used:** among differing dashboard files, ~211 reference `rust-api` / Rust client patterns; ~18 do not (login IA, hybrids, utils, one UI primitive).
+
+### Recommended next frontend action
+
+**Do not mass-rsync** `apps/dashboard` or `packages/ui` from Downloads — that would overwrite ~211 Rust client call sites and delete `src/lib/rust-api/**`.
+
+1. **Accept drift** for Rust-direct wiring (current workspace is ahead of baseline for data path).
+2. **Selective baseline restore** (copy-only, no redesign):
+   - `src/app/[locale]/(public)/login/page.tsx` + restore `password-sign-in.tsx` if login page imports it
+   - Optional: `upgrade/page.tsx`, `app-sunset-banner.tsx`, `sunset-banner.tsx` if product should match upstream
+3. **Preserve after any sync** (never overwrite from baseline):
+   - `apps/dashboard/src/app/api/replacement/**`
+   - `apps/dashboard/src/lib/rust-api/**` and hybrid modules listed above
+   - `apps/dashboard/.env-example` replacement/Rust entries (merge baseline Supabase vars, don’t drop `NEXT_PUBLIC_RUST_API_URL`)
+4. **QA:** With Rust on `:8787` and residual Node on `:3003`, smoke login (after restore), sidebar layout, transactions, inbox, invoices — compare to baseline only where IA was restored.
+
+### Sync plan (if executing selective restore)
+
+```bash
+BASE="${MIDDAY_UI_BASELINE:-$HOME/Downloads/midday-main-main}"
+WS="/path/to/fintech/midday"
+
+# Example: login parity only (adjust list after review)
+cp "$BASE/apps/dashboard/src/app/[locale]/(public)/login/page.tsx" \
+   "$WS/apps/dashboard/src/app/[locale]/(public)/login/page.tsx"
+cp "$BASE/apps/dashboard/src/components/password-sign-in.tsx" \
+   "$WS/apps/dashboard/src/components/password-sign-in.tsx"
+
+# Re-run parity check
+bash "$WS/scripts/diff-ui-baseline.sh" | tee /tmp/ui-baseline-diff.txt
+```
+
+**Full-tree rsync (destructive — list before running):** would replace essentially all of `apps/dashboard/src/{app,components,hooks}` and most of `src/actions` except paths you `--exclude` after backing up `lib/rust-api`, `app/api/replacement`, and hybrid `src/lib/*` files above.
+
+### Local dashboard dev (documented in repo)
+
+| Source | Command / port |
+|--------|----------------|
+| `apps/dashboard/package.json` | `bun run dev` → `next dev -p 3001 --turbopack` (TZ=UTC) |
+| Root `package.json` | `bun run dev` → `turbo dev --parallel` (all apps) |
+| `apps/dashboard/README.md` | Stub only — no setup steps |
+| Upstream | [docs.midday.ai](https://docs.midday.ai) (linked from root README) |
+
+Do not assume Supabase/Rust/API are running; use `.env-example` + sibling `clone` API for Rust cutover QA.
+
+**Branch / HEAD (audit):** `cursor/backend-replace-ui-frozen-plans` @ `84184e01c` (2026-10-06 pass; no frontend code changes in this audit).
+
 ## Phase 0 checklist (minimal)
 
 - [x] Add to dashboard `.env-example`: `MIDDAY_BACKEND_MODE`, `REPLACEMENT_API_URL`
