@@ -105,15 +105,22 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 **Parity check:** `bash scripts/diff-ui-baseline.sh` (baseline: `~/Downloads/midday-main-main`, override via `MIDDAY_UI_BASELINE`).
 
-| Tree | Differ | Only in workspace | Only in baseline |
-|------|--------|-------------------|----------------|
-| `apps/dashboard` | **229** files | `.env`, `next-env.d.ts`, `src/app/api/replacement/**`, `src/lib/rust-api/**` (~110 files), hybrid helpers (`fetch-invoice-pdf.ts`, `files-api-url.ts`, `invoice-hybrid-flows.ts`, `invoice-create-from-tracker-compose.ts`, `team-category-seed.ts` + tests), `src/utils/new-user-gate.test.ts` | — |
-| `packages/ui` | **1** file (`multiple-selector.tsx`) | — | — |
+| Tree | Files differ | Only in workspace | Only in baseline |
+|------|--------------|-------------------|------------------|
+| `apps/dashboard` | **227** (was 228 pre–login restore) | 13 (`.env`, `next-env.d.ts`, `src/app/api/replacement/**`, `src/lib/rust-api/**`, hybrid helpers, tests) | **3** — `upgrade/page.tsx`, `app-sunset-banner.tsx`, `sunset-banner.tsx` |
+| `packages/ui` | **1** (`multiple-selector.tsx`) | — | — |
+
+**Login IA restore (2026-10-06, branch `cursor/backend-replace-ui-frozen-plans`, parent `64f0613f6`):**
+
+- Restored from baseline: `src/app/[locale]/(public)/login/page.tsx`, `src/components/password-sign-in.tsx` (OAuth preferred-provider flow, password + accordion; Supabase client unchanged).
+- Already matched baseline: `login-accordion.tsx`, `oauth-sign-in.tsx`, `login-video-background.tsx`.
+- **Still differs (login-adjacent):** `otp-sign-in.tsx` — workspace keeps `+` email rejection; baseline does not.
+- **Deferred (optional):** sunset banners + `upgrade` route — not copied this slice (sidebar layout is Rust-wired; banners would need layout import audit).
 
 **Only in baseline (workspace missing — restore if parity required):**
 
 - `(sidebar)/upgrade/page.tsx`
-- `components/password-sign-in.tsx`, `app-sunset-banner.tsx`, `sunset-banner.tsx`
+- `components/app-sunset-banner.tsx`, `sunset-banner.tsx`
 
 ### Intentional vs drift
 
@@ -122,8 +129,8 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 | **Direct Rust cutover wiring** | ~211 differing files | `layout.tsx` prefetches `lib/rust-api/*-server`; pages/components/hooks swap `trpc.*` → `*-client` / server query options; preserve React Query keys | **Intentional** — required for [autopilot direct cutover](./2026-10-02-autopilot-direct-cutover.md); **do not** blind `rsync` from Downloads |
 | **Replacement / env / tooling** | handful | `.env-example` (`NEXT_PUBLIC_RUST_API_URL`, `MIDDAY_BACKEND_MODE=replacement`), `package.json` (`generate:rust-api`, `@midday/replacement-backend`), `app/api/replacement/status` | **Keep** |
 | **Hybrid / BFF helpers** | ~10 new files under `src/lib/` | invoice PDF, files URL, tracker→invoice compose, hybrid flows | **Keep** |
-| **Auth / login IA drift** | 1 page + related | `login/page.tsx` — workspace is OTP-only; baseline has OAuth accordion, password sign-in, preferred-provider cookies | **Unintentional UX drift** — restore from baseline (keep `new-user-gate` behavior if still needed) |
-| **Upstream-only UI** | 3 components + 1 route | sunset banners, `upgrade` route, `password-sign-in.tsx` | **Drift (missing)** — copy from baseline unless product explicitly dropped them |
+| **Auth / login IA drift** | 1 component | `otp-sign-in.tsx` only (page + password restored 2026-10-06) | **Mostly resolved** — optional: align OTP validation with baseline |
+| **Upstream-only UI** | 2 components + 1 route | sunset banners, `upgrade` route | **Drift (missing)** — copy from baseline when sidebar IA is reviewed |
 | **packages/ui** | 1 | `multiple-selector.tsx` — keeps creatable list open while typing in sheets | **Behavior fix** — accept in workspace or cherry-pick into baseline copy later; not a visual redesign |
 | **Misc non–rust-api diffs** | ~14 | `otp-sign-in.tsx`, `new-user-gate.ts`, `upload.ts`, `use-realtime.ts`, export/invoice hybrid UI | Review per file — mostly cutover/hybrid, not styling |
 
@@ -135,7 +142,7 @@ Workspace `fintech/midday` is the practical migration repo (already has git + Ph
 
 1. **Accept drift** for Rust-direct wiring (current workspace is ahead of baseline for data path).
 2. **Selective baseline restore** (copy-only, no redesign):
-   - `src/app/[locale]/(public)/login/page.tsx` + restore `password-sign-in.tsx` if login page imports it
+   - ~~Login page + `password-sign-in.tsx`~~ **Done (2026-10-06)**
    - Optional: `upgrade/page.tsx`, `app-sunset-banner.tsx`, `sunset-banner.tsx` if product should match upstream
 3. **Preserve after any sync** (never overwrite from baseline):
    - `apps/dashboard/src/app/api/replacement/**`
