@@ -43,7 +43,7 @@ test("postActivityNotificationFlushClaim throws when rust is not ok", async () =
     postActivityNotificationFlushClaim(
       { url: "http://rust/flush", token: "tok" },
       100,
-      (async () => new Response("no", { status: 500 })) as typeof fetch,
+      async () => new Response("no", { status: 500 }),
     ),
   ).rejects.toThrow("500");
 });
@@ -52,7 +52,7 @@ test("postActivityNotificationFlushComplete returns completed count on success",
   const body = await postActivityNotificationFlushComplete(
     [{ batchId: "00000000-0000-0000-0000-000000000001", delivered: false }],
     { url: "http://rust/flush", token: "tok" },
-    (async () =>
+    async () =>
       new Response(
         JSON.stringify({
           executed: true,
@@ -61,7 +61,7 @@ test("postActivityNotificationFlushComplete returns completed count on success",
           completed: 1,
         }),
         { status: 200 },
-      )) as typeof fetch,
+      ),
   );
   expect(body).toEqual({
     executed: true,

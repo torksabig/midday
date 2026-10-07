@@ -1,3 +1,5 @@
+import type { DelegationFetch } from "./delegation-fetch";
+
 export type ProcessDocumentStatusPayload = {
   teamId: string;
   pathTokens: string[];
@@ -40,7 +42,7 @@ export function processDocumentDelegationTarget(
 export async function postProcessDocumentStatus(
   payload: ProcessDocumentStatusPayload,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ProcessDocumentRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

@@ -1,3 +1,5 @@
+import type { DelegationFetch } from "./delegation-fetch";
+
 /**
  * AP-WORKER-10 — accounting export / insights / invoice PDF+email SQL delegation.
  *
@@ -37,7 +39,7 @@ async function postWorkerJson<T>(
   job: AccountingInsightsInvoiceJob,
   payload: unknown,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<T> {
   const response = await fetchImpl(target.url, {
     method: "POST",
@@ -74,7 +76,7 @@ export type UpsertAccountingSyncRustBody = {
 export async function postUpsertAccountingSync(
   payload: { teamId: string; records: AccountingSyncRecordPayload[] },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpsertAccountingSyncRustBody> {
   return postWorkerJson(
     "upsert-accounting-sync",
@@ -99,7 +101,7 @@ export async function postUpdateAccountingAttachmentMapping(
     errorCode?: string | null;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpdateAccountingAttachmentMappingRustBody> {
   return postWorkerJson(
     "update-accounting-attachment-mapping",
@@ -131,7 +133,7 @@ export async function postPersistTeamInsight(
     generatedAt?: string;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<PersistTeamInsightRustBody> {
   return postWorkerJson("persist-team-insight", payload, target, fetchImpl);
 }
@@ -149,7 +151,7 @@ export async function postUpdateInvoiceFile(
     fileSize: number;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpdateInvoiceFileRustBody> {
   return postWorkerJson("update-invoice-file", payload, target, fetchImpl);
 }
@@ -168,7 +170,7 @@ export async function postUpdateInvoiceSent(
     sentAt: string;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpdateInvoiceSentRustBody> {
   return postWorkerJson("update-invoice-sent", payload, target, fetchImpl);
 }

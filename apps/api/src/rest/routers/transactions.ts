@@ -312,7 +312,7 @@ app.openapi(
     const result = {
       url: data.signedUrl,
       expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
-      fileName: attachment.name || attachment.path.at(-1) || null,
+      fileName: attachment.name || attachment.path?.at(-1) || null,
     };
 
     return c.json(

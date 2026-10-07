@@ -257,7 +257,7 @@ export async function flushDueActivityNotificationBatches(db: Database) {
 
     const sent = await sendSummaryToIdentity(
       app,
-      identity,
+      identity as DeliverIdentity,
       summary.text,
       batch.eventFamily,
       entries,
@@ -623,6 +623,8 @@ async function sendSummaryToIdentity(
       });
       return true;
     }
+    default:
+      return false;
   }
 }
 

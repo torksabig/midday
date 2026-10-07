@@ -116,15 +116,18 @@ app.openapi(
   async (c) => {
     const db = c.get("db");
     const teamId = c.get("teamId");
-    const id = c.req.valid("param").id;
+    const { id: documentId } = c.req.valid("param");
+    if (!documentId) {
+      throw new HTTPException(400, { message: "Missing document id" });
+    }
 
     const result = await fetchDocumentByIdForRest(
-      id,
+      documentId,
       c.req.header("Authorization"),
       () =>
         getDocumentById(db, {
           teamId,
-          id,
+          id: documentId,
         }),
     );
 

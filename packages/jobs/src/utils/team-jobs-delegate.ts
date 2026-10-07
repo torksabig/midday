@@ -1,3 +1,4 @@
+import type { DelegationFetch } from "./delegation-fetch";
 export type OnboardTeamRustBody = {
   executed: boolean;
   user: {
@@ -36,7 +37,7 @@ export function teamJobsDelegationTarget(
 export async function postOnboardTeam(
   payload: { userId: string },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<OnboardTeamRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

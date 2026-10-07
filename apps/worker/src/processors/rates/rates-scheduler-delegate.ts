@@ -1,3 +1,5 @@
+import type { DelegationFetch } from "../../utils/delegation-fetch";
+
 export type ExchangeRateRow = {
   base: string;
   target: string;
@@ -35,7 +37,7 @@ export async function postRatesScheduler(
   rates: ExchangeRateRow[],
   batchSize: number,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<RatesSchedulerRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

@@ -1,3 +1,4 @@
+import type { DelegationFetch } from "./delegation-fetch";
 export type MatchSuggestionPayload = {
   transactionId: string;
   name: string;
@@ -66,7 +67,7 @@ export function inboxMatchingDelegationTarget(
 export async function postBatchProcessMatching(
   payload: { teamId: string; inboxIds: string[] },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<BatchProcessMatchingRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",
@@ -85,7 +86,7 @@ export async function postBatchProcessMatching(
 export async function postMatchTransactionsBidirectional(
   payload: { teamId: string; newTransactionIds: string[] },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<MatchTransactionsBidirectionalRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

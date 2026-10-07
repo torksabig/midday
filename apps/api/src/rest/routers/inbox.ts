@@ -744,7 +744,7 @@ app.openapi(
     const result = {
       url: data.signedUrl,
       expiresAt: new Date(Date.now() + expireIn * 1000).toISOString(),
-      fileName: inboxItem.fileName || inboxItem.filePath.at(-1) || null,
+      fileName: inboxItem.fileName || inboxItem.filePath?.at(-1) || null,
     };
 
     return c.json(
@@ -891,7 +891,11 @@ app.openapi(
       c.req.header("Authorization"),
       async () => {
         try {
-          return await deleteInbox(db, { id, teamId });
+          const deleted = await deleteInbox(db, { id, teamId });
+          if (!deleted?.id) {
+            return null;
+          }
+          return { id: deleted.id };
         } catch {
           throw new HTTPException(404, { message: "Inbox item not found" });
         }

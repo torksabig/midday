@@ -122,14 +122,14 @@ export const syncAccount = schemaTask({
       if (balance !== null) {
         const currency =
           needsCurrencyHeal && balanceCurrencyValid
-            ? balanceData.currency
+            ? balanceData?.currency
             : undefined;
         if (currency) {
           currencyHealed = true;
           logger.info("Healing account currency from balance", {
             accountId,
             from: currentCurrency,
-            to: balanceData.currency,
+            to: currency,
           });
         }
 

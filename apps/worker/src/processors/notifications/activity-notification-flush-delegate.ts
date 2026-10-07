@@ -1,3 +1,5 @@
+import type { DelegationFetch } from "../../utils/delegation-fetch";
+
 export type ActivityNotificationPendingBatch = {
   batchId: string;
   teamId: string;
@@ -72,7 +74,7 @@ export function activityNotificationFlushDelegationTarget(
 export async function postActivityNotificationFlushClaim(
   target: { url: string; token: string },
   limit = 100,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ActivityNotificationFlushClaimBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",
@@ -93,7 +95,7 @@ export async function postActivityNotificationFlushClaim(
 export async function postActivityNotificationFlushComplete(
   completions: ActivityNotificationFlushCompletion[],
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ActivityNotificationFlushCompleteBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

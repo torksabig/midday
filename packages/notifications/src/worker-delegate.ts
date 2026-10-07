@@ -1,3 +1,5 @@
+import type { DelegationFetch } from "./delegation-fetch";
+
 export type NotificationWorkerUser = {
   id: string;
   full_name?: string | null;
@@ -53,7 +55,7 @@ export async function postNotificationWorker(
     [key: string]: unknown;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<NotificationWorkerBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",

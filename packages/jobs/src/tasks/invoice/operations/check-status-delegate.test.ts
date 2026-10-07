@@ -61,7 +61,7 @@ test("postCheckInvoiceStatus throws when rust is not ok", async () => {
     postCheckInvoiceStatus(
       "inv",
       { url: "http://rust/check", token: "tok" },
-      (async () => new Response("no", { status: 500 })) as typeof fetch,
+      async () => new Response("no", { status: 500 }),
     ),
   ).rejects.toThrow("500");
 });

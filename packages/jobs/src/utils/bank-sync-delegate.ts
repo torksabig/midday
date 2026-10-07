@@ -1,3 +1,4 @@
+import type { DelegationFetch } from "./delegation-fetch";
 export type BankUpsertTransactionRow = {
   name: string;
   date: string;
@@ -73,7 +74,7 @@ async function postWorkerJson<T>(
   job: BankSyncJob,
   payload: unknown,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<T> {
   const response = await fetchImpl(target.url, {
     method: "POST",
@@ -96,7 +97,7 @@ export async function postUpsertTransactions(
     transactions: BankUpsertTransactionRow[];
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpsertTransactionsRustBody> {
   return postWorkerJson("upsert-transactions", payload, target, fetchImpl);
 }
@@ -111,7 +112,7 @@ export async function postSyncConnectionStatus(
     markDisconnectedIfAllRetries?: boolean;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<SyncConnectionStatusRustBody> {
   return postWorkerJson("sync-connection-status", payload, target, fetchImpl);
 }
@@ -130,7 +131,7 @@ export async function postUpdateBankAccountSync(
     setBalance?: boolean;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<UpdateBankAccountSyncRustBody> {
   return postWorkerJson("update-bank-account-sync", payload, target, fetchImpl);
 }
@@ -147,7 +148,7 @@ export async function postRemapBankAccountIds(
     }>;
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<RemapBankAccountIdsRustBody> {
   return postWorkerJson("remap-bank-account-ids", payload, target, fetchImpl);
 }

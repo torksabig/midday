@@ -43,7 +43,7 @@ test("postRatesScheduler throws when rust is not ok", async () => {
       [{ base: "USD", target: "EUR", rate: 0.9, updatedAt: "2026-09-29" }],
       500,
       { url: "http://rust/rates", token: "tok" },
-      (async () => new Response("no", { status: 500 })) as typeof fetch,
+      async () => new Response("no", { status: 500 }),
     ),
   ).rejects.toThrow("500");
 });
@@ -53,7 +53,7 @@ test("postRatesScheduler returns camelCase counts on success", async () => {
     [{ base: "USD", target: "EUR", rate: 0.9, updatedAt: "2026-09-29" }],
     500,
     { url: "http://rust/rates", token: "tok" },
-    (async () =>
+    async () =>
       new Response(
         JSON.stringify({
           executed: true,
@@ -61,7 +61,7 @@ test("postRatesScheduler returns camelCase counts on success", async () => {
           batchesProcessed: 1,
         }),
         { status: 200 },
-      )) as typeof fetch,
+      ),
   );
   expect(body).toEqual({
     executed: true,

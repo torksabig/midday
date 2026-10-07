@@ -176,7 +176,16 @@ type RestCreateInvoiceInput = {
   topBlock?: unknown;
   bottomBlock?: unknown;
   amount?: number | null;
-  lineItems?: Array<{ name: unknown; quantity?: number; price?: number; vat?: number }>;
+  lineItems?: Array<{
+    name?: unknown;
+    quantity?: number;
+    price?: number;
+    vat?: number | null;
+    tax?: number | null;
+    taxRate?: number | null;
+    unit?: string | null;
+    productId?: string;
+  }>;
 };
 
 export async function createRestInvoiceDraft(

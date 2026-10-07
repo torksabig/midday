@@ -1,3 +1,4 @@
+import type { DelegationFetch } from "./delegation-fetch";
 export type ImportTransactionRow = {
   name: string;
   date: string;
@@ -85,7 +86,7 @@ async function postWorkerJson<T>(
   job: TransactionImportExportJob,
   payload: unknown,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<T> {
   const response = await fetchImpl(target.url, {
     method: "POST",
@@ -104,7 +105,7 @@ async function postWorkerJson<T>(
 export async function postImportTransactions(
   payload: { teamId: string; transactions: ImportTransactionRow[] },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ImportTransactionsRustBody> {
   return postWorkerJson("import-transactions", payload, target, fetchImpl);
 }
@@ -112,7 +113,7 @@ export async function postImportTransactions(
 export async function postProcessExport(
   payload: { teamId: string; ids: string[] },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ProcessExportRustBody> {
   return postWorkerJson("process-export", payload, target, fetchImpl);
 }
@@ -132,7 +133,7 @@ export async function postExportTransactions(
     };
   },
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<ExportTransactionsRustBody> {
   return postWorkerJson("export-transactions", payload, target, fetchImpl);
 }

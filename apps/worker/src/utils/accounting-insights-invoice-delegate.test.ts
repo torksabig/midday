@@ -45,7 +45,7 @@ test("postUpsertAccountingSync throws when rust is not ok", async () => {
     postUpsertAccountingSync(
       { teamId: "t", records: [] },
       { url: "http://rust/upsert", token: "tok" },
-      (async () => new Response("no", { status: 500 })) as typeof fetch,
+      async () => new Response("no", { status: 500 }),
     ),
   ).rejects.toThrow("500");
 });
@@ -59,11 +59,11 @@ test("postPersistTeamInsight returns body on ok", async () => {
       title: "ok",
     },
     { url: "http://rust/insight", token: "tok" },
-    (async () =>
+    async () =>
       new Response(
         JSON.stringify({ executed: true, updated: true, insightId: "i" }),
         { status: 200 },
-      )) as typeof fetch,
+      ),
   );
   expect(body).toEqual({ executed: true, updated: true, insightId: "i" });
 });

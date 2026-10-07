@@ -42,7 +42,7 @@ test("postNotificationWorker throws when rust is not ok", async () => {
     postNotificationWorker(
       { type: "inbox_new", teamId: "00000000-0000-0000-0000-000000000001" },
       { url: "http://rust/notification", token: "tok" },
-      (async () => new Response("no", { status: 500 })) as typeof fetch,
+      async () => new Response("no", { status: 500 }),
     ),
   ).rejects.toThrow("500");
 });
@@ -56,7 +56,7 @@ test("postNotificationWorker returns activities and users on success", async () 
       totalCount: 1,
     },
     { url: "http://rust/notification", token: "tok" },
-    (async () =>
+    async () =>
       new Response(
         JSON.stringify({
           executed: true,
@@ -68,7 +68,7 @@ test("postNotificationWorker returns activities and users on success", async () 
           users: [],
         }),
         { status: 200 },
-      )) as typeof fetch,
+      ),
   );
   expect(body.activities).toBe(1);
   expect(body.type).toBe("inbox_new");

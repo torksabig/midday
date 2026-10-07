@@ -545,7 +545,8 @@ describe("replacement mappers", () => {
       result: Record<string, unknown[]>;
     };
     expect(mapped.meta.totalDuration).toBe(3600);
-    expect(mapped.result["2024-04-15"][0]).toMatchObject({ id: "e1" });
+    const dayEntries = mapped.result["2024-04-15"];
+    expect(dayEntries?.[0]).toMatchObject({ id: "e1" });
   });
 
   test("mapReplacementToAccountingConnections maps provider rows", () => {

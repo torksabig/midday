@@ -820,6 +820,20 @@ export const mocks = {
   // Bank connections
   getBankConnections: mock(() => Promise.resolve([])) as MockFn,
   deleteBankConnection: mock(() => Promise.resolve(null)) as MockFn,
+  reconnectBankConnection: mock(() =>
+    Promise.resolve({ id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
+  ) as MockFn,
+
+  // Transaction categories
+  createTransactionCategory: mock(() =>
+    Promise.resolve({ id: "cat-1", name: "Category" }),
+  ) as MockFn,
+  updateTransactionCategory: mock(() =>
+    Promise.resolve({ id: "cat-1", name: "Category" }),
+  ) as MockFn,
+  deleteTransactionCategory: mock(() =>
+    Promise.resolve({ id: "cat-1" }),
+  ) as MockFn,
 
   // Inbox accounts (tRPC inbox-accounts router)
   getInboxAccounts: mock(() => Promise.resolve([])) as MockFn,

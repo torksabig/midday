@@ -68,10 +68,11 @@ async function resolveCustomerById(params: {
     assertLegacyIdentityFallbackAllowed();
   }
 
-  return getCustomerById(params.db, {
+  const customer = await getCustomerById(params.db, {
     id: params.id,
     teamId: params.teamId,
   });
+  return customer ?? null;
 }
 
 async function removeInvoiceScheduledJobs(jobIds: string[]): Promise<void> {

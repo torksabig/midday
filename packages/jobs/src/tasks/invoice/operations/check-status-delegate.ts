@@ -1,3 +1,4 @@
+import type { DelegationFetch } from "../../../utils/delegation-fetch";
 export type CheckInvoiceStatusRustBody = {
   executed: boolean;
   outcome: "skipped" | "paid" | "overdue" | "unchanged" | string;
@@ -51,7 +52,7 @@ export function notificationFromRust(
 export async function postCheckInvoiceStatus(
   invoiceId: string,
   target: { url: string; token: string },
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: DelegationFetch = fetch,
 ): Promise<CheckInvoiceStatusRustBody> {
   const response = await fetchImpl(target.url, {
     method: "POST",
