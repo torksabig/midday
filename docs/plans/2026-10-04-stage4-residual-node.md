@@ -8,7 +8,7 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `3b90cbd67` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `e81ba0720` | torksabig |
 | **clone** (origin) | `cursor/backend-replace-ui-frozen-plans` | `3354988` | origin |
 
 Prior midday tip: `375d8cb53` (transactions REST bulk-create docs).
@@ -115,21 +115,28 @@ Until then, local/prod runbooks keep **clone + minimal Node + dashboard** even w
 
 Background runtimes still call Node **`trpc.banking.*`** for provider HTTP and decrypt—not the dashboard HTTP surface, but they **pin `apps/api` alive** for full Node teardown.
 
-**`apps/worker` (BullMQ processors on `:3003` tRPC client):**
+**Inventory (2026-10-07 grep — all `trpc.banking` in worker/jobs only):**
 
-| Call site | Procedure | Role |
-|-----------|-----------|------|
-| `processors/rates/rates-scheduler.ts` | `banking.rates` (query) | FX / rate feed for scheduled jobs |
-| `processors/teams/delete-team.ts` | `banking.deleteConnection` (mutate) | Provider teardown while deleting a team (after dashboard/Rust SQL prep) |
+| Runtime | Job / task id | Source | tRPC call | Job role | Rust SQL half (AP-WORKER-8/3) | Replace tRPC with Rust? |
+|---------|---------------|--------|-----------|----------|--------------------------------|-------------------------|
+| BullMQ | `rates-scheduler` | `apps/worker/.../rates-scheduler.ts` | `banking.rates` (query) | Fetch FX rows from banking provider | **Yes** — upsert via `POST /api/v1/workers/rates-scheduler` when `MIDDAY_BACKEND_MODE` + token set | **STOP** — provider FX HTTP stays Node until Rust banking client exists |
+| BullMQ | `delete-team` | `apps/worker/.../delete-team.ts` | `banking.deleteConnection` (mutate) | Provider teardown per connection during team delete | Team SQL on Rust/tRPC REST; this call is provider-only | **STOP** — OAuth/token + provider APIs |
+| Trigger | `delete-connection` | `packages/jobs/.../delete-connection.ts` | `banking.deleteConnection` (mutate) | Provider delete after Rust `DELETE /bank-connections/{id}` | N/A (no SQL in task body) | **STOP** — same as dashboard enqueue pair |
+| Trigger | `sync-connection` | `packages/jobs/.../sync/connection.ts` | `banking.connectionStatus` (query) | Provider status before account fan-out | **Yes** — `postSyncConnectionStatus` → Rust when delegated | **STOP** — query hits live provider via Node `@midday/banking` |
+| Trigger | `sync-account` | `packages/jobs/.../sync/account.ts` | `banking.getBalance`, `getProviderTransactions` (query) | Balances + transaction pages | **Yes** — `postUpdateBankAccountSync`, upsert tx via Rust workers | **STOP** — provider HTTP + decrypt |
+| Trigger | `reconnect-connection` | `packages/jobs/.../reconnect/connection.ts` | `connectionByReference`, `getProviderAccounts` (×4 paths) | Reconnect / remap accounts | **Yes** — reference_id + remap via `postSyncConnectionStatus` / Rust reconnect worker | **STOP** — `getProviderAccounts` needs vault decrypt + provider |
 
-**`packages/jobs` (Trigger.dev tasks; same Node tRPC endpoint):**
+**Bank sync tasks with no `trpc.banking.*` (schedules / SQL-only / notifications):**
 
-| Task area | Procedures | Role |
-|-----------|------------|------|
-| `tasks/bank/delete/delete-connection.ts` | `banking.deleteConnection` (mutate) | Provider delete after SQL row removed (pairs with dashboard `enqueueDeleteConnection` / Rust DELETE) |
-| `tasks/bank/sync/connection.ts` | `banking.connectionStatus` (query) | Sync gate / status |
-| `tasks/bank/sync/account.ts` | `banking.getBalance`, `getProviderTransactions` (query) | Account sync |
-| `tasks/reconnect/connection.ts` | `banking.connectionByReference`, `getProviderAccounts` (query) | Reconnect flows |
+| Runtime | Task id | Source | Notes |
+|---------|---------|--------|-------|
+| Trigger | `initial-bank-setup` | `tasks/bank/setup/initial.ts` | Schedules only — no banking tRPC |
+| Trigger | `bank-sync-scheduler` | `tasks/bank/scheduler/bank-scheduler.ts` | Fan-out to `sync-connection` |
+| Trigger | `ensure-bank-schedulers` | `tasks/bank/scheduler/ensure-bank-schedulers.ts` | Schedule registration |
+| Trigger | `upsert-transactions` | `tasks/bank/transactions/upsert.ts` | SQL upsert (Rust-delegated in replacement mode) |
+| Trigger | `transaction-notifications` | `tasks/bank/notifications/transactions.ts` | Notifications only |
+
+**Slice outcome (2026-10-07):** No worker/jobs code changes — every remaining `trpc.banking.*` call is provider OAuth/decrypt/HTTP (**STOP**). SQL halves already delegate per [Stage 3 workers](./2026-09-29-stage3-workers.md) AP-WORKER-8. Next engineering gate: Rust (or banking micro-BFF) implements provider parity for rates + sync + delete, then swap tRPC client for HTTP to that host.
 
 **Exit criteria (worker row in checklist):** Move provider HTTP + vault decrypt for these jobs onto Rust (or a dedicated banking micro-BFF), then delete worker/Trigger imports of `@midday/trpc` banking procedures. Dashboard bank OAuth STOP gates can remain on Node longer, but **worker banking** is the hard dependency for deleting the whole `apps/api` package.
 
@@ -681,7 +688,14 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**REST OpenAPI product migration is closed** until clone adds **`POST /api/v1/tracker/entries/bulk`** (or maps bulk create to documented upsert). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists. **Next milestone:** **`POST /chat`** co-host documentation + long-term port plan; parallel **worker `trpc.banking.*`** inventory (inventory-only until tracker bulk ships).
+**REST OpenAPI product migration is closed** until clone adds **`POST /api/v1/tracker/entries/bulk`** (or maps bulk create to documented upsert). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists.
+
+**Next milestones (ordered):**
+
+1. **Clone:** ship `POST /api/v1/tracker/entries/bulk` (or document bulk → upsert) — unblocks REST closure note in checklist.
+2. **Worker banking:** provider-side Rust/BFF for the six STOP rows in **Worker banking tRPC** inventory (no safe thin delegate left on Node jobs).
+3. **`POST /chat`** co-host — document/runbook only until product scopes Rust agent host.
+4. **Optional UI drift:** copy Downloads baseline `upgrade/page.tsx` + `app-sunset-banner.tsx` + `sunset-banner.tsx` when baseline path is present on machine ([UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md)).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 
