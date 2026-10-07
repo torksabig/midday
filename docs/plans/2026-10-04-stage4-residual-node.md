@@ -8,8 +8,10 @@
 
 | Repo | Branch | SHA | Remote |
 |------|--------|-----|--------|
-| **midday** | `cursor/backend-replace-ui-frozen-plans` | `e81ba0720` | torksabig |
+| **midday** | `cursor/backend-replace-ui-frozen-plans` | `b1477c032` | torksabig |
 | **clone** (origin) | `cursor/backend-replace-ui-frozen-plans` | `3354988` | origin |
+
+Prior midday tip: `e81ba0720` (tracker-entries REST bulk-create → Rust docs + tests).
 
 Prior midday tip: `375d8cb53` (transactions REST bulk-create docs).
 
@@ -173,9 +175,11 @@ Use this as a gate for the user one-shot **`decommission`** ([autopilot direct c
 | **apps/api** (minimal Node) | `3003` | Residual tRPC (job enqueue hybrids) + invoice PDF React-PDF fallback `/files/download/invoice` (drafts/receipts) + `/chat` + OAuth callbacks |
 
 ```bash
-# 1) Clone API
-cd ../clone && cargo run -p clone-api   # :8787
-# Require: FILE_KEY_SECRET (same as Midday), SUPABASE_URL, SUPABASE_SECRET_KEY
+# 1) Clone API (:8787) — from midday root:
+bash scripts/dev-replacement-api.sh
+# Or from ../clone: bun run api   (= cargo run -p clone-api --bin clone-api; required — bare -p clone-api is ambiguous)
+# SQLite clone state: script sets DATABASE_URL=sqlite:data/clone.db. For Supabase JWT auth + Midday reads, copy .env.example → .env and run local Supabase (`supabase start`) so MIDDAY_DATABASE_URL hits :54322.
+# Optional vault/files: FILE_KEY_SECRET, SUPABASE_URL, SUPABASE_SECRET_KEY (same as Midday apps/api)
 
 # 2) Midday API (residual Node) — require replacement mode
 cd apps/api
@@ -535,9 +539,9 @@ Helpers: `apps/api/src/rest/services/replacement-rest-users.ts` (mirrors tRPC id
 
 **OAuth/MCP REST inventory (read-only migration — none shipped this slice):** Dashboard tRPC `oauthApplications.*` already has `tryDelegateOAuthApplicationGet` / list / etc. on Rust, but **public REST** `apps/api/src/rest/routers/oauth.ts` does **not** call those helpers — every route is part of the live token/consent flow. **Do not** port OAuth callbacks/webhooks wholesale. Optional later: delegate **read-only** app metadata on `GET /oauth/authorization` only if product accepts Rust-backed consent screen without moving token endpoints.
 
-**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` — **79 pass** / 14 files (2026-10-05 closure run).
+**Tests:** `cd apps/api && bun test src/__tests__/rest/replacement-rest-*.test.ts` — **81 pass** / 14 files (tracker-entries bulk-create delegation included).
 
-**Clone:** unchanged at **`9bf4592`** — no new Rust in this slice.
+**Clone:** **`3354988`** — `POST /api/v1/tracker/entries/create-many` (OpenAPI `POST /tracker-entries/bulk` on `:3003` delegates here in `replacement` mode).
 
 ### REST OpenAPI still Drizzle in replacement mode (inventory)
 
@@ -554,7 +558,7 @@ Helpers: `apps/api/src/rest/services/replacement-rest-users.ts` (mirrors tRPC id
 | `notifications` | _(list/update/update-all migrated)_ |
 | `bank-accounts` | _(list/get/create/update/delete migrated)_ |
 | `tracker-projects` | _(list/get/create/update/delete migrated)_ |
-| `tracker-entries` | _(list/upsert/delete + timer migrated; `POST /bulk` still Drizzle)_ |
+| `tracker-entries` | _(fully migrated incl. bulk create → Rust `create-many` + timer)_ |
 | `users` | _(GET/PATCH `/me` migrated)_ |
 | `oauth`, `mcp`, app OAuth callbacks, webhooks | integrations |
 | `files/download` | invoice React-PDF fallback + partial delegation |
@@ -688,14 +692,13 @@ Until then, `@midday/replacement-backend` remains for residual hybrid SQL delega
 
 ### Next recommended residual slice
 
-**REST OpenAPI product migration is closed** until clone adds **`POST /api/v1/tracker/entries/bulk`** (or maps bulk create to documented upsert). **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists.
+**REST OpenAPI product migration is closed** (2026-10-05): tracker bulk was the last product gap — clone **`3354988`** exposes **`POST /api/v1/tracker/entries/create-many`**; Node **`POST /tracker-entries/bulk`** delegates via `tryDelegateTrackerEntriesCreateMany`. **`invoice.updateSchedule`** has no dashboard callers—skip until UI exists.
 
 **Next milestones (ordered):**
 
-1. **Clone:** ship `POST /api/v1/tracker/entries/bulk` (or document bulk → upsert) — unblocks REST closure note in checklist.
-2. **Worker banking:** provider-side Rust/BFF for the six STOP rows in **Worker banking tRPC** inventory (no safe thin delegate left on Node jobs).
-3. **`POST /chat`** co-host — document/runbook only until product scopes Rust agent host.
-4. **Optional UI drift:** copy Downloads baseline `upgrade/page.tsx` + `app-sunset-banner.tsx` + `sunset-banner.tsx` when baseline path is present on machine ([UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md)).
+1. **Worker banking:** provider-side Rust/BFF for the six STOP rows in **Worker banking tRPC** inventory (no safe thin delegate left on Node jobs).
+2. **`POST /chat`** co-host — document/runbook only until product scopes Rust agent host.
+3. **Optional UI drift:** copy Downloads baseline `upgrade/page.tsx` + `app-sunset-banner.tsx` + `sunset-banner.tsx` when baseline path is present on machine ([UI frozen plan](./2026-09-28-backend-replace-ui-frozen-downloads.md)).
 
 OpenAPI: **`deleteBankConnection`** on Rust returns SQL row; dashboard delete uses Rust + Node `enqueueDeleteConnection` for provider teardown.
 
