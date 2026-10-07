@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { Customer } from "@/lib/rust-api/customers";
 import { Avatar, AvatarFallback, AvatarImageNext } from "@midday/ui/avatar";
 import { Badge } from "@midday/ui/badge";
 import { Button } from "@midday/ui/button";
@@ -26,7 +26,7 @@ import { FormatAmount } from "@/components/format-amount";
 import { useCustomerParams } from "@/hooks/use-customer-params";
 import { getWebsiteLogo } from "@/utils/logos";
 
-export type Customer = RouterOutputs["customers"]["get"]["data"][number];
+export type { Customer };
 
 const NameCell = memo(
   ({ name, website }: { name: string | null; website: string | null }) => {

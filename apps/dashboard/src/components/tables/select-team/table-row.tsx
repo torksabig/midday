@@ -11,7 +11,7 @@ import { switchTeamFromRust } from "@/lib/rust-api/user-client";
 import { useTRPC } from "@/trpc/client";
 
 type Props = {
-  row: RouterOutputs["team"]["list"][number];
+  row: import("@/lib/rust-api/team").TeamListItem;
 };
 
 export function TableRow({ row }: Props) {

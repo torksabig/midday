@@ -29,7 +29,7 @@ export type TrackerProject = {
     website?: string | null;
   } | null;
   tags?: Array<{ id?: string | null; name?: string | null; [key: string]: unknown }>;
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 export type TrackerProjectsList = {

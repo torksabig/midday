@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { DocumentListItem } from "@/lib/rust-api/documents";
 import { isMimeTypeSupportedForProcessing } from "@midday/documents/utils";
 import { Badge } from "@midday/ui/badge";
 import { Button } from "@midday/ui/button";
@@ -25,7 +25,7 @@ import { downloadFile } from "@/lib/download";
 import { isStaleProcessing } from "@/utils/document";
 import { formatSize } from "@/utils/format";
 
-export type Document = RouterOutputs["documents"]["get"]["data"][number];
+export type Document = DocumentListItem;
 
 function DownloadFileMenuItem({
   pathTokens,

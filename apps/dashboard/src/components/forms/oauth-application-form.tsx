@@ -114,7 +114,7 @@ const formSchema = z.object({
 });
 
 type Props = {
-  data?: RouterOutputs["oauthApplications"]["get"];
+  data?: import("@/lib/rust-api/oauth-applications").OAuthApplicationDetail;
 };
 
 export function OAuthApplicationForm({ data }: Props) {

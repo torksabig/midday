@@ -16,7 +16,7 @@ import { formatDistanceToNow } from "date-fns";
 import { memo, useCallback } from "react";
 import { FormatAmount } from "@/components/format-amount";
 
-export type Product = RouterOutputs["invoiceProducts"]["get"][number];
+export type Product = import("@/lib/rust-api/invoice-products").InvoiceProduct;
 
 const ActionsCell = memo(
   ({

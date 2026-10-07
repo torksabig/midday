@@ -8,7 +8,7 @@ type CalendarGridProps = {
   calendarDays: TZDate[];
   currentDate: TZDate;
   selectedDate: string | null;
-  data: RouterOutputs["trackerEntries"]["byRange"]["result"] | undefined;
+  data: import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult | undefined;
   range: [string, string] | null;
   localRange: [string | null, string | null];
   isDragging: boolean;

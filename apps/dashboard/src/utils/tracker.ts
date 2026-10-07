@@ -1,4 +1,4 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TrackerEntryByDate } from "@/lib/rust-api/delegated-trpc-shapes";
 import { tz } from "@date-fns/tz";
 import { UTCDate, utc } from "@date-fns/utc";
 import {
@@ -19,8 +19,7 @@ import { parseDateAsUTC } from "./date";
 export const NEW_EVENT_ID = "new-event";
 
 // API Response type from the router
-type ApiTrackerRecord =
-  RouterOutputs["trackerEntries"]["byDate"]["data"][number];
+type ApiTrackerRecord = TrackerEntryByDate;
 
 // Internal tracker record type with consistent Date handling
 export interface TrackerRecord {
@@ -294,31 +293,39 @@ export const transformApiRecord = (
   apiRecord: ApiTrackerRecord,
   selectedDate: string | null,
 ): TrackerRecord => {
-  const start = apiRecord.start
-    ? parseISO(apiRecord.start)
-    : parseISO(`${apiRecord.date || selectedDate}T09:00:00`);
+  const startRaw = apiRecord.start;
+  const start = startRaw
+    ? parseISO(typeof startRaw === "string" ? startRaw : startRaw.toISOString())
+    : parseISO(`${apiRecord.date ?? selectedDate}T09:00:00`);
 
-  const stop = apiRecord.stop
-    ? parseISO(apiRecord.stop)
-    : addSeconds(start, apiRecord.duration || 0);
+  const stopRaw = apiRecord.stop;
+  const stop = stopRaw
+    ? parseISO(typeof stopRaw === "string" ? stopRaw : stopRaw.toISOString())
+    : addSeconds(start, apiRecord.duration ?? 0);
 
   return {
     id: apiRecord.id,
-    date: apiRecord.date,
-    description: apiRecord.description,
-    duration: apiRecord.duration,
+    date: apiRecord.date ?? null,
+    description: apiRecord.description ?? null,
+    duration: apiRecord.duration ?? null,
     start: isValid(start) ? start : new Date(),
     stop: isValid(stop)
       ? stop
       : addMinutes(isValid(start) ? start : new Date(), 15),
-    user: apiRecord.user,
+    user: apiRecord.user
+      ? {
+          id: apiRecord.user.id,
+          fullName: apiRecord.user.fullName ?? null,
+          avatarUrl: apiRecord.user.avatarUrl ?? null,
+        }
+      : null,
     trackerProject: apiRecord.trackerProject
       ? {
           id: apiRecord.trackerProject.id,
           name: apiRecord.trackerProject.name || "",
-          currency: apiRecord.trackerProject.currency,
-          rate: apiRecord.trackerProject.rate,
-          customer: apiRecord.trackerProject.customer,
+          currency: apiRecord.trackerProject.currency ?? null,
+          rate: apiRecord.trackerProject.rate ?? null,
+          customer: apiRecord.trackerProject.customer ?? null,
         }
       : null,
   };

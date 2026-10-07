@@ -12,7 +12,7 @@ import { createSafeDate } from "@/utils/tracker";
 type Props = {
   data: any[];
   isToday: boolean;
-  allData: RouterOutputs["trackerEntries"]["byRange"]["result"] | undefined;
+  allData: import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult | undefined;
   currentDate: TZDate;
   onEventClick?: (eventId: string, date: TZDate) => void;
 };

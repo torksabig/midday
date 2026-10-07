@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { UTCDate } from "@date-fns/utc";
 import { DEFAULT_TEMPLATE } from "@midday/invoice";
 import { addDays } from "date-fns";
@@ -9,7 +8,7 @@ import { RustApiError } from "./overview";
 type InvoiceDefaultSettingsData =
   components["schemas"]["InvoiceDefaultSettingsData"];
 
-type InvoiceDefaultSettings = RouterOutputs["invoice"]["defaultSettings"];
+export type InvoiceDefaultSettings = Record<string, any>;
 
 export const invoiceDefaultSettingsQueryKey = [
   "rust-api",

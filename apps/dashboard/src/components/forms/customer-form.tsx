@@ -103,7 +103,7 @@ const excludedDomains = [
 ];
 
 type Props = {
-  data?: RouterOutputs["customers"]["getById"];
+  data?: import("@/lib/rust-api/customers").Customer | null;
 };
 
 export function CustomerForm({ data }: Props) {

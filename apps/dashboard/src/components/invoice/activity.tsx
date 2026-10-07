@@ -58,7 +58,7 @@ function ActivityItem({
 }
 
 type Props = {
-  data: RouterOutputs["invoice"]["getById"];
+  data: import("@/lib/rust-api/invoices").Invoice | null | undefined;
 };
 
 export function InvoiceActivity({ data }: Props) {

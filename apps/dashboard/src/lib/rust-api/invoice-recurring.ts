@@ -1,14 +1,17 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type {
+  InvoiceRecurringDetail,
+  InvoiceRecurringList,
+  InvoiceRecurringResume,
+  InvoiceRecurringUpcoming,
+} from "./delegated-trpc-shapes";
 import { RustApiError } from "./overview";
 
-export type InvoiceRecurringDetail =
-  RouterOutputs["invoiceRecurring"]["get"];
-export type InvoiceRecurringUpcoming =
-  RouterOutputs["invoiceRecurring"]["getUpcoming"];
-export type InvoiceRecurringList =
-  RouterOutputs["invoiceRecurring"]["list"];
-export type InvoiceRecurringResume =
-  RouterOutputs["invoiceRecurring"]["resume"];
+export type {
+  InvoiceRecurringDetail,
+  InvoiceRecurringList,
+  InvoiceRecurringResume,
+  InvoiceRecurringUpcoming,
+} from "./delegated-trpc-shapes";
 
 export type ListInvoiceRecurringParams = {
   cursor?: string | null;
@@ -93,7 +96,7 @@ export async function fetchInvoiceRecurringById(
     },
   );
 
-  if (response.status === 404) return null as InvoiceRecurringDetail;
+  if (response.status === 404) return null;
 
   if (!response.ok) {
     throw new RustApiError(

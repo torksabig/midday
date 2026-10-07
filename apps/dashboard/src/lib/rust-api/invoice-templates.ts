@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
@@ -6,15 +5,14 @@ type RawInvoiceTemplate = components["schemas"]["InvoiceTemplate"];
 type RawDeleteInvoiceTemplateResponse =
   components["schemas"]["DeleteInvoiceTemplateResponse"];
 
-export type InvoiceTemplateList = RouterOutputs["invoiceTemplate"]["list"];
-export type InvoiceTemplateItem = NonNullable<InvoiceTemplateList>[number];
-export type InvoiceTemplateDetail = RouterOutputs["invoiceTemplate"]["get"];
-export type InvoiceTemplateCount = RouterOutputs["invoiceTemplate"]["count"];
-export type InvoiceTemplateCreate = RouterOutputs["invoiceTemplate"]["create"];
-export type InvoiceTemplateUpsert = RouterOutputs["invoiceTemplate"]["upsert"];
-export type InvoiceTemplateSetDefault =
-  RouterOutputs["invoiceTemplate"]["setDefault"];
-export type InvoiceTemplateDelete = RouterOutputs["invoiceTemplate"]["delete"];
+export type InvoiceTemplateList = RawInvoiceTemplate[];
+export type InvoiceTemplateItem = RawInvoiceTemplate;
+export type InvoiceTemplateDetail = RawInvoiceTemplate | null;
+export type InvoiceTemplateCount = number;
+export type InvoiceTemplateCreate = RawInvoiceTemplate;
+export type InvoiceTemplateUpsert = RawInvoiceTemplate;
+export type InvoiceTemplateSetDefault = RawInvoiceTemplate;
+export type InvoiceTemplateDelete = RawDeleteInvoiceTemplateResponse;
 
 export type CreateInvoiceTemplateInput = Record<string, unknown> & {
   name: string;

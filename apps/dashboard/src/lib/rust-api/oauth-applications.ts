@@ -1,36 +1,37 @@
+import type { RouterInputs } from "@api/trpc/routers/_app";
 import type {
-  RouterInputs,
-  RouterOutputs,
-} from "@api/trpc/routers/_app";
+  OAuthApplicationCreate,
+  OAuthApplicationDelete,
+  OAuthApplicationDetail,
+  OAuthApplicationInfo,
+  OAuthApplicationItem,
+  OAuthApplicationRegenerateSecret,
+  OAuthApplicationRevokeAccess,
+  OAuthApplicationsAuthorized,
+  OAuthApplicationsList,
+  OAuthApplicationUpdate,
+} from "./delegated-trpc-shapes";
 import { RustApiError } from "./overview";
+
+export type {
+  OAuthApplicationCreate,
+  OAuthApplicationDelete,
+  OAuthApplicationDetail,
+  OAuthApplicationInfo,
+  OAuthApplicationItem,
+  OAuthApplicationRegenerateSecret,
+  OAuthApplicationRevokeAccess,
+  OAuthApplicationsAuthorized,
+  OAuthApplicationsList,
+  OAuthApplicationUpdate,
+} from "./delegated-trpc-shapes";
 
 export type AuthorizeOAuthApplicationInput =
   RouterInputs["oauthApplications"]["authorize"];
-export type AuthorizeOAuthApplicationResult =
-  RouterOutputs["oauthApplications"]["authorize"];
+export type AuthorizeOAuthApplicationResult = Record<string, unknown>;
 export type UpdateOAuthApprovalStatusInput =
   RouterInputs["oauthApplications"]["updateApprovalStatus"];
-export type UpdateOAuthApprovalStatusResult =
-  RouterOutputs["oauthApplications"]["updateApprovalStatus"];
-
-export type OAuthApplicationsList = RouterOutputs["oauthApplications"]["list"];
-export type OAuthApplicationItem =
-  OAuthApplicationsList["data"][number];
-export type OAuthApplicationDetail = RouterOutputs["oauthApplications"]["get"];
-export type OAuthApplicationCreate =
-  RouterOutputs["oauthApplications"]["create"];
-export type OAuthApplicationUpdate =
-  RouterOutputs["oauthApplications"]["update"];
-export type OAuthApplicationDelete =
-  RouterOutputs["oauthApplications"]["delete"];
-export type OAuthApplicationRegenerateSecret =
-  RouterOutputs["oauthApplications"]["regenerateSecret"];
-export type OAuthApplicationsAuthorized =
-  RouterOutputs["oauthApplications"]["authorized"];
-export type OAuthApplicationRevokeAccess =
-  RouterOutputs["oauthApplications"]["revokeAccess"];
-export type OAuthApplicationInfo =
-  RouterOutputs["oauthApplications"]["getApplicationInfo"];
+export type UpdateOAuthApprovalStatusResult = OAuthApplicationItem;
 
 export type CreateOAuthApplicationInput =
   RouterInputs["oauthApplications"]["create"];

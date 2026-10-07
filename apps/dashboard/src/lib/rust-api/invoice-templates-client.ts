@@ -2,6 +2,7 @@
 
 import { type QueryKey, queryOptions } from "@tanstack/react-query";
 import { getAccessToken } from "@/utils/session";
+export type { UpsertInvoiceTemplateInput } from "./invoice-templates";
 import {
   type CreateInvoiceTemplateInput,
   type InvoiceTemplateCount,

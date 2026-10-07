@@ -1,4 +1,4 @@
-import type { RouterInputs, RouterOutputs } from "@api/trpc/routers/_app";
+import type { RouterInputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
@@ -8,10 +8,8 @@ export type CreateAttachmentsInput =
   RouterInputs["transactionAttachments"]["createMany"];
 export type DeleteAttachmentInput =
   RouterInputs["transactionAttachments"]["delete"];
-export type CreateAttachmentsResult =
-  RouterOutputs["transactionAttachments"]["createMany"];
-export type DeleteAttachmentResult =
-  RouterOutputs["transactionAttachments"]["delete"];
+export type CreateAttachmentsResult = RawTransactionAttachment[];
+export type DeleteAttachmentResult = { success?: boolean };
 
 function snakeToCamelKey(key: string): string {
   return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

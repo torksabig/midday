@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
 
@@ -6,14 +5,11 @@ type RawInvoiceProduct = components["schemas"]["InvoiceProduct"];
 type RawSaveLineItemAsProductResponse =
   components["schemas"]["SaveLineItemAsProductResponse"];
 
-export type InvoiceProduct = NonNullable<
-  RouterOutputs["invoiceProducts"]["get"]
->[number];
+export type InvoiceProduct = RawInvoiceProduct;
 
-export type InvoiceProductDetail = RouterOutputs["invoiceProducts"]["getById"];
+export type InvoiceProductDetail = RawInvoiceProduct | null;
 
-export type SaveLineItemAsProductResult =
-  RouterOutputs["invoiceProducts"]["saveLineItemAsProduct"];
+export type SaveLineItemAsProductResult = RawSaveLineItemAsProductResponse;
 
 export type ListInvoiceProductsParams = {
   sortBy?: string | null;

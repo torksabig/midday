@@ -16,9 +16,9 @@ type CalendarDayProps = {
   currentDate: TZDate;
   selectedDate: string | null;
   dayData:
-    | RouterOutputs["trackerEntries"]["byRange"]["result"][string]
+    | import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntryByDate[]
     | undefined;
-  allData?: RouterOutputs["trackerEntries"]["byRange"]["result"];
+  allData?: import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult;
   range: [string, string] | null;
   localRange: [string | null, string | null];
   isDragging: boolean;

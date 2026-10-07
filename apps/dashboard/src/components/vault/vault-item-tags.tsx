@@ -6,7 +6,7 @@ import { Skeleton } from "@midday/ui/skeleton";
 import { useDocumentFilterParams } from "@/hooks/use-document-filter-params";
 
 type Props = {
-  tags: RouterOutputs["documents"]["get"]["data"][number]["documentTagAssignments"];
+  tags: import("@/lib/rust-api/documents").DocumentListItem["documentTagAssignments"];
   isLoading: boolean;
 };
 

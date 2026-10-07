@@ -1,12 +1,10 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
+import type { InboxAccount } from "./delegated-trpc-shapes";
 import { RustApiError } from "./overview";
 
 type RawInboxAccountListItem = components["schemas"]["InboxAccountListItem"];
 
-export type InboxAccount = NonNullable<
-  RouterOutputs["inboxAccounts"]["get"]
->[number];
+export type { InboxAccount } from "./delegated-trpc-shapes";
 
 export function normalizeInboxAccounts(
   payload: RawInboxAccountListItem[],

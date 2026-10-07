@@ -8,6 +8,8 @@ export type InstalledApp = {
   [key: string]: unknown;
 };
 
+export type AuthorizedOAuthApp = Record<string, unknown>;
+
 export type UpdateAppSettingsInput = {
   appId: string;
   option: {

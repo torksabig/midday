@@ -65,7 +65,7 @@ export function Row({ children }: RowProps) {
 }
 
 type DataTableRowProps = {
-  row: RouterOutputs["trackerProjects"]["get"]["data"][number];
+  row: import("@/lib/rust-api/tracker-projects").TrackerProject;
   onDelete: ({ id }: { id: string }) => void;
 };
 

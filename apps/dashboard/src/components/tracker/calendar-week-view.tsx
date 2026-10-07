@@ -13,7 +13,7 @@ type CalendarWeekViewProps = {
   weekDays: TZDate[];
   currentDate: TZDate;
   selectedDate: string | null;
-  data: RouterOutputs["trackerEntries"]["byRange"]["result"] | undefined;
+  data: import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult | undefined;
   range: [string, string] | null;
   localRange: [string | null, string | null];
   isDragging: boolean;
@@ -32,7 +32,7 @@ const hours = Array.from({ length: 25 }, (_, i) => i); // 0-24 for cleaner displ
 
 type ProcessedEntry = {
   event: NonNullable<
-    RouterOutputs["trackerEntries"]["byRange"]["result"]
+    import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult
   >[string][number];
   eventIndex: string | number;
   displayStartSlot: number;
@@ -200,7 +200,7 @@ const DayEntries = memo(
     currentTime,
   }: {
     day: TZDate;
-    data: RouterOutputs["trackerEntries"]["byRange"]["result"] | undefined;
+    data: import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntriesByRangeResult | undefined;
     user: any;
     handleMouseDown: (date: TZDate) => void;
     handleMouseEnter: (date: TZDate) => void;

@@ -1,5 +1,5 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
+import type { SearchAttachmentItem } from "./delegated-trpc-shapes";
 import { RustApiError } from "./overview";
 
 type RawGlobalSearchRow = components["schemas"]["GlobalSearchRow"];
@@ -18,7 +18,7 @@ export type SearchAttachmentsParams = {
   limit?: number | null;
 };
 
-export type SearchAttachmentsResult = RouterOutputs["search"]["attachments"];
+export type SearchAttachmentsResult = SearchAttachmentItem[];
 
 /** Matches façade / tRPC shape (`created_at` stays snake_case). */
 export type GlobalSearchRow = {

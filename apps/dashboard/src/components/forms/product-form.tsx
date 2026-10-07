@@ -42,7 +42,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 type Props = {
-  data?: RouterOutputs["invoiceProducts"]["getById"];
+  data?: import("@/lib/rust-api/invoice-products").InvoiceProductDetail;
   defaultCurrency?: string;
 };
 

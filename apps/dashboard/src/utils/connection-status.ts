@@ -1,18 +1,17 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { differenceInDays } from "date-fns";
+import type { BankConnectionListItem } from "@/lib/rust-api/bank-connections";
+import type { InboxAccount } from "@/lib/rust-api/inbox-accounts";
 
 const DISPLAY_DAYS = 30;
 const WARNING_DAYS = 14;
 const ERROR_DAYS = 7;
 
-// Type from unified connectionStatus endpoint
-type ConnectionStatusData = RouterOutputs["team"]["connectionStatus"];
+type ConnectionStatusData = {
+  bankConnections: BankConnectionListItem[];
+  inboxAccounts: InboxAccount[];
+};
 
-// Legacy types for backward compatibility
-type BankConnection = NonNullable<
-  RouterOutputs["bankConnections"]["get"]
->[number];
-type InboxAccount = NonNullable<RouterOutputs["inboxAccounts"]["get"]>[number];
+type BankConnection = BankConnectionListItem;
 
 /**
  * Unified connection issue type for both bank and inbox connections

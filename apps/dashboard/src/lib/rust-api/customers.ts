@@ -10,12 +10,8 @@ export type CustomersListParams = {
   sort?: string[] | null;
 };
 
-export type Customer = {
-  id: string;
-  name?: string | null;
-  email?: string | null;
-  [key: string]: unknown;
-};
+export type { Customer, CustomerTag } from "./delegated-trpc-shapes";
+import type { Customer } from "./delegated-trpc-shapes";
 
 export type CustomersList = {
   meta: {

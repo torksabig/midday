@@ -205,7 +205,7 @@ const safeCalculateDuration = (
 };
 
 type TrackerRecord = NonNullable<
-  RouterOutputs["trackerEntries"]["byDate"]["data"]
+  import("@/lib/rust-api/delegated-trpc-shapes").TrackerEntryByDate[]
 >[number];
 
 type ProcessedScheduleEntry = TrackerRecord & {
@@ -404,7 +404,7 @@ const createNewEvent = (
   slot: number,
   selectedProjectId: string | null,
   selectedDate?: string | null,
-  projects?: RouterOutputs["trackerProjects"]["get"]["data"],
+  projects?: import("@/lib/rust-api/tracker-projects").TrackerProject[],
   user?: { timezone?: string | null },
 ): TrackerRecord => {
   // Get base date for event

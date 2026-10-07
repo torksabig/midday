@@ -15,7 +15,7 @@ import { Icons } from "@midday/ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { useTokenModalStore } from "@/store/token-modal";
 
-type ApiKey = RouterOutputs["apiKeys"]["get"][number];
+type ApiKey = import("@/lib/rust-api/api-keys").ApiKey;
 
 export const columns: ColumnDef<ApiKey>[] = [
   {

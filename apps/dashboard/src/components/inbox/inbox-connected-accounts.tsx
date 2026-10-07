@@ -40,7 +40,7 @@ import { DeleteInboxAccount } from "./delete-inbox-account";
 import { InboxAccountsListSkeleton } from "./inbox-connected-accounts-skeleton";
 import { SyncInboxAccount } from "./sync-inbox-account";
 
-type InboxAccount = NonNullable<RouterOutputs["inboxAccounts"]["get"]>[number];
+import type { InboxAccount } from "@/lib/rust-api/inbox-accounts";
 
 function InboxAccountItem({ account }: { account: InboxAccount }) {
   const trpc = useTRPC();

@@ -1,5 +1,18 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import type { components } from "./openapi.generated";
+import type {
+  CreatedReport,
+  ReportByLinkId,
+  ReportChartByLinkId,
+  ReportsAccountBalances,
+  ReportsBurnRate,
+  ReportsExpense,
+  ReportsProfit,
+  ReportsRevenue,
+  ReportsRevenueForecast,
+  ReportsRunway,
+  ReportsSpending,
+  ReportsTaxSummary,
+} from "./delegated-trpc-shapes";
 import { RustApiError } from "./overview";
 
 type RawPublicReport = components["schemas"]["PublicReportResponse"];
@@ -45,21 +58,20 @@ export type CreateReportInput = {
   expireAt?: string | null;
 };
 
-export type ReportsRevenue = RouterOutputs["reports"]["revenue"];
-export type ReportsProfit = RouterOutputs["reports"]["profit"];
-export type ReportsBurnRate = RouterOutputs["reports"]["burnRate"];
-export type ReportsRunway = RouterOutputs["reports"]["runway"];
-export type ReportsExpense = RouterOutputs["reports"]["expense"];
-export type ReportsSpending = RouterOutputs["reports"]["spending"];
-export type ReportsTaxSummary = RouterOutputs["reports"]["taxSummary"];
-export type ReportsAccountBalances =
-  RouterOutputs["reports"]["getAccountBalances"];
-export type ReportsRevenueForecast =
-  RouterOutputs["reports"]["revenueForecast"];
-export type ReportByLinkId = RouterOutputs["reports"]["getByLinkId"];
-export type ReportChartByLinkId =
-  RouterOutputs["reports"]["getChartDataByLinkId"];
-export type CreatedReport = RouterOutputs["reports"]["create"];
+export type {
+  CreatedReport,
+  ReportByLinkId,
+  ReportChartByLinkId,
+  ReportsAccountBalances,
+  ReportsBurnRate,
+  ReportsExpense,
+  ReportsProfit,
+  ReportsRevenue,
+  ReportsRevenueForecast,
+  ReportsRunway,
+  ReportsSpending,
+  ReportsTaxSummary,
+} from "./delegated-trpc-shapes";
 
 function snakeToCamelKey(key: string): string {
   return key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

@@ -13,7 +13,7 @@ export type ApiKey = {
   scopes?: unknown;
   lastUsedAt?: string | null;
   user?: ApiKeyUser | null;
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 export type DeleteApiKeyInput = {

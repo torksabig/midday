@@ -84,13 +84,12 @@ export function HydrateClient(props: { children: React.ReactNode }) {
   );
 }
 
-export function prefetch<T extends ReturnType<TRPCQueryOptions<any>>>(
-  queryOptions: T,
-) {
+/** Rust hybrid query options are not TRPCQueryOptions; accept both at the boundary. */
+export function prefetch(queryOptions: any) {
   const queryClient = getQueryClient();
 
-  if (queryOptions.queryKey[1]?.type === "infinite") {
-    void queryClient.prefetchInfiniteQuery(queryOptions as any).catch(() => {
+  if (queryOptions?.queryKey?.[1]?.type === "infinite") {
+    void queryClient.prefetchInfiniteQuery(queryOptions).catch(() => {
       // Avoid unhandled promise rejections from fire-and-forget prefetches.
     });
   } else {
@@ -100,14 +99,12 @@ export function prefetch<T extends ReturnType<TRPCQueryOptions<any>>>(
   }
 }
 
-export function batchPrefetch<T extends ReturnType<TRPCQueryOptions<any>>>(
-  queryOptionsArray: T[],
-) {
+export function batchPrefetch(queryOptionsArray: any[]) {
   const queryClient = getQueryClient();
 
   for (const queryOptions of queryOptionsArray) {
-    if (queryOptions.queryKey[1]?.type === "infinite") {
-      void queryClient.prefetchInfiniteQuery(queryOptions as any).catch(() => {
+    if (queryOptions?.queryKey?.[1]?.type === "infinite") {
+      void queryClient.prefetchInfiniteQuery(queryOptions).catch(() => {
         // Avoid unhandled promise rejections from fire-and-forget prefetches.
       });
     } else {

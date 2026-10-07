@@ -17,7 +17,7 @@ import { isStaleProcessing } from "@/utils/document";
 import { VaultItemActions } from "./vault-item-actions";
 
 type Props = {
-  data: Partial<RouterOutputs["documents"]["get"]["data"][number]> & {
+  data: Partial<import("@/lib/rust-api/documents").DocumentListItem> & {
     id: string;
     name?: string | null;
     metadata: Record<string, unknown>;

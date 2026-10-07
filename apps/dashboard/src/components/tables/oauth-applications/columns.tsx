@@ -1,4 +1,4 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { OAuthApplicationItem } from "@/lib/rust-api/oauth-applications";
 import { Button } from "@midday/ui/button";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
@@ -26,7 +26,7 @@ import { DeleteOAuthApplicationModal } from "../../modals/delete-oauth-applicati
 import { OAuthApplicationStatusBadge } from "../../oauth-application-status-badge";
 
 type OAuthApplication =
-  RouterOutputs["oauthApplications"]["list"]["data"][number];
+  OAuthApplicationItem;
 
 export const columns: ColumnDef<OAuthApplication>[] = [
   {

@@ -1,4 +1,3 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { fetchInvoiceDefaultSettings } from "./invoice-default-settings";
 import type { components } from "./openapi.generated";
 import { RustApiError } from "./overview";
@@ -6,6 +5,14 @@ import { RustApiError } from "./overview";
 type RawInvoicesListResponse = components["schemas"]["InvoicesListResponse"];
 type RawPaymentStatusResponse = components["schemas"]["PaymentStatusResponse"];
 type RawInvoiceSummaryResponse = components["schemas"]["InvoiceSummaryResponse"];
+type RawMostActiveClientResponse =
+  components["schemas"]["MostActiveClientResponse"];
+type RawTopRevenueClientResponse =
+  components["schemas"]["TopRevenueClientResponse"];
+type RawSearchInvoiceNumberHit =
+  components["schemas"]["SearchInvoiceNumberHit"];
+type RawAverageInvoiceSizeRow =
+  components["schemas"]["AverageInvoiceSizeRow"];
 
 export type InvoicesListParams = {
   cursor?: string | null;
@@ -45,23 +52,12 @@ export type InvoicesList = {
   data: InvoiceListItem[];
 };
 
-export type InvoicePaymentStatus = RouterOutputs["invoice"]["paymentStatus"];
-export type InvoiceSummary = RouterOutputs["invoice"]["invoiceSummary"];
-export type MostActiveClient = RouterOutputs["invoice"]["mostActiveClient"];
-export type TopRevenueClient = RouterOutputs["invoice"]["topRevenueClient"];
-export type SearchInvoiceNumberHit =
-  RouterOutputs["invoice"]["searchInvoiceNumber"];
-export type AverageInvoiceSize =
-  RouterOutputs["invoice"]["averageInvoiceSize"];
-
-type RawMostActiveClientResponse =
-  components["schemas"]["MostActiveClientResponse"];
-type RawTopRevenueClientResponse =
-  components["schemas"]["TopRevenueClientResponse"];
-type RawSearchInvoiceNumberHit =
-  components["schemas"]["SearchInvoiceNumberHit"];
-type RawAverageInvoiceSizeRow =
-  components["schemas"]["AverageInvoiceSizeRow"];
+export type InvoicePaymentStatus = Record<string, unknown>;
+export type InvoiceSummary = Record<string, unknown>;
+export type MostActiveClient = Record<string, any> | null;
+export type TopRevenueClient = Record<string, any> | null;
+export type SearchInvoiceNumberHit = Record<string, any> | null;
+export type AverageInvoiceSize = Record<string, any> | Array<Record<string, any>>;
 
 export function normalizeMostActiveClient(
   payload: RawMostActiveClientResponse | null,
