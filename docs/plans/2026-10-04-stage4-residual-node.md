@@ -177,7 +177,7 @@ Use this as a gate for the user one-shot **`decommission`** ([autopilot direct c
 ```bash
 # 1) Clone API (:8787) — from midday root:
 bash scripts/dev-replacement-api.sh
-# Or from ../clone: bun run api   (= cargo run -p clone-api --bin clone-api; required — bare -p clone-api is ambiguous)
+# Or from ../clone: bun run api   (= cargo run -p clone-api; default-run = "clone-api" — bare -p clone-api works)
 # SQLite clone state: script sets DATABASE_URL=sqlite:data/clone.db. For Supabase JWT auth + Midday reads, copy .env.example → .env and run local Supabase (`supabase start`) so MIDDAY_DATABASE_URL hits :54322.
 # Optional vault/files: FILE_KEY_SECRET, SUPABASE_URL, SUPABASE_SECRET_KEY (same as Midday apps/api)
 
