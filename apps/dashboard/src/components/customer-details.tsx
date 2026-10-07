@@ -370,7 +370,7 @@ export function CustomerDetails() {
                 customer.website && "hidden",
               )}
             >
-              {customer.name.charAt(0).toUpperCase()}
+              {(customer.name ?? "?").charAt(0).toUpperCase()}
             </div>
             <h2 className="text-lg font-serif truncate">{customer.name}</h2>
           </div>

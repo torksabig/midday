@@ -72,16 +72,18 @@ export function MatchTransaction() {
 
   const options = transactionMatch?.map((transaction, index) => ({
     id: transaction.transaction_id,
-    name: transaction.name,
+    name: transaction.name ?? "",
     component: () => (
       <TransactionMatchItem
-        date={transaction.transaction_date}
-        name={transaction.name}
+        date={transaction.transaction_date ?? ""}
+        name={transaction.name ?? ""}
         dateFormat={user?.dateFormat}
-        amount={transaction.transaction_amount}
-        currency={transaction.transaction_currency}
+        amount={transaction.transaction_amount ?? 0}
+        currency={transaction.transaction_currency ?? ""}
         isAlreadyMatched={transaction.is_already_matched}
-        matchedAttachmentFilename={transaction.matched_attachment_filename}
+        matchedAttachmentFilename={
+          transaction.matched_attachment_filename ?? undefined
+        }
         showBestMatch={
           index === 0 && transactionMatch?.length > 1 && !debouncedValue.length
         }
@@ -90,11 +92,17 @@ export function MatchTransaction() {
   }));
 
   const selectedOptionBase = data?.transaction
-    ? { id: data.transaction.id, name: data.transaction.name }
+    ? {
+        id: data.transaction.id,
+        name: data.transaction.name ?? "",
+      }
     : options?.find((option) => option.id === debouncedValue);
 
   const selectedValue = selectedOptionBase
-    ? { id: selectedOptionBase.id, name: selectedOptionBase.name }
+    ? {
+        id: selectedOptionBase.id,
+        name: selectedOptionBase.name ?? "",
+      }
     : undefined;
 
   const handleChange = (value: string) => {
@@ -131,10 +139,10 @@ export function MatchTransaction() {
             transactionId,
             transaction: {
               id: selectedTransaction.transaction_id,
-              name: selectedTransaction.name,
-              date: selectedTransaction.transaction_date,
-              amount: selectedTransaction.transaction_amount,
-              currency: selectedTransaction.transaction_currency,
+              name: selectedTransaction.name ?? "",
+              date: selectedTransaction.transaction_date ?? "",
+              amount: selectedTransaction.transaction_amount ?? 0,
+              currency: selectedTransaction.transaction_currency ?? "",
             },
           });
         }

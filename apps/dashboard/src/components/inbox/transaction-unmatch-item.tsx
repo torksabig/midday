@@ -84,11 +84,11 @@ export function TransactionUnmatchItem() {
       <Icons.Check className="w-4 h-4" />
 
       <TransactionMatchItem
-        date={data?.transaction?.date}
-        name={data?.transaction?.name}
+        date={data.transaction.date ?? ""}
+        name={data.transaction.name ?? ""}
         dateFormat={user?.dateFormat}
-        amount={data?.transaction?.amount}
-        currency={data?.transaction?.currency}
+        amount={data.transaction.amount ?? 0}
+        currency={data.transaction.currency ?? ""}
       />
 
       <button

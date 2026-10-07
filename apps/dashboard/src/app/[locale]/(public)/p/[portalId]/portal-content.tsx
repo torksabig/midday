@@ -100,7 +100,7 @@ export function PortalContent({ portalId }: Props) {
     setDownloadingId(invoice.id);
     try {
       await downloadInvoicePdf(
-        { token: invoice.token },
+        { token: invoice.token ?? undefined },
         `${invoice.invoiceNumber || "invoice"}.pdf`,
       );
     } finally {
@@ -125,7 +125,9 @@ export function PortalContent({ portalId }: Props) {
 
       const filePromises = selected.map(async (invoice) => {
         try {
-          const blob = await fetchInvoicePdfBlob({ token: invoice.token });
+          const blob = await fetchInvoicePdfBlob({
+            token: invoice.token ?? undefined,
+          });
           const baseName = invoice.invoiceNumber ?? `invoice-${invoice.id}`;
           let filename = `${baseName}.pdf`;
           let counter = 1;

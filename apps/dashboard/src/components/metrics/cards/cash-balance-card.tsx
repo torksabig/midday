@@ -41,18 +41,24 @@ export function CashBalanceCard({
     if (breakdown.length === 0) return [];
 
     const total = breakdown.reduce(
-      (sum, a) => sum + Math.abs(a.convertedBalance),
+      (sum, a) => sum + Math.abs(a.convertedBalance ?? 0),
       0,
     );
 
     return breakdown
-      .filter((a) => a.convertedBalance > 0)
-      .sort((a, b) => b.convertedBalance - a.convertedBalance)
+      .filter((a) => (a.convertedBalance ?? 0) > 0)
+      .sort(
+        (a, b) =>
+          (b.convertedBalance ?? 0) - (a.convertedBalance ?? 0),
+      )
       .slice(0, 7)
       .map((account) => ({
-        name: account.name,
-        amount: account.convertedBalance,
-        percentage: total > 0 ? (account.convertedBalance / total) * 100 : 0,
+        name: account.name ?? "",
+        amount: account.convertedBalance ?? 0,
+        percentage:
+          total > 0
+            ? ((account.convertedBalance ?? 0) / total) * 100
+            : 0,
       }));
   }, [breakdown]);
 

@@ -74,11 +74,20 @@ export function normalizeCustomerDetail(payload: unknown): Customer {
   return deepCamelCaseKeys(payload) as Customer;
 }
 
+export type CustomerInvoiceSummary = {
+  totalAmount?: number;
+  paidAmount?: number;
+  outstandingAmount?: number;
+  invoiceCount?: number;
+  currency?: string;
+  [key: string]: unknown;
+};
+
 export function normalizeCustomerInvoiceSummary(
   payload: unknown,
-): Record<string, unknown> {
+): CustomerInvoiceSummary {
   // Rust already returns camelCase for this endpoint; still normalize defensively.
-  return deepCamelCaseKeys(payload) as Record<string, unknown>;
+  return deepCamelCaseKeys(payload) as CustomerInvoiceSummary;
 }
 
 export type PortalCustomerTeam = {

@@ -1,10 +1,10 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TransactionListItem } from "@/lib/rust-api/transactions";
 import { useI18n } from "@/locales/client";
 
 type Props = {
-  method: RouterOutputs["transactions"]["get"]["data"][number]["method"];
+  method: TransactionListItem["method"];
 };
 
 export function TransactionMethod({ method }: Props) {

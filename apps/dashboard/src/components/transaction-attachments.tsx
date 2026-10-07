@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TransactionAttachment } from "@/lib/rust-api/transactions";
 import { LogEvents } from "@midday/events/events";
 import { cn } from "@midday/ui/cn";
 import { useToast } from "@midday/ui/use-toast";
@@ -32,7 +32,7 @@ const normalizePath = (path: unknown): string[] => {
 
 type Props = {
   id: string;
-  data?: NonNullable<RouterOutputs["transactions"]["getById"]>["attachments"];
+  data?: TransactionAttachment[];
   onUploadAction?: (files: Attachment[]) => void;
   onDeleteUploadAction?: (file: Attachment) => void;
   persistToTransaction?: boolean;

@@ -40,6 +40,7 @@ export type ReportsRunway = {
   months?: number;
   medianBurn?: number;
   runway?: number;
+  runwayMonths?: number;
   currency?: string;
   burnRate?: ReportValuePoint[];
   [key: string]: unknown;
@@ -67,12 +68,57 @@ export type ReportsAccountBalances = {
   };
   [key: string]: unknown;
 };
+export type RevenueForecastPoint = {
+  date: string;
+  value: number;
+  optimistic?: number | null;
+  pessimistic?: number | null;
+  confidence?: number | null;
+  breakdown?: unknown | null;
+};
+
 export type ReportsRevenueForecast = {
-  result?: Array<Record<string, unknown>>;
-  summary?: Record<string, unknown>;
+  historical?: RevenueForecastPoint[];
+  forecast?: RevenueForecastPoint[];
+  summary?: {
+    totalProjectedRevenue?: number;
+    [key: string]: unknown;
+  };
+  meta?: Record<string, unknown>;
   [key: string]: unknown;
 };
-export type ReportByLinkId = Record<string, unknown> | null;
+
+/** Public shared metric report (`reports.getByLinkId`). */
+export type ReportByLinkId = {
+  id: string;
+  linkId: string;
+  type: string;
+  from: string;
+  to: string;
+  currency?: string | null;
+  teamId?: string | null;
+  teamName?: string | null;
+  teamLogoUrl?: string | null;
+  createdAt?: string;
+  expireAt?: string | null;
+  [key: string]: unknown;
+} | null;
+
+export type { Invoice as PublicInvoiceTemplateData } from "@midday/invoice/types";
+
+export type {
+  InboxDetail,
+  InboxList,
+  InboxListItem,
+  InboxSearchItem,
+} from "./inbox";
+
+export type {
+  SearchTransactionMatchRow,
+  TransactionDetail,
+  TransactionListItem,
+  TransactionsList,
+} from "./transactions";
 export type ReportChartByLinkId = Record<string, unknown>;
 export type CreatedReport = Record<string, unknown>;
 
@@ -149,16 +195,47 @@ export type OAuthApplicationInfo = OAuthApplicationItem & {
   state?: string;
 };
 
-export type InvoiceRecurringDetail = Record<string, unknown> | null;
+export type InvoiceRecurringDetail = {
+  id: string;
+  frequency?: string | null;
+  frequencyDay?: number | null;
+  frequencyWeek?: number | null;
+  frequencyInterval?: number | null;
+  endType?: string | null;
+  endDate?: string | null;
+  endCount?: number | null;
+  amount?: number | null;
+  currency?: string | null;
+  customerName?: string | null;
+  invoiceNumber?: string | null;
+  status?: string | null;
+  nextScheduledAt?: string | null;
+  [key: string]: unknown;
+} | null;
+
+export type InvoiceRecurringListItem = {
+  id: string;
+  frequency?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  customerName?: string | null;
+  status?: string | null;
+  [key: string]: unknown;
+};
+
 export type InvoiceRecurringList = {
   meta?: {
     cursor?: string | null;
     hasNextPage?: boolean;
     hasPreviousPage?: boolean;
   };
-  data: Record<string, unknown>[];
+  data: InvoiceRecurringListItem[];
 };
-export type InvoiceRecurringUpcoming = Record<string, unknown>[];
+export type InvoiceRecurringUpcoming = Array<{
+  scheduledAt?: string | null;
+  amount?: number | null;
+  [key: string]: unknown;
+}>;
 export type InvoiceRecurringResume = Record<string, unknown>;
 
 export type TrackerEntryByDate = {

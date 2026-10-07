@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TransactionDetail } from "@/lib/rust-api/transactions";
 import { cn } from "@midday/ui/cn";
 import { Icons } from "@midday/ui/icons";
 import { Skeleton } from "@midday/ui/skeleton";
@@ -18,9 +18,7 @@ import { LocalStorageKeys } from "@/utils/constants";
 import { FilePreview } from "./file-preview";
 import { FormatAmount } from "./format-amount";
 
-type Suggestion = NonNullable<
-  RouterOutputs["transactions"]["getById"]
->["suggestion"];
+type Suggestion = TransactionDetail["suggestion"];
 
 type SuggestedMatchProps = {
   suggestion?: Suggestion;
@@ -136,10 +134,13 @@ export function SuggestedMatch({
   };
 
   const documentName = suggestion?.documentName || "Document";
-  const mimeType = getMimeType(suggestion?.documentPath || null);
-  const filePath = suggestion?.documentPath
-    ? suggestion.documentPath.join("/")
+  const documentPathTokens = suggestion?.documentPath
+    ? Array.isArray(suggestion.documentPath)
+      ? suggestion.documentPath
+      : suggestion.documentPath.split("/")
     : null;
+  const mimeType = getMimeType(documentPathTokens);
+  const filePath = documentPathTokens?.join("/") ?? null;
 
   if (isLoading) {
     return (

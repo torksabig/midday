@@ -22,20 +22,10 @@ import { reportChartByLinkIdQueryOptions } from "@/lib/rust-api/reports-client";
 import { useTRPC } from "@/trpc/client";
 import { formatAmount } from "@/utils/format";
 
-interface Report {
-  id: string;
-  linkId: string | null;
-  type: string | null;
-  from: string | null;
-  to: string | null;
-  currency: string | null;
-  teamId: string | null;
-  createdAt: string;
-  expireAt: string | null;
-}
+import type { ReportByLinkId } from "@/lib/rust-api/reports";
 
 interface PublicMetricViewProps {
-  report: Report;
+  report: NonNullable<ReportByLinkId>;
   chartName: string;
   dateRangeDisplay: string;
   className?: string;

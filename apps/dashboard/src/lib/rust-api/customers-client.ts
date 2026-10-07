@@ -8,6 +8,7 @@ import {
 import { getAccessToken } from "@/utils/session";
 import {
   type Customer,
+  type CustomerInvoiceSummary,
   type CustomersList,
   type CustomersListParams,
   type PortalCustomerById,
@@ -83,7 +84,7 @@ export function customerInvoiceSummaryQueryOptions(
   id: string,
   options: { enabled?: boolean } = {},
 ) {
-  return queryOptions<Record<string, unknown>>({
+  return queryOptions<CustomerInvoiceSummary>({
     queryKey,
     queryFn: async () =>
       fetchCustomerInvoiceSummary(getRustApiUrl(), await getAccessToken(), id),

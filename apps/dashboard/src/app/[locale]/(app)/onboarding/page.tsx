@@ -37,9 +37,9 @@ export default async function Page() {
         hasOtherTeams={hasOtherTeams}
         user={{
           id: user.id,
-          fullName: user.fullName,
+          fullName: user.fullName ?? null,
           avatarUrl: user.avatarUrl ?? null,
-          teamId: user.teamId,
+          teamId: user.teamId ?? null,
         }}
       />
     </HydrateClient>

@@ -32,7 +32,7 @@ export type InvoiceSummaryParams = {
   statuses?: string[] | null;
 };
 
-// get/getById RouterOutputs collapse via façade `unknown` returns; keep UI-usable shape.
+/** Invoice detail row (Rust-normalized; compatible with `@midday/invoice/types` at render boundaries). */
 export type Invoice = {
   id: string;
   [key: string]: any;
@@ -53,7 +53,15 @@ export type InvoicesList = {
 };
 
 export type InvoicePaymentStatus = Record<string, unknown>;
-export type InvoiceSummary = Record<string, unknown>;
+
+export type InvoiceSummary = {
+  totalAmount?: number;
+  paidAmount?: number;
+  outstandingAmount?: number;
+  invoiceCount?: number;
+  currency?: string;
+  [key: string]: unknown;
+};
 export type MostActiveClient = Record<string, any> | null;
 export type TopRevenueClient = Record<string, any> | null;
 export type SearchInvoiceNumberHit = Record<string, any> | null;

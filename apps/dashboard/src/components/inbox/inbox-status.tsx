@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { InboxListItem } from "@/lib/rust-api/inbox";
 import { Icons } from "@midday/ui/icons";
 import { Spinner } from "@midday/ui/spinner";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@midday/ui/tooltip";
 
 type Props = {
-  item: RouterOutputs["inbox"]["get"]["data"][number];
+  item: InboxListItem;
 };
 
 export function InboxStatus({ item }: Props) {

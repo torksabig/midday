@@ -75,7 +75,8 @@ export function RunwayCard({
       return [];
     }
 
-    const { months: runwayMonths, medianBurn } = runwayData;
+    const runwayMonths = runwayData.months ?? runwayData.runwayMonths ?? 0;
+    const medianBurn = runwayData.medianBurn ?? 0;
 
     if (medianBurn <= 0 || !Number.isFinite(medianBurn)) {
       return [];

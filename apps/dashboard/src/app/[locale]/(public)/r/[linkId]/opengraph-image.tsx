@@ -53,7 +53,8 @@ export default async function Image({ params }: Props) {
   )}`;
 
   const teamName = report.teamName || "Company";
-  const logoUrl = report.teamLogoUrl;
+  const logoUrl =
+    typeof report.teamLogoUrl === "string" ? report.teamLogoUrl : undefined;
   const isValidLogo = logoUrl ? await isValidLogoUrl(logoUrl) : false;
 
   return new ImageResponse(

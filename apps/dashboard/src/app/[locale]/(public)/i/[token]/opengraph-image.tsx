@@ -1,4 +1,5 @@
 import { isValidLogoUrl, OgTemplate } from "@midday/invoice";
+import type { Invoice as PublicInvoiceTemplateData } from "@midday/invoice/types";
 import { ImageResponse } from "next/og";
 import { invoiceByTokenServerQueryOptions } from "@/lib/rust-api/invoices-server";
 import { getQueryClient, trpc } from "@/trpc/server";
@@ -34,7 +35,10 @@ export default async function Image({ params }: Props) {
   const isValidLogo = await isValidLogoUrl(logoUrl);
 
   return new ImageResponse(
-    <OgTemplate data={invoice} isValidLogo={isValidLogo} />,
+    <OgTemplate
+      data={invoice as PublicInvoiceTemplateData}
+      isValidLogo={isValidLogo}
+    />,
     {
       width: 1200,
       height: 630,

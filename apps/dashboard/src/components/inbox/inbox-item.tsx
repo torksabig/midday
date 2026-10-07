@@ -1,4 +1,4 @@
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { InboxListItem } from "@/lib/rust-api/inbox";
 import { Badge } from "@midday/ui/badge";
 import { cn } from "@midday/ui/cn";
 import { Skeleton } from "@midday/ui/skeleton";
@@ -18,7 +18,7 @@ import { useUserQuery } from "@/hooks/use-user";
 import { useInboxStore } from "@/store/inbox";
 
 type Props = {
-  item: RouterOutputs["inbox"]["get"]["data"][number];
+  item: InboxListItem;
   index: number;
   onItemClick?: (e: React.MouseEvent, index: number) => void;
 };

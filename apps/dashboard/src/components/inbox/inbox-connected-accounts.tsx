@@ -1,6 +1,5 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
 import { Avatar, AvatarFallback } from "@midday/ui/avatar";
 import { Badge } from "@midday/ui/badge";
 import { Button } from "@midday/ui/button";
@@ -209,7 +208,9 @@ function InboxAccountItem({ account }: { account: InboxAccount }) {
             ) : (
               <>
                 Last accessed{" "}
-                {formatDistanceToNow(new Date(account.lastAccessed))} ago
+                {account.lastAccessed
+                  ? `${formatDistanceToNow(new Date(account.lastAccessed))} ago`
+                  : "never"}
               </>
             )}
           </span>

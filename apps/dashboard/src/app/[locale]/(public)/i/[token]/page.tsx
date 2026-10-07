@@ -1,5 +1,6 @@
 import { decrypt } from "@midday/encryption";
 import { HtmlTemplate } from "@midday/invoice/templates/html";
+import type { Invoice as PublicInvoiceTemplateData } from "@midday/invoice/types";
 import { createClient } from "@midday/supabase/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -153,7 +154,11 @@ export default async function Page(props: Props) {
       >
         <div className="pb-24 md:pb-0">
           <div className="shadow-[0_24px_48px_-12px_rgba(0,0,0,0.3)] dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.6)]">
-            <HtmlTemplate data={invoice} width={width} height={height} />
+            <HtmlTemplate
+              data={invoice as PublicInvoiceTemplateData}
+              width={width}
+              height={height}
+            />
           </div>
         </div>
       </InvoiceViewWrapper>

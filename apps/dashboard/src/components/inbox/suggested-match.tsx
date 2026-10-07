@@ -165,7 +165,9 @@ export function SuggestedMatch() {
           </div>
 
           <div className="text-xs text-muted-foreground">
-            {suggestion && Math.round(suggestion.confidenceScore * 100)}%
+            {suggestion &&
+              Math.round((suggestion.confidenceScore ?? 0) * 100)}
+            %
             confidence
           </div>
         </div>

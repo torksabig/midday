@@ -1,12 +1,12 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { InboxDetail } from "@/lib/rust-api/inbox";
 import { AnimatePresence } from "framer-motion";
 import { MatchTransaction } from "./match-transaction";
 import { SuggestedMatch } from "./suggested-match";
 
 type Props = {
-  data: RouterOutputs["inbox"]["getById"];
+  data: InboxDetail | null | undefined;
 };
 
 export function InboxActions({ data }: Props) {

@@ -16,7 +16,7 @@ type InboxSource =
   | null;
 
 function getInboxSource(data: {
-  inboxAccount?: { provider?: string } | null;
+  inboxAccount?: { provider?: string | null } | null;
   meta?: unknown;
 }): InboxSource {
   // Check inboxAccount provider (for email providers like Gmail, Outlook)
@@ -75,7 +75,7 @@ export function InboxSourceIcon({
   data,
 }: {
   data: {
-    inboxAccount?: { provider?: string; email?: string } | null;
+    inboxAccount?: { provider?: string | null; email?: string | null } | null;
     meta?: unknown;
   };
 }) {

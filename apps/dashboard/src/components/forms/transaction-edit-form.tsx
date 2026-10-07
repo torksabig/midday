@@ -1,6 +1,6 @@
 "use client";
 
-import type { RouterOutputs } from "@api/trpc/routers/_app";
+import type { TransactionDetail } from "@/lib/rust-api/transactions";
 import { utc } from "@date-fns/utc";
 import { uniqueCurrencies } from "@midday/location/currencies";
 import {
@@ -35,10 +35,8 @@ import { transactionCategoriesQueryOptions } from "@/lib/rust-api/transaction-ca
 import { updateTransactionFromRust } from "@/lib/rust-api/transactions-client";
 import { useTRPC } from "@/trpc/client";
 
-type Transaction = RouterOutputs["transactions"]["getById"];
-
 type Props = {
-  transaction: NonNullable<Transaction>;
+  transaction: TransactionDetail;
 };
 
 export function TransactionEditForm({ transaction }: Props) {
